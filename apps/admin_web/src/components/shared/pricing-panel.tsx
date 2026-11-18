@@ -58,7 +58,13 @@ function pricingAmountLabel(item: ActivityPricing): string {
   if (item.pricing_type === 'free') {
     return '-';
   }
-  return `${normalizeCurrencyCode(item.currency)} ${formatPriceAmount(item.amount)}`;
+  const amount = formatPriceAmount(item.amount);
+  const upper = item.amount_max;
+  const text =
+    upper != null && Number(upper) > Number(item.amount)
+      ? `${amount}–${formatPriceAmount(upper)}`
+      : amount;
+  return `${normalizeCurrencyCode(item.currency)} ${text}`;
 }
 
 function applyCreateDefaults(
@@ -124,7 +130,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
 
   const formKey = panel.editingId ?? 'new';
   const validation = useFormValidation(
-    ['location_id', 'activity_id', 'sessions_count', 'amount'],
+    ['location_id', 'activity_id', 'sessions_count', 'amount', 'amount_max'],
     formKey
   );
   const errorInputClassName = formErrorClassName;
@@ -150,6 +156,13 @@ export function PricingPanel({ mode }: PricingPanelProps) {
       }
       if (amountValue <= 0) {
         return 'Amount must be greater than 0.';
+      }
+    }
+    if (!isFreeType && formState.amount_max.trim()) {
+      const upper = Number(formState.amount_max);
+      const lower = Number(formState.amount);
+      if (!Number.isFinite(upper) || upper <= lower) {
+        return 'Up to must be greater than the amount.';
       }
     }
     if (formState.pricing_type === 'per_sessions') {
@@ -182,6 +195,21 @@ export function PricingPanel({ mode }: PricingPanelProps) {
     return '';
   }, [formState.amount, isFreeType]);
 
+  const amountMaxError = useMemo(() => {
+    if (isFreeType || !formState.amount_max.trim()) {
+      return '';
+    }
+    const upper = Number(formState.amount_max);
+    if (!Number.isFinite(upper)) {
+      return 'Up to must be numeric.';
+    }
+    const lower = Number(formState.amount);
+    if (!Number.isFinite(lower) || upper <= lower) {
+      return 'Up to must be greater than the amount.';
+    }
+    return '';
+  }, [formState.amount, formState.amount_max, isFreeType]);
+
   const sessionsError = useMemo(() => {
     if (!showSessionsField) {
       return '';
@@ -211,6 +239,8 @@ export function PricingPanel({ mode }: PricingPanelProps) {
       location_id: resolved.location_id,
       pricing_type: resolved.pricing_type,
       amount: isFree ? '0' : resolved.amount.trim(),
+      amount_max:
+        isFree || !resolved.amount_max.trim() ? null : resolved.amount_max.trim(),
       currency: isFree
         ? defaultCurrencyCode
         : normalizeCurrencyCode(resolved.currency),
@@ -250,6 +280,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
   const showLocationError = shouldShowError('location_id', locationError);
   const showActivityError = shouldShowError('activity_id', activityError);
   const showAmountError = shouldShowError('amount', amountError);
+  const showAmountMaxError = shouldShowError('amount_max', amountMaxError);
   const showSessionsError = shouldShowError('sessions_count', sessionsError);
   const versionView = useCatalogVersion({
     mode,
@@ -316,6 +347,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
                     ? prev.free_trial_class_offered
                     : false,
                 amount: value === 'free' ? '' : prev.amount,
+                amount_max: value === 'free' ? '' : prev.amount_max,
                 currency:
                   value === 'free' ? defaultCurrencyCode : prev.currency,
               }));
@@ -415,6 +447,29 @@ export function PricingPanel({ mode }: PricingPanelProps) {
             }}
             className={showAmountError ? errorInputClassName : ''}
             aria-invalid={showAmountError || undefined}
+          />
+        </VersionField>
+        <VersionField
+          label='Up to'
+          htmlFor='pricing-amount-max'
+          versionKey='amount_max'
+          error={showAmountMaxError ? amountMaxError : undefined}
+        >
+          <Input
+            id='pricing-amount-max'
+            type='number'
+            step='0.01'
+            value={editorForm.amount_max}
+            disabled={locked || editorIsFree}
+            onChange={(event) => {
+              markTouched('amount_max');
+              panel.setFormState((prev) => ({
+                ...prev,
+                amount_max: event.target.value,
+              }));
+            }}
+            className={showAmountMaxError ? errorInputClassName : ''}
+            aria-invalid={showAmountMaxError || undefined}
           />
         </VersionField>
     </CatalogInlineEditor>

@@ -266,10 +266,24 @@ def _pricing_exists(
             )
             == pricing_type
             and Decimal(str(row.amount)) == amount
+            and _same_upper_bound(row.amount_max, proposed.get("amount_max"))
             and (wanted_sessions is None or row.sessions_count == wanted_sessions)
         ):
             return True
     return False
+
+
+def _same_upper_bound(stored: Decimal | None, proposed: object) -> bool:
+    """True when the catalog row and the proposal name the same bound."""
+    if proposed in (None, ""):
+        return stored is None
+    try:
+        upper = Decimal(str(proposed))
+    except (InvalidOperation, ValueError):
+        return False
+    if not upper.is_finite() or stored is None:
+        return False
+    return Decimal(str(stored)) == upper
 
 
 def _schedule_exists(

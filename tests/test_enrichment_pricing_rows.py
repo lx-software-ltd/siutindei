@@ -40,7 +40,8 @@ def test_sheet_keeps_sessions_and_a_monthly_price() -> None:
     page = "https://club.test/fall-term"
     text = (
         "Painting Workshops. Fee: HK$500 for 8 classes. "
-        "Monthly plan HK$800. Term fee HK$600 for 12.0 classes. "
+        "Monthly plan HK$800. Holiday HK$900. "
+        "Term fee HK$600 for 12.0 classes. "
         "Drop-in HK$90."
     )
     pages = [{"url": page, "final_url": page, "text": text}]
@@ -69,7 +70,7 @@ def test_sheet_keeps_sessions_and_a_monthly_price() -> None:
                 "amount": "900",
                 "currency": "HKD",
                 "confidence": 0.8,
-                "evidence": [{"url": page, "quote": "Fee: HK$500 for 8 classes"}],
+                "evidence": [{"url": page, "quote": "Holiday HK$900"}],
             },
             {
                 "activity_name": "Painting Workshops",
@@ -105,6 +106,64 @@ def test_sheet_keeps_sessions_and_a_monthly_price() -> None:
     assert rows[2]["pricing_type"] == "per_class"
     assert rows[3]["sessions_count"] == 12
     assert "sessions_count" not in rows[4]
+
+
+def test_a_range_keeps_only_a_number_the_page_states() -> None:
+    page = "https://club.test/fees"
+    pages = [
+        {
+            "url": page,
+            "final_url": page,
+            "text": "Painting is HK$200 per class. The holiday rate is HK$300.",
+        }
+    ]
+    low = [{"url": page, "quote": "HK$200 per class"}]
+    high = [{"url": page, "quote": "The holiday rate is HK$300"}]
+    sheet = {
+        "pricing": [
+            {
+                "activity_name": "Painting",
+                "pricing_type": "per_class",
+                "amount": "200",
+                "amount_max": {"value": "300", "evidence": high},
+                "currency": "HKD",
+                "confidence": 0.8,
+                "evidence": low,
+            },
+            {
+                "activity_name": "Drawing",
+                "pricing_type": "per_class",
+                "amount": "200",
+                "amount_max": "900",
+                "currency": "HKD",
+                "confidence": 0.8,
+                "evidence": low,
+            },
+            {
+                "activity_name": "Clay",
+                "pricing_type": "per_class",
+                "amount": "50",
+                "currency": "HKD",
+                "confidence": 0.8,
+                "evidence": low,
+            },
+        ]
+    }
+    rows = [
+        item
+        for item in validate_model_sheet(sheet, pages, {})
+        if item["kind"] == "create_pricing"
+    ]
+    assert [item["proposed"]["activity_name"] for item in rows] == [
+        "Painting",
+        "Drawing",
+    ]
+    assert rows[0]["proposed"]["amount_max"] == "300"
+    assert [item["quote"] for item in rows[0]["evidence"]] == [
+        "HK$200 per class",
+        "The holiday rate is HK$300",
+    ]
+    assert "amount_max" not in rows[1]["proposed"]
 
 
 def test_whole_class_counts() -> None:

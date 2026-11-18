@@ -138,4 +138,47 @@ describe('enrichment pricing overrides', () => {
       }).map((item) => item.field)
     ).toEqual(['location_id']);
   });
+
+  it('sends an upper bound the reviewer typed, including a cleared one', () => {
+    expect(
+      chosenEnrichmentOverrides(
+        ['price-1'],
+        { 'price-1': { amount_max: '800' } },
+        [price]
+      )
+    ).toEqual({ 'price-1': { amount_max: '800' } });
+    const ranged = {
+      ...price,
+      proposed_value: { ...price.proposed_value, amount_max: '800' },
+      blockers: [{ field: 'amount_max', message: 'Upper bound must be a number above the amount' }],
+    };
+    expect(visibleBlockers(ranged, { amount_max: '' }, context)).toEqual([]);
+    expect(
+      chosenEnrichmentOverrides(['price-1'], { 'price-1': { amount_max: '' } }, [ranged])
+    ).toEqual({ 'price-1': { amount_max: '' } });
+  });
+
+  it('warns when the reviewer raises the amount above the upper bound', () => {
+    const ranged: EnrichmentProposal = {
+      ...price,
+      proposed_value: { ...price.proposed_value, amount: '200', amount_max: '300' },
+      blockers: [],
+    };
+    const note = {
+      field: 'amount_max',
+      message: 'Upper bound must be a number above the amount',
+    };
+    expect(
+      visibleBlockers(ranged, { amount: '400' }, { ...context, proposals: [ranged] })
+    ).toEqual([note]);
+    expect(
+      firstBlockerMessage(
+        ['price-1'],
+        [ranged],
+        { 'price-1': { amount: '400' } },
+        context.venues,
+        context.activities
+      )
+    ).toBe(note.message);
+  });
 });

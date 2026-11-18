@@ -47,9 +47,10 @@ test.describe('Pricing Panel', () => {
     await adminPage.locator('#pricing-activity').selectOption('activity-1');
     await adminPage.locator('#pricing-currency').selectOption('HKD');
     await adminPage.locator('#pricing-amount').fill('250');
+    await adminPage.locator('#pricing-amount-max').fill('300');
 
     await adminPage.getByRole('button', { name: 'Create' }).click();
-    await expect(adminPage.getByRole('table')).toContainText('HKD 250.00');
+    await expect(adminPage.getByRole('table')).toContainText('HKD 250.00–300.00');
     await expect(adminPage.getByRole('table')).toContainText('Per class');
   });
 });

@@ -143,6 +143,8 @@ paths:
         - name: price_min
           in: query
           required: false
+          description: |
+            A price matches when its upper bound is at least this value.
           schema:
             type: number
             format: decimal
@@ -150,6 +152,8 @@ paths:
         - name: price_max
           in: query
           required: false
+          description: |
+            A price matches when its lower bound is at most this value.
           schema:
             type: number
             format: decimal

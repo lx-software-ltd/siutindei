@@ -116,6 +116,7 @@ class PricingSchema(BaseModel):
 
     pricing_type: str
     amount: Decimal
+    amount_max: Decimal | None = None
     currency: str
     sessions_count: int | None
     free_trial_class_offered: bool
@@ -190,6 +191,7 @@ _CARD_OMITTED_WHEN_EMPTY = (
     ("organization", "parent_verified_at"),
     ("organization", "rating"),
     ("location", "name"),
+    ("pricing", "amount_max"),
     ("schedule", "starts_on"),
     ("schedule", "ends_on"),
 )
@@ -211,11 +213,22 @@ def dump_search_response(
         payload.pop("area_scope", None)
     if payload.get("total") is None:
         payload.pop("total", None)
+    _omit_null_amount_max(payload)
     if view != "card":
         return payload
     for item in payload.get("items", []):
         _apply_card_view(item)
     return payload
+
+
+def _omit_null_amount_max(payload: dict) -> None:
+    """A single price omits the ceiling, so old snapshots stay the same."""
+    for item in payload.get("items") or []:
+        if not isinstance(item, dict):
+            continue
+        pricing = item.get("pricing")
+        if isinstance(pricing, dict) and pricing.get("amount_max") is None:
+            pricing.pop("amount_max", None)
 
 
 def _drop_duplicate_english_name(section: dict, name_key: str = "name") -> None:

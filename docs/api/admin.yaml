@@ -37,7 +37,8 @@ info:
     | lng | -180 to 180 |
     | age_min | 0 or more; stored as at most 18 |
     | age_max | 0 or more; stored as at most 18. A higher value is saved as 18. age_min cannot exceed age_max, and the two may be equal. |
-    | amount | >= 0 |
+    | amount | >= 0. The lower bound when `amount_max` is set. |
+    | amount_max | Greater than `amount`, or omitted. `free` has none. |
     | sessions_count | > 0 |
     | day_of_week_utc | 0-6 (Sunday-Saturday) |
     | start_minutes_utc | 0-1439 |
@@ -4476,6 +4477,9 @@ components:
           type: string
         amount:
           type: string
+        amount_max:
+          type: string
+          description: Upper bound. Empty clears a proposed range.
         currency:
           type: string
         sessions_count:
@@ -4930,6 +4934,14 @@ components:
         amount:
           type: number
           minimum: 0
+          description: Price, or the lower bound when `amount_max` is set.
+        amount_max:
+          type: number
+          minimum: 0
+          nullable: true
+          description: |
+            Upper bound of a price range. Omit it for a single price.
+            Greater than `amount`. `free` has none.
         currency:
           type: string
         sessions_count:
@@ -6702,7 +6714,14 @@ components:
         amount:
           type: number
           minimum: 0
-          description: Price amount (required, must be >= 0)
+          description: Price amount (required, must be >= 0). Lower bound of a range.
+        amount_max:
+          type: number
+          minimum: 0
+          nullable: true
+          description: |
+            Upper bound of a price range. Omit it for a single price.
+            Must be greater than `amount`. `free` has none.
         currency:
           type: string
           minLength: 3
@@ -6728,7 +6747,14 @@ components:
         amount:
           type: number
           minimum: 0
-          description: Price amount (must be >= 0)
+          description: Price amount (must be >= 0). Lower bound of a range.
+        amount_max:
+          type: number
+          minimum: 0
+          nullable: true
+          description: |
+            Upper bound of a price range. Null clears it. Must be
+            greater than `amount`. `free` has none.
         currency:
           type: string
           minLength: 3
@@ -6769,6 +6795,11 @@ components:
           type: string
         amount:
           type: number
+          description: Price, or the lower bound when `amount_max` is set.
+        amount_max:
+          type: number
+          nullable: true
+          description: Upper bound of a price range. Null for a single price.
         currency:
           type: string
         sessions_count:

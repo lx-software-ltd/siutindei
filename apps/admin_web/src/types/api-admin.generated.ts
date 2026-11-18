@@ -7666,6 +7666,8 @@ export interface components {
             location_id?: string;
             pricing_type?: string;
             amount?: string;
+            /** @description Upper bound. Empty clears a proposed range. */
+            amount_max?: string;
             currency?: string;
             sessions_count?: number;
         };
@@ -7955,7 +7957,13 @@ export interface components {
             location_name: string;
             /** @enum {string} */
             pricing_type: "per_class" | "per_sessions" | "per_hour" | "per_day" | "free" | "per_month" | "per_year";
+            /** @description Price, or the lower bound when `amount_max` is set. */
             amount?: number;
+            /**
+             * @description Upper bound of a price range. Omit it for a single price.
+             *     Greater than `amount`. `free` has none.
+             */
+            amount_max?: number | null;
             currency?: string;
             sessions_count?: number;
             free_trial_class_offered?: boolean;
@@ -8912,8 +8920,13 @@ export interface components {
              * @enum {string}
              */
             pricing_type: "per_class" | "per_sessions" | "per_hour" | "per_day" | "free" | "per_month" | "per_year";
-            /** @description Price amount (required, must be >= 0) */
+            /** @description Price amount (required, must be >= 0). Lower bound of a range. */
             amount: number;
+            /**
+             * @description Upper bound of a price range. Omit it for a single price.
+             *     Must be greater than `amount`. `free` has none.
+             */
+            amount_max?: number | null;
             /**
              * @description ISO 4217 currency code (default HKD, case-insensitive)
              * @default HKD
@@ -8930,8 +8943,13 @@ export interface components {
         PricingUpdate: {
             /** @enum {string} */
             pricing_type?: "per_class" | "per_sessions" | "per_hour" | "per_day" | "free" | "per_month" | "per_year";
-            /** @description Price amount (must be >= 0) */
+            /** @description Price amount (must be >= 0). Lower bound of a range. */
             amount?: number;
+            /**
+             * @description Upper bound of a price range. Null clears it. Must be
+             *     greater than `amount`. `free` has none.
+             */
+            amount_max?: number | null;
             /** @description ISO 4217 currency code (case-insensitive) */
             currency?: string;
             /** @description Classes within term (must be > 0) */
@@ -8947,7 +8965,10 @@ export interface components {
             /** Format: uuid */
             location_id: string;
             pricing_type: string;
+            /** @description Price, or the lower bound when `amount_max` is set. */
             amount: number;
+            /** @description Upper bound of a price range. Null for a single price. */
+            amount_max?: number | null;
             currency: string;
             sessions_count?: number | null;
             free_trial_class_offered: boolean;

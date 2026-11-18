@@ -27,6 +27,7 @@ _ROW_FIELDS = {
         "location_address",
         "pricing_type",
         "amount",
+        "amount_max",
         "currency",
         "sessions_count",
     ),

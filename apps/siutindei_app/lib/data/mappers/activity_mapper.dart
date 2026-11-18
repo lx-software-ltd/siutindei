@@ -49,6 +49,7 @@ class ActivityMapper {
     return PricingEntity(
       type: PricingType.fromString(model.pricingType),
       amount: model.amount,
+      amountMax: model.amountMax,
       currency: model.currency,
       sessionsCount: model.sessionsCount,
       freeTrialClassOffered: model.freeTrialClassOffered,

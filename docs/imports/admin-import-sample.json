@@ -43,6 +43,7 @@
               "location_name": "Wan Chai Center",
               "pricing_type": "per_class",
               "amount": 150,
+              "amount_max": 180,
               "currency": "HKD",
               "free_trial_class_offered": true
             }

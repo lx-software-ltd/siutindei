@@ -124,12 +124,16 @@ class PricingEntity {
     required this.type,
     required this.amount,
     required this.currency,
+    this.amountMax,
     this.sessionsCount,
     this.freeTrialClassOffered = false,
   });
 
   final PricingType type;
   final double amount;
+
+  /// Upper bound of a range. Null is one price.
+  final double? amountMax;
   final String currency;
   final int? sessionsCount;
   final bool freeTrialClassOffered;
@@ -140,7 +144,7 @@ class PricingEntity {
   /// Returns a formatted price string.
   String get formattedPrice {
     if (isFree) return 'Free';
-    final priceStr = '${amount.toStringAsFixed(0)} $currency';
+    final priceStr = _priceText;
     return switch (type) {
       PricingType.perClass => '$priceStr/class',
       PricingType.perSessions =>
@@ -155,16 +159,31 @@ class PricingEntity {
     };
   }
 
+  String get _priceText {
+    final high = amountMax;
+    if (high == null || high <= amount) {
+      return '${amount.toStringAsFixed(0)} $currency';
+    }
+    final lowWhole = amount.toStringAsFixed(0);
+    final highWhole = high.toStringAsFixed(0);
+    if (lowWhole == highWhole) {
+      return '${amount.toStringAsFixed(2)}'
+          '–${high.toStringAsFixed(2)} $currency';
+    }
+    return '$lowWhole–$highWhole $currency';
+  }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is PricingEntity &&
           other.type == type &&
           other.amount == amount &&
+          other.amountMax == amountMax &&
           other.currency == currency);
 
   @override
-  int get hashCode => Object.hash(type, amount, currency);
+  int get hashCode => Object.hash(type, amount, amountMax, currency);
 }
 
 /// Pricing type enumeration.

@@ -324,7 +324,7 @@ Source: [`apps/public_www`](../../apps/public_www).
 
   | Event | When | Params |
   |---|---|---|
-  | `view_item` | Activity detail listing loaded | `item_id`, `item_name`, `item_brand` (org), `price`, `currency` |
+  | `view_item` | Activity detail listing loaded | `item_id`, `item_name`, `item_brand` (org), `price` (lower bound), `currency` |
   | `generate_lead` | WhatsApp click | `lead_type`: `whatsapp_activity` / `whatsapp_footer` / `whatsapp_partner`; item fields on the activity CTA |
   | `search` | Search results fetch succeeds | `search_term` / `area_id` / `age` / `category_id` when set |
 

@@ -615,6 +615,7 @@ function PricingFields({
   const pricing = row.kind === 'create_pricing';
   const pricingType = override.pricing_type ?? String(proposed.pricing_type || 'per_class');
   const amount = override.amount ?? String(proposed.amount ?? '');
+  const amountMax = override.amount_max ?? String(proposed.amount_max ?? '');
   const currency = override.currency ?? String(proposed.currency || 'HKD');
   const sessions =
     typeof override.sessions_count === 'string'
@@ -676,6 +677,20 @@ function PricingFields({
             spellCheck={false}
             value={amount}
             onChange={(event) => onOverride({ ...override, amount: event.target.value })}
+          />
+        </div>
+        <div>
+          <Label htmlFor={`pricing-amount-max-${row.id}`}>Up to</Label>
+          <Input
+            id={`pricing-amount-max-${row.id}`}
+            name='amount_max'
+            inputMode='decimal'
+            autoComplete='off'
+            spellCheck={false}
+            value={amountMax}
+            onChange={(event) =>
+              onOverride({ ...override, amount_max: event.target.value })
+            }
           />
         </div>
         <div>

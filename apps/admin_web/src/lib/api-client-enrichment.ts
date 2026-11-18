@@ -124,6 +124,8 @@ export interface EnrichmentOverride {
   location_id?: string;
   pricing_type?: string;
   amount?: string;
+  /** Upper bound, or an empty string when the reviewer clears a range. */
+  amount_max?: string;
   currency?: string;
   /** A whole count sent to apply, or the text still being typed. */
   sessions_count?: number | string;

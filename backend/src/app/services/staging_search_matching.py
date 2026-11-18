@@ -11,7 +11,7 @@ from app.db.queries import (
     applied_search_area_scope,
     search_today,
 )
-from app.db.search_conditions import class_price_value, hong_kong_day
+from app.db.search_conditions import amounts_overlap, class_price_value, hong_kong_day
 from app.services.schedule_dates import parse_schedule_date, schedule_dates_match
 
 
@@ -83,15 +83,12 @@ def matches(
     ):
         return False
 
-    if (
-        filters.price_min is not None
-        and Decimal(str(pricing.get("amount", 0))) < filters.price_min
-    ):
-        return False
-
-    if (
-        filters.price_max is not None
-        and Decimal(str(pricing.get("amount", 0))) > filters.price_max
+    raw_max = pricing.get("amount_max")
+    if not amounts_overlap(
+        Decimal(str(pricing.get("amount", 0))),
+        None if raw_max in (None, "") else Decimal(str(raw_max)),
+        filters.price_min,
+        filters.price_max,
     ):
         return False
 

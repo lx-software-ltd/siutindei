@@ -56,6 +56,7 @@ interface StagingFixtureItem {
   readonly pricing: {
     readonly pricing_type: string;
     readonly amount: string | number;
+    readonly amount_max?: string | number | null;
     readonly currency: string;
     readonly sessions_count?: number | null;
     readonly free_trial_class_offered: boolean;
@@ -322,6 +323,9 @@ function classPriceOf(item: StagingFixtureItem): number | null {
     {
       pricingType: pricing.pricing_type,
       amount: Number(pricing.amount),
+      amountMax: pricing.amount_max == null || pricing.amount_max === ''
+        ? null
+        : Number(pricing.amount_max),
       currency: pricing.currency,
       sessionsCount: pricing.sessions_count ?? null,
       freeTrialClassOffered: pricing.free_trial_class_offered,

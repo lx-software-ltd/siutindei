@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
 from typing import Any
+from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from psycopg.types.range import Range
@@ -24,7 +25,6 @@ from app.api.admin_validators import (
 from app.db.models import (
     Activity,
     ActivityLocation,
-    ActivityPricing,
     ActivitySchedule,
     ActivityScheduleEntry,
     Location,
@@ -33,6 +33,7 @@ from app.db.models import (
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.db.models.enums import ScheduleType
 from app.db.models.org_enrichment import OrgEnrichmentProposal
+from app.db.repositories import ActivityPricingRepository
 from app.exceptions import ValidationError
 from app.services.area_assignment import get_leaf
 from app.services.category_suggestions.capture import (
@@ -287,16 +288,15 @@ def _apply_pricing(
     if location is None:
         raise ValidationError(PRICE_VENUE, field="location_id")
     fields = pricing_fields(proposed, override)
-    session.add(
-        ActivityPricing(
-            activity_id=activity.id,
-            location_id=location.id,
-            pricing_type=fields["pricing_type"],
-            amount=fields["amount"],
-            currency=fields["currency"],
-            sessions_count=fields["sessions_count"],
-            free_trial_class_offered=bool(proposed.get("free_trial_class_offered")),
-        )
+    ActivityPricingRepository(session).save_for_activity_location(
+        activity_id=UUID(str(activity.id)),
+        location_id=UUID(str(location.id)),
+        pricing_type=fields["pricing_type"],
+        amount=fields["amount"],
+        currency=fields["currency"],
+        sessions_count=fields["sessions_count"],
+        free_trial_class_offered=bool(proposed.get("free_trial_class_offered")),
+        amount_max=fields["amount_max"],
     )
 
 

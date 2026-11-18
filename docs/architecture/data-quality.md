@@ -51,7 +51,8 @@ Warnings, with their thresholds as named constants:
   six or more days. Those are opening hours, so the kind is probably
   `place`.
 - `class_price_outlier`: a `per_class` or `per_hour` price above
-  HK$1,500, which is usually a term fee.
+  HK$1,500, which is usually a term fee. A range is judged on its
+  lower bound.
 - `verification_stale`: a parent check more than 365 days old, or one
   with no date. It prompts the owner to check again. The public badge
   and the listing stay.
