@@ -6,7 +6,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from app.api.admin_validators import _validate_currency
-from app.db.models.enums import PricingType
+from app.db.models.enums import FREE_TRIAL_PRICING_TYPES, PricingType
 from app.exceptions import ValidationError
 
 PRICE_ACTIVITY = "Pick the activity this price belongs to"
@@ -88,12 +88,16 @@ def pricing_fields(
         sessions = positive_sessions(_pick(override, proposed, "sessions_count"))
         if sessions is None:
             raise ValidationError(SESSIONS_REQUIRED, field="sessions_count")
+    offered = bool(proposed.get("free_trial_class_offered")) and (
+        kind in FREE_TRIAL_PRICING_TYPES
+    )
     return {
         "pricing_type": kind,
         "amount": amount,
         "amount_max": amount_max,
         "currency": currency,
         "sessions_count": sessions,
+        "free_trial_class_offered": offered,
     }
 
 
