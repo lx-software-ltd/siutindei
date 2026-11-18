@@ -7966,6 +7966,7 @@ export interface components {
             amount_max?: number | null;
             currency?: string;
             sessions_count?: number;
+            /** @description Whether a free trial class is offered. Stored for per_class, per_sessions, and per_month. Any other pricing type stores false. */
             free_trial_class_offered?: boolean;
         };
         AdminImportSchedule: {
@@ -8935,7 +8936,7 @@ export interface components {
             /** @description Classes within term (required for per_sessions, must be > 0) */
             sessions_count?: number;
             /**
-             * @description Whether a free trial class is offered
+             * @description Whether a free trial class is offered. Stored for per_class, per_sessions, and per_month. Any other pricing type stores false.
              * @default false
              */
             free_trial_class_offered: boolean;
@@ -8954,7 +8955,7 @@ export interface components {
             currency?: string;
             /** @description Classes within term (must be > 0) */
             sessions_count?: number;
-            /** @description Whether a free trial class is offered */
+            /** @description Whether a free trial class is offered. Stored for per_class, per_sessions, and per_month. Any other pricing type stores false. */
             free_trial_class_offered?: boolean;
         };
         Pricing: {

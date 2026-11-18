@@ -780,7 +780,10 @@ Columns:
 - `amount_max` (numeric(10,2), optional). The upper bound of a range. Null is one price.
 - `currency` (text, default `HKD`)
 - `sessions_count` (integer, optional)
-- `free_trial_class_offered` (boolean, default `false`)
+- `free_trial_class_offered` (boolean, default `false`).
+  The API stores `true` for `per_class`, `per_sessions`, and
+  `per_month`. Every other pricing type stores `false`.
+  No check constraint enforces this.
 - `version` (integer, default 1)
 
 Constraints:

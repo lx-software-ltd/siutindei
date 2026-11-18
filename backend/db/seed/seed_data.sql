@@ -130,7 +130,7 @@ INSERT INTO activity_pricing (
   free_trial_class_offered
 )
 SELECT 'f1111111-1111-1111-1111-111111111111', 'dddddddd-dddd-dddd-dddd-dddddddddddd',
-       'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'per_class', 280.00, 'HKD', NULL, false
+       'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'per_class', 280.00, 'HKD', NULL, true
 WHERE NOT EXISTS (
   SELECT 1 FROM activity_pricing WHERE id = 'f1111111-1111-1111-1111-111111111111'
 );

@@ -4949,6 +4949,9 @@ components:
           minimum: 1
         free_trial_class_offered:
           type: boolean
+          description: >
+            Whether a free trial class is offered. Stored for per_class,
+            per_sessions, and per_month. Any other pricing type stores false.
 
     AdminImportSchedule:
       type: object
@@ -6735,7 +6738,9 @@ components:
           description: Classes within term (required for per_sessions, must be > 0)
         free_trial_class_offered:
           type: boolean
-          description: Whether a free trial class is offered
+          description: >
+            Whether a free trial class is offered. Stored for per_class,
+            per_sessions, and per_month. Any other pricing type stores false.
           default: false
 
     PricingUpdate:
@@ -6767,7 +6772,9 @@ components:
           description: Classes within term (must be > 0)
         free_trial_class_offered:
           type: boolean
-          description: Whether a free trial class is offered
+          description: >
+            Whether a free trial class is offered. Stored for per_class,
+            per_sessions, and per_month. Any other pricing type stores false.
 
     Pricing:
       type: object

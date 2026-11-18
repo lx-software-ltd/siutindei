@@ -48,6 +48,16 @@ export function getPricingTypeLabel(value: string): string {
   return pricingTypeLabelByValue.get(value) ?? value;
 }
 
+const freeTrialPricingTypes = new Set([
+  'per_class',
+  'per_sessions',
+  'per_month',
+]);
+
+export function pricingTypeAllowsFreeTrial(pricingType: string): boolean {
+  return freeTrialPricingTypes.has(pricingType);
+}
+
 export function normalizeCurrencyCode(value?: string | null): string {
   const trimmed = value?.trim();
   if (!trimmed) {

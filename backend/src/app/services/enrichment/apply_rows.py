@@ -31,7 +31,7 @@ from app.db.models import (
     Organization,
 )
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
-from app.db.models.enums import ScheduleType
+from app.db.models.enums import FREE_TRIAL_PRICING_TYPES, ScheduleType
 from app.db.models.org_enrichment import OrgEnrichmentProposal
 from app.db.repositories import ActivityPricingRepository
 from app.exceptions import ValidationError
@@ -288,6 +288,9 @@ def _apply_pricing(
     if location is None:
         raise ValidationError(PRICE_VENUE, field="location_id")
     fields = pricing_fields(proposed, override)
+    offered = bool(proposed.get("free_trial_class_offered"))
+    if fields["pricing_type"] not in FREE_TRIAL_PRICING_TYPES:
+        offered = False
     ActivityPricingRepository(session).save_for_activity_location(
         activity_id=UUID(str(activity.id)),
         location_id=UUID(str(location.id)),
@@ -295,7 +298,7 @@ def _apply_pricing(
         amount=fields["amount"],
         currency=fields["currency"],
         sessions_count=fields["sessions_count"],
-        free_trial_class_offered=bool(proposed.get("free_trial_class_offered")),
+        free_trial_class_offered=offered,
         amount_max=fields["amount_max"],
     )
 
