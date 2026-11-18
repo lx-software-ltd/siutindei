@@ -854,7 +854,8 @@ components:
           nullable: true
           description: |
             Upper bound of a price range. Null when the fee is a single
-            price. Greater than `amount`.
+            price. Greater than `amount`. `view=card` omits the field
+            when null.
         currency:
           type: string
           description: ISO 4217 currency code (case-insensitive)

@@ -53,7 +53,8 @@ the lower bound.
 ## Invariants this change preserves
 
 - A row with no `amount_max` matches, sorts, imports, and displays as
-  it does today. `amount` remains the lower bound.
+  it does today. `amount` remains the lower bound. Card search omits
+  a null `amount_max`, so a single price stays the same size.
 - `per_sessions` still requires `sessions_count`. `free` still stores
   amount 0 and has no upper bound.
 - Import identity stays activity, venue, and pricing type. A file that

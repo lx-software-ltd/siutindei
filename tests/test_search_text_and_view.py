@@ -83,6 +83,8 @@ def test_card_view_omits_heavy_fields_and_stays_under_900_bytes(
     assert len(full_item["schedule"]["weekly_entries"]) == 2
     assert "age_min" in card_item["activity"]
     assert "lat" in card_item["location"]
+    assert "amount_max" not in card_item["pricing"]
+    assert full_item["pricing"]["amount_max"] is None
     encoded = json.dumps(card_item, default=str, separators=(",", ":")).encode()
     assert len(encoded) < 900
 

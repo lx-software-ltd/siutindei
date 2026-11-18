@@ -11,6 +11,7 @@ from app.api.admin_resource_pricing import (
     _serialize_pricing,
     _update_pricing,
 )
+from app.api.schemas import dump_search_response
 from app.api.search import fetch_search_response
 from app.db.models import (
     Activity,
@@ -294,3 +295,10 @@ def test_search_matches_an_overlapping_range_and_sorts_by_the_lower_bound(
     ]
     ordered = _ids(ActivitySearchFilters(sort="price", **shared))
     assert ordered == [ranged_search["cheap_id"], ranged_search["ranged_id"]]
+    card = dump_search_response(
+        fetch_search_response(ActivitySearchFilters(view="card", **shared)),
+        "card",
+    )
+    by_id = {row["activity"]["id"]: row for row in card["items"]}
+    assert by_id[ranged_search["ranged_id"]]["pricing"]["amount_max"] == Decimal(400)
+    assert "amount_max" not in by_id[ranged_search["cheap_id"]]["pricing"]

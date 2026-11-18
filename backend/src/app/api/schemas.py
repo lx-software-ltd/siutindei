@@ -191,6 +191,7 @@ _CARD_OMITTED_WHEN_EMPTY = (
     ("organization", "parent_verified_at"),
     ("organization", "rating"),
     ("location", "name"),
+    ("pricing", "amount_max"),
     ("schedule", "starts_on"),
     ("schedule", "ends_on"),
 )
