@@ -4,6 +4,7 @@ import type {
   EnrichmentProposal,
   EnrichmentRead,
 } from './api-client-enrichment';
+import { pricingTypeAllowsFreeTrial } from './free-trial-pricing';
 
 const pricingTypes = new Set([
   'per_class',
@@ -204,6 +205,14 @@ export function chosenEnrichmentOverrides(
       count !== positiveSessions(proposed.sessions_count)
     ) {
       cleaned.sessions_count = count;
+    }
+    const proposedTrial = Boolean(proposed.free_trial_class_offered);
+    if (
+      pricingTypeAllowsFreeTrial(type) &&
+      draft.free_trial_class_offered !== undefined &&
+      draft.free_trial_class_offered !== proposedTrial
+    ) {
+      cleaned.free_trial_class_offered = draft.free_trial_class_offered;
     }
     if (Object.keys(cleaned).length > 0) {
       body[id] = cleaned;

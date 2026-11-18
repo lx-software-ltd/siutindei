@@ -135,6 +135,15 @@ WHERE NOT EXISTS (
   SELECT 1 FROM activity_pricing WHERE id = 'f1111111-1111-1111-1111-111111111111'
 );
 
+-- A database seeded before this row carried the tick stays unticked,
+-- because the insert above only adds a missing id. This updates that
+-- sample per-class price and no other row.
+UPDATE activity_pricing
+SET free_trial_class_offered = true
+WHERE id = 'f1111111-1111-1111-1111-111111111111'
+  AND pricing_type = 'per_class'
+  AND free_trial_class_offered = false;
+
 INSERT INTO activity_pricing (
   id,
   activity_id,

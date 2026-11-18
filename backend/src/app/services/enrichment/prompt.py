@@ -28,7 +28,10 @@ MODEL_INSTRUCTIONS = (
     "the row. A pricing quote must contain the amount. pricing_type is per_class, "
     "per_sessions, per_hour, per_day, free, per_month, or per_year. "
     "For per_sessions, sessions_count is the number of classes in that fee "
-    "when the page states it. When the page states two numbers for the same "
+    "when the page states it. When a per_class, per_sessions, or per_month "
+    "fee offers a free trial class, set free_trial_class_offered to true "
+    "and quote the sentence that offers it. Omit that field otherwise. "
+    "When the page states two numbers for the same "
     "fee, amount is the lower number and amount_max is the higher number. "
     "Omit amount_max when there is one price. Do not invent an upper bound. "
     "When the page shows $ or HK$ and no other "
@@ -49,7 +52,7 @@ MODEL_INSTRUCTIONS = (
     '"confidence": 0.9, "url": "...", "quote": "..."}], '
     '"pricing": [{"activity_name": "...", "location_address": "...", '
     '"pricing_type": "per_sessions", "sessions_count": 12, "amount": "2400", '
-    '"currency": "HKD", '
+    '"currency": "HKD", "free_trial_class_offered": true, '
     '"confidence": 0.9, "url": "...", "quote": "..."}], '
     '"schedules": [{"activity_name": "...", "location_address": "...", '
     '"url": "...", "quote": "...", "entries": [{"day_of_week": 3, '

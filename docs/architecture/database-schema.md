@@ -781,9 +781,9 @@ Columns:
 - `currency` (text, default `HKD`)
 - `sessions_count` (integer, optional)
 - `free_trial_class_offered` (boolean, default `false`).
-  The API stores `true` for `per_class`, `per_sessions`, and
-  `per_month`. Every other pricing type stores `false`.
-  No check constraint enforces this.
+  The API and website enrichment store `true` for `per_class`,
+  `per_sessions`, and `per_month`. Every other pricing type
+  stores `false`. No check constraint enforces this.
 - `version` (integer, default 1)
 
 Constraints:

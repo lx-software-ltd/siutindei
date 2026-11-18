@@ -1,6 +1,6 @@
 # Plan: free trial tick on per-class and monthly prices
 
-**Status**: Approved
+**Status**: Approved, with a follow-up for the review notes
 **Zone**: yellow, plus an approved seed edit under `backend/db/seed/`
 
 ## Goal
@@ -20,7 +20,7 @@ An admin can tick "Free trial class offered" on a `per_class`, `per_sessions`, o
 - `tests/test_admin_imports.py` covers a per-class import and a second import of the same row.
 - `backend/src/app/db/models/enums.py` holds the allowlist.
 - `backend/src/app/api/admin_resource_pricing.py` stores the tick for the allowlist. `sessions_count` stays tied to `per_sessions`.
-- `backend/src/app/services/enrichment/apply_rows.py` uses the same allowlist.
+- `backend/src/app/services/enrichment/row_blockers.py` `pricing_fields` uses the same allowlist. Apply passes that value through.
 - `apps/admin_web/src/components/shared/pricing/pricing-types.ts` and `pricing-panel.tsx` show and send the tick for the allowlist.
 - `apps/admin_web/e2e/pricing.spec.ts` ticks the box on a monthly price and checks the request.
 - `docs/api/admin.yaml` states the rule. `docs/architecture/database-schema.md` notes that the database does not enforce it.
@@ -49,3 +49,14 @@ Revert the change. Rows ticked in the meantime keep `true` until the next save o
 - No backfill of prices imported before this change.
 - The existing per-class seed row stores the tick. No new seed row.
 - The staging search fixture stays as it is.
+
+## Follow-up
+
+The public site already reads the stored tick, so it stays unchanged.
+
+- A skipped import (`allow_updates` false) leaves the baseline where it was. A later import that allows updates can still apply that file, including a free-trial tick the first pass skipped. An unchanged row still refreshes its baseline.
+- An import of a type outside the allowlist compares the tick as `false`, so a second import of the same hourly row is `unchanged`.
+- `docs/api/admin.yaml` `FreeTrialPricingType` is the allowlist. Python tests that it matches `FREE_TRIAL_PRICING_TYPES`. The admin form's set must satisfy that generated union.
+- Website enrichment proposes `free_trial_class_offered: true` only when the quote offers a trial and the type is on the allowlist. A reviewer can tick or clear it. A proposal that omits the field leaves a stored tick as it is.
+- Re-running `backend/db/seed/seed_data.sql` sets the sample per-class row to `true`. No other price is updated.
+- The enrichment test asserts stored rows, not the allowlist constant against itself.

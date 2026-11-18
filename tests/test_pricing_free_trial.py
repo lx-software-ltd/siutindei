@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import re
+from decimal import Decimal
+from pathlib import Path
+
 from app.api.admin_resource_pricing import _create_pricing, _update_pricing
 from app.db.models import ActivityPricing, PricingType
 from app.db.models.enums import FREE_TRIAL_PRICING_TYPES
 from app.db.repositories import ActivityPricingRepository
 from app.services.enrichment.apply_rows import _apply_pricing
 from sqlalchemy import select
+
+_OPENAPI = Path(__file__).resolve().parents[1] / "docs" / "api" / "admin.yaml"
 
 
 def _body(
@@ -131,10 +137,58 @@ def test_enrichment_apply_uses_the_same_allowlist(
     assert stored[PricingType.PER_CLASS] is True
     assert stored[PricingType.PER_MONTH] is True
     assert stored[PricingType.PER_HOUR] is False
-    assert FREE_TRIAL_PRICING_TYPES == frozenset(
-        {
-            PricingType.PER_CLASS,
-            PricingType.PER_SESSIONS,
-            PricingType.PER_MONTH,
-        }
+
+
+def test_a_reviewer_can_set_the_tick_and_an_omission_keeps_it(
+    db_session, sample_activity, sample_location
+) -> None:
+    org = sample_activity.organization
+    override = {
+        "activity_id": str(sample_activity.id),
+        "location_id": str(sample_location.id),
+    }
+    proposed = {
+        "activity_name": sample_activity.name,
+        "pricing_type": "per_class",
+        "amount": "90",
+        "currency": "HKD",
+        "free_trial_class_offered": True,
+    }
+    _apply_pricing(db_session, org, proposed, override)
+    cleared = {
+        key: value
+        for key, value in proposed.items()
+        if key != "free_trial_class_offered"
+    }
+    _apply_pricing(db_session, org, {**cleared, "amount": "100"}, override)
+    row = db_session.scalars(select(ActivityPricing)).one()
+    assert row.amount == Decimal(100)
+    assert row.free_trial_class_offered is True
+
+    _apply_pricing(
+        db_session,
+        org,
+        cleared,
+        {**override, "free_trial_class_offered": False},
     )
+    assert row.free_trial_class_offered is False
+
+    _apply_pricing(
+        db_session,
+        org,
+        cleared,
+        {**override, "free_trial_class_offered": True},
+    )
+    db_session.flush()
+    assert row.free_trial_class_offered is True
+
+
+def test_openapi_allowlist_matches_the_constant() -> None:
+    text = _OPENAPI.read_text()
+    match = re.search(
+        r"FreeTrialPricingType:\n(?:.*\n)*?      enum: \[([^\]]+)\]",
+        text,
+    )
+    assert match is not None
+    names = {item.strip() for item in match.group(1).split(",")}
+    assert names == {item.value for item in FREE_TRIAL_PRICING_TYPES}

@@ -4485,6 +4485,11 @@ components:
         sessions_count:
           type: integer
           minimum: 1
+        free_trial_class_offered:
+          type: boolean
+          description: >
+            Reviewer's free-trial choice. Stored for FreeTrialPricingType.
+            Any other pricing type stores false.
 
     EnrichmentApplyRequest:
       type: object
@@ -6686,6 +6691,11 @@ components:
           nullable: true
 
     # Pricing schemas
+    FreeTrialPricingType:
+      type: string
+      description: A pricing type that stores a free trial class.
+      enum: [per_class, per_sessions, per_month]
+
     PricingCreate:
       type: object
       required:

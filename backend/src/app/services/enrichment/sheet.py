@@ -30,6 +30,7 @@ _ROW_FIELDS = {
         "amount_max",
         "currency",
         "sessions_count",
+        "free_trial_class_offered",
     ),
     "schedules": ("activity_name", "location_address"),
 }

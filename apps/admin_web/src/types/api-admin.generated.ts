@@ -7670,6 +7670,8 @@ export interface components {
             amount_max?: string;
             currency?: string;
             sessions_count?: number;
+            /** @description Reviewer's free-trial choice. Stored for FreeTrialPricingType. Any other pricing type stores false. */
+            free_trial_class_offered?: boolean;
         };
         EnrichmentApplyRequest: {
             ids: string[];
@@ -8898,6 +8900,11 @@ export interface components {
             items: components["schemas"]["Activity"][];
             next_cursor?: string | null;
         };
+        /**
+         * @description A pricing type that stores a free trial class.
+         * @enum {string}
+         */
+        FreeTrialPricingType: "per_class" | "per_sessions" | "per_month";
         PricingCreate: {
             /**
              * Format: uuid

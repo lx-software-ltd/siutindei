@@ -94,7 +94,7 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
         amount: Decimal,
         currency: str,
         sessions_count: int | None,
-        free_trial_class_offered: bool,
+        free_trial_class_offered: bool | None,
         amount_max: Decimal | None = None,
     ) -> ActivityPricing:
         """Keep one price for an activity, venue, and pricing type.
@@ -118,14 +118,15 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
                 amount=amount,
                 currency=currency,
                 sessions_count=sessions_count,
-                free_trial_class_offered=free_trial_class_offered,
+                free_trial_class_offered=bool(free_trial_class_offered),
                 amount_max=amount_max,
             )
         existing.amount = amount
         existing.amount_max = amount_max
         existing.currency = currency
         existing.sessions_count = sessions_count
-        existing.free_trial_class_offered = free_trial_class_offered
+        if free_trial_class_offered is not None:
+            existing.free_trial_class_offered = free_trial_class_offered
         return existing
 
     def find_by_price_range(

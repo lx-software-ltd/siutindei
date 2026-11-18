@@ -10,13 +10,14 @@ from sqlalchemy.orm import Session
 
 from app.api.admin_validators import schedule_languages
 from app.db.models import ActivityPricing, Organization
+from app.db.models.enums import FREE_TRIAL_PRICING_TYPES, PricingType
 from app.db.models.org_enrichment import OrgEnrichmentProposal
 from app.services.enrichment.apply_rows import (
     _existing_schedule,
     activity_by_name,
     location_by_address,
 )
-from app.services.enrichment.row_blockers import positive_sessions
+from app.services.enrichment.row_blockers import free_trial_flag, positive_sessions
 
 
 def prepare_proposals(
@@ -268,9 +269,23 @@ def _pricing_exists(
             and Decimal(str(row.amount)) == amount
             and _same_upper_bound(row.amount_max, proposed.get("amount_max"))
             and (wanted_sessions is None or row.sessions_count == wanted_sessions)
+            and _same_trial(row, proposed)
         ):
             return True
     return False
+
+
+def _same_trial(row: ActivityPricing, proposed: dict[str, Any]) -> bool:
+    """A proposal that omits the tick matches a row that already has one."""
+    if "free_trial_class_offered" not in proposed:
+        return True
+    kind = row.pricing_type
+    if not isinstance(kind, PricingType):
+        kind = PricingType(str(kind))
+    wanted = free_trial_flag(proposed.get("free_trial_class_offered"))
+    if kind not in FREE_TRIAL_PRICING_TYPES:
+        wanted = False
+    return bool(row.free_trial_class_offered) == wanted
 
 
 def _same_upper_bound(stored: Decimal | None, proposed: object) -> bool:

@@ -108,6 +108,64 @@ def test_sheet_keeps_sessions_and_a_monthly_price() -> None:
     assert "sessions_count" not in rows[4]
 
 
+def test_sheet_keeps_a_trial_the_quote_offers() -> None:
+    page = "https://club.test/trial"
+    pages = [
+        {
+            "url": page,
+            "final_url": page,
+            "text": (
+                "Painting Workshops. First class is a free trial. "
+                "Fee HK$180. Hourly studio HK$90."
+            ),
+        }
+    ]
+    evidence = [{"url": page, "quote": "Fee HK$180."}]
+    trial = {
+        "value": True,
+        "evidence": [{"url": page, "quote": "First class is a free trial."}],
+    }
+    sheet = {
+        "pricing": [
+            {
+                "activity_name": "Painting Workshops",
+                "pricing_type": "per_class",
+                "amount": "180",
+                "currency": "HKD",
+                "free_trial_class_offered": trial,
+                "confidence": 0.8,
+                "evidence": evidence,
+            },
+            {
+                "activity_name": "Painting Workshops",
+                "pricing_type": "per_hour",
+                "amount": "90",
+                "currency": "HKD",
+                "free_trial_class_offered": trial,
+                "confidence": 0.8,
+                "evidence": [{"url": page, "quote": "Hourly studio HK$90."}],
+            },
+            {
+                "activity_name": "Painting Workshops",
+                "pricing_type": "per_month",
+                "amount": "180",
+                "currency": "HKD",
+                "free_trial_class_offered": True,
+                "confidence": 0.8,
+                "evidence": evidence,
+            },
+        ]
+    }
+    rows = [
+        item["proposed"]
+        for item in validate_model_sheet(sheet, pages, {})
+        if item["kind"] == "create_pricing"
+    ]
+    assert rows[0]["free_trial_class_offered"] is True
+    assert "free_trial_class_offered" not in rows[1]
+    assert "free_trial_class_offered" not in rows[2]
+
+
 def test_a_range_keeps_only_a_number_the_page_states() -> None:
     page = "https://club.test/fees"
     pages = [
