@@ -284,6 +284,11 @@ def accept_all(
     if import_job_id is not None:
         stmt = stmt.where(ImportChangeProposal.import_job_id == import_job_id)
     rows = list(session.scalars(stmt).all())
+    # A tighter range fails if the new ceiling is written while the old
+    # lower bound is still in place. Write every other field first.
+    rows.sort(
+        key=lambda row: row.entity_type == "pricing" and row.field == "amount_max"
+    )
     applied = 0
     for row in rows:
         entity = _load_entity(session, row.entity_type, row.entity_id)

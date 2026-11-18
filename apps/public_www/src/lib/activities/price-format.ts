@@ -16,24 +16,31 @@ export function formatMoney(
   locale: Locale,
   amount: number,
   currency: string,
+  digits = 0,
 ): string {
   return new Intl.NumberFormat(locale === 'zh-HK' ? 'zh-HK' : 'en-HK', {
     style: 'currency',
     currency: currency.toUpperCase(),
-    maximumFractionDigits: 0,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(amount);
+}
+
+function formatPlain(locale: Locale, amount: number, digits: number): string {
+  return new Intl.NumberFormat(locale === 'zh-HK' ? 'zh-HK' : 'en-HK', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
   }).format(amount);
 }
 
 function formatAmountSpan(locale: Locale, pricing: SearchPricing): string {
-  const low = formatMoney(locale, pricing.amount, pricing.currency);
   const high = pricing.amountMax;
   if (high == null || high <= pricing.amount) {
-    return low;
+    return formatMoney(locale, pricing.amount, pricing.currency);
   }
-  const highText = new Intl.NumberFormat(locale === 'zh-HK' ? 'zh-HK' : 'en-HK', {
-    maximumFractionDigits: 0,
-  }).format(high);
-  return `${low}–${highText}`;
+  const digits = formatPlain(locale, pricing.amount, 0) === formatPlain(locale, high, 0) ? 2 : 0;
+  const lowText = formatMoney(locale, pricing.amount, pricing.currency, digits);
+  return `${lowText}–${formatPlain(locale, high, digits)}`;
 }
 
 /**

@@ -20,6 +20,7 @@ from app.db.models import (
     ActivitySchedule,
     ActivityScheduleEntry,
     GeographicArea,
+    ImportChangeProposal,
     Location,
     Organization,
     PricingType,
@@ -27,10 +28,13 @@ from app.db.models import (
 )
 from app.db.queries import ActivitySearchFilters
 from app.db.repositories import ActivityPricingRepository
+from app.db.repositories.import_change_proposal import accept_all
 from app.db.search_conditions import amounts_overlap
 from app.exceptions import ValidationError
 from app.services.catalog_version_shape import pricing_shape
+from app.services.enrichment.apply_rows import _apply_pricing
 from app.services.enrichment.row_blockers import pricing_fields, row_blockers
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import Range
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -125,7 +129,11 @@ def test_update_sets_and_clears_the_upper_bound(
     db_session.flush()
     _update_pricing(repo, pricing, {"amount_max": "4200"})
     assert pricing.amount_max == Decimal(4200)
-    _update_pricing(repo, pricing, {"amount_max": None})
+    _update_pricing(repo, pricing, {"amount": "5000"})
+    assert pricing.amount == Decimal(5000)
+    assert pricing.amount_max is None
+    _update_pricing(repo, pricing, {"amount_max": "6000"})
+    repo.update_pricing(pricing, clear_amount_max=True)
     assert pricing.amount_max is None
     with pytest.raises(ValidationError):
         _update_pricing(repo, pricing, {"amount": "5000", "amount_max": "4200"})
@@ -302,3 +310,107 @@ def test_search_matches_an_overlapping_range_and_sorts_by_the_lower_bound(
     by_id = {row["activity"]["id"]: row for row in card["items"]}
     assert by_id[ranged_search["ranged_id"]]["pricing"]["amount_max"] == Decimal(400)
     assert "amount_max" not in by_id[ranged_search["cheap_id"]]["pricing"]
+
+
+def test_repository_matches_an_overlapping_range(
+    db_session, sample_activity, sample_location
+) -> None:
+    repo = ActivityPricingRepository(db_session)
+    single = ActivityPricing(
+        activity_id=sample_activity.id,
+        location_id=sample_location.id,
+        pricing_type=PricingType.PER_CLASS,
+        amount=Decimal(200),
+    )
+    ranged = ActivityPricing(
+        activity_id=sample_activity.id,
+        location_id=sample_location.id,
+        pricing_type=PricingType.PER_HOUR,
+        amount=Decimal(200),
+        amount_max=Decimal(400),
+    )
+    db_session.add_all([single, ranged])
+    db_session.flush()
+
+    def ids(**bounds: Decimal) -> set:
+        return {row.id for row in repo.find_by_price_range(**bounds)}
+
+    assert ids(min_amount=Decimal(350)) == {ranged.id}
+    assert ids(max_amount=Decimal(150)) == set()
+    assert ids(max_amount=Decimal(250)) == {single.id, ranged.id}
+    assert ids(min_amount=Decimal(250), max_amount=Decimal(300)) == {ranged.id}
+
+
+def test_accepting_a_tighter_range_writes_the_lower_bound_first(
+    db_session, sample_activity, sample_location
+) -> None:
+    pricing = ActivityPricing(
+        activity_id=sample_activity.id,
+        location_id=sample_location.id,
+        pricing_type=PricingType.PER_CLASS,
+        amount=Decimal(200),
+        amount_max=Decimal(300),
+    )
+    db_session.add(pricing)
+    db_session.flush()
+    db_session.add_all(
+        [
+            ImportChangeProposal(
+                entity_type="pricing",
+                entity_id=pricing.id,
+                org_id=sample_activity.org_id,
+                field="amount_max",
+                proposed_value="150",
+            ),
+            ImportChangeProposal(
+                entity_type="pricing",
+                entity_id=pricing.id,
+                org_id=sample_activity.org_id,
+                field="amount",
+                proposed_value="100",
+            ),
+        ]
+    )
+    db_session.flush()
+    accept_all(db_session, "admin", org_id=sample_activity.org_id)
+    db_session.refresh(pricing)
+    assert pricing.amount == Decimal(100)
+    assert pricing.amount_max == Decimal(150)
+
+
+def test_applying_a_range_updates_the_existing_price(
+    db_session, sample_organization, sample_activity, sample_location
+) -> None:
+    db_session.add(
+        ActivityPricing(
+            activity_id=sample_activity.id,
+            location_id=sample_location.id,
+            pricing_type=PricingType.PER_CLASS,
+            amount=Decimal(200),
+        )
+    )
+    db_session.flush()
+    _apply_pricing(
+        db_session,
+        sample_organization,
+        {
+            "activity_name": sample_activity.name,
+            "location_address": sample_location.address,
+            "pricing_type": "per_class",
+            "amount": "200",
+            "amount_max": "300",
+            "currency": "HKD",
+        },
+        {},
+    )
+    db_session.flush()
+    rows = list(
+        db_session.scalars(
+            select(ActivityPricing).where(
+                ActivityPricing.activity_id == sample_activity.id
+            )
+        ).all()
+    )
+    assert len(rows) == 1
+    assert rows[0].amount == Decimal(200)
+    assert rows[0].amount_max == Decimal(300)

@@ -91,6 +91,14 @@ def _update_pricing(
             entity.amount_max = _amount_max_value(
                 body.get("amount_max"), entity.amount, pricing_type
             )
+        elif (
+            "amount" in body
+            and entity.amount_max is not None
+            and entity.amount_max <= entity.amount
+        ):
+            # The new lower bound no longer fits the stored ceiling, and
+            # this write did not send a replacement. Keep one price.
+            entity.amount_max = None
         elif entity.amount_max is not None and entity.amount_max <= entity.amount:
             raise ValidationError(
                 "amount_max must be greater than amount",

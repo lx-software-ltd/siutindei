@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import ActivityPricing, PricingType
@@ -91,11 +91,15 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
         pricing_type: PricingType | None = None,
         limit: int = 50,
     ) -> Sequence[ActivityPricing]:
-        """Find pricing within a price range.
+        """Find pricing that overlaps a price window.
+
+        ``amount`` is the price or the lower bound. The upper bound is
+        ``amount_max`` when set. A single price matches the same window
+        it matched before ranges existed.
 
         Args:
-            min_amount: Minimum price (inclusive).
-            max_amount: Maximum price (inclusive).
+            min_amount: Lowest price the window includes.
+            max_amount: Highest price the window includes.
             pricing_type: Filter by pricing type.
             limit: Maximum results to return.
 
@@ -104,9 +108,10 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
         """
         query = select(ActivityPricing)
         conditions = []
+        upper = func.coalesce(ActivityPricing.amount_max, ActivityPricing.amount)
 
         if min_amount is not None:
-            conditions.append(ActivityPricing.amount >= min_amount)
+            conditions.append(upper >= min_amount)
         if max_amount is not None:
             conditions.append(ActivityPricing.amount <= max_amount)
         if pricing_type is not None:
@@ -164,6 +169,7 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
         currency: str | None = None,
         sessions_count: int | None = None,
         free_trial_class_offered: bool | None = None,
+        clear_amount_max: bool = False,
     ) -> ActivityPricing:
         """Update pricing.
 
@@ -175,6 +181,7 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
             currency: New currency (if provided).
             sessions_count: New sessions count (if provided).
             free_trial_class_offered: New free trial flag (if provided).
+            clear_amount_max: Drop the upper bound. A single price remains.
 
         Returns:
             The updated pricing.
@@ -183,7 +190,9 @@ class ActivityPricingRepository(BaseRepository[ActivityPricing]):
             pricing.pricing_type = pricing_type
         if amount is not None:
             pricing.amount = amount
-        if amount_max is not None:
+        if clear_amount_max:
+            pricing.amount_max = None
+        elif amount_max is not None:
             pricing.amount_max = amount_max
         if currency is not None:
             pricing.currency = currency

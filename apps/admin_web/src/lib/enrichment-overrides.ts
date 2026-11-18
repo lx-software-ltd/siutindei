@@ -112,6 +112,10 @@ export function visibleBlockers(
     }
     notes.push(item);
   }
+  const rangeNote = priceRangeBlocker(row, override);
+  if (rangeNote && !notes.some((item) => item.field === 'amount_max')) {
+    notes.push(rangeNote);
+  }
   return notes;
 }
 
@@ -296,6 +300,33 @@ function fold(value: unknown): string {
     .filter(Boolean)
     .join(' ')
     .toLocaleLowerCase();
+}
+
+const AMOUNT_MAX_INVALID = 'Upper bound must be a number above the amount';
+
+function priceRangeBlocker(
+  row: EnrichmentProposal,
+  override: EnrichmentOverride
+): EnrichmentBlocker | null {
+  if (row.kind !== 'create_pricing') {
+    return null;
+  }
+  const proposed = row.proposed_value;
+  const type = override.pricing_type || String(proposed.pricing_type ?? '');
+  if (type === 'free') {
+    return null;
+  }
+  const rawMax =
+    override.amount_max !== undefined ? override.amount_max : proposed.amount_max;
+  if (rawMax == null || String(rawMax).trim() === '') {
+    return null;
+  }
+  const upper = Number(rawMax);
+  const lower = Number(override.amount ?? proposed.amount);
+  if (Number.isFinite(upper) && Number.isFinite(lower) && upper > lower) {
+    return null;
+  }
+  return { field: 'amount_max', message: AMOUNT_MAX_INVALID };
 }
 
 function upperBoundResolved(

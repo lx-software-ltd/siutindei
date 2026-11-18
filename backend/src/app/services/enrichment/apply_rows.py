@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 
 from psycopg.types.range import Range
 from sqlalchemy import select
+from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.orm import Session
 
 from app.api.admin_imports_lookups import lookup_district_area_id
@@ -33,6 +34,7 @@ from app.db.models import (
 from app.db.models.category_suggestion import PENDING_CATEGORY_ID
 from app.db.models.enums import ScheduleType
 from app.db.models.org_enrichment import OrgEnrichmentProposal
+from app.db.repositories import ActivityPricingRepository
 from app.exceptions import ValidationError
 from app.services.area_assignment import get_leaf
 from app.services.category_suggestions.capture import (
@@ -287,6 +289,27 @@ def _apply_pricing(
     if location is None:
         raise ValidationError(PRICE_VENUE, field="location_id")
     fields = pricing_fields(proposed, override)
+    repo = ActivityPricingRepository(session)
+    try:
+        existing = repo.find_by_activity_location_pricing_type(
+            activity.id,
+            location.id,
+            fields["pricing_type"],
+        )
+    except MultipleResultsFound as exc:
+        raise ValidationError(
+            "Multiple pricing entries found",
+            field="pricing_type",
+        ) from exc
+    if existing is not None:
+        existing.amount = fields["amount"]
+        existing.amount_max = fields["amount_max"]
+        existing.currency = fields["currency"]
+        existing.sessions_count = fields["sessions_count"]
+        existing.free_trial_class_offered = bool(
+            proposed.get("free_trial_class_offered")
+        )
+        return
     session.add(
         ActivityPricing(
             activity_id=activity.id,

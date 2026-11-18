@@ -110,6 +110,12 @@ describe('prices', () => {
     expect(classPriceEquivalent(ranged)).toBe(200);
   });
 
+  it('keeps cents when whole dollars would look the same', () => {
+    const close = buildPricing({ amount: 199.6, amountMax: 200.4 });
+    expect(formatPricing('en', close)).toBe('HK$199.60–200.40 / class');
+    expect(formatPricing('zh-HK', close)).toBe('HK$199.60–200.40 / 堂');
+  });
+
   it('keeps the plain suffixes', () => {
     expect(formatPricing('en', buildPricing())).toBe('HK$180 / class');
     expect(formatPricing('en', buildPricing({ pricingType: 'per_sessions' }))).toBe(

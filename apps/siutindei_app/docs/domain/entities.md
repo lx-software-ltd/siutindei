@@ -137,11 +137,15 @@ class PricingEntity {
   /// Returns formatted price string
   String get formattedPrice {
     if (isFree) return 'Free';
-    final low = amount.toStringAsFixed(0);
     final high = amountMax;
+    final lowWhole = amount.toStringAsFixed(0);
+    final highWhole = high?.toStringAsFixed(0);
     final priceStr = high != null && high > amount
-        ? '$low–${high.toStringAsFixed(0)} $currency'
-        : '$low $currency';
+        ? (lowWhole == highWhole
+            ? '${amount.toStringAsFixed(2)}'
+                '–${high.toStringAsFixed(2)} $currency'
+            : '$lowWhole–$highWhole $currency')
+        : '$lowWhole $currency';
     return switch (type) {
       PricingType.perClass => '$priceStr/class',
       PricingType.perSessions =>

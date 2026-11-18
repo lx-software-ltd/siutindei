@@ -160,12 +160,17 @@ class PricingEntity {
   }
 
   String get _priceText {
-    final low = amount.toStringAsFixed(0);
     final high = amountMax;
-    if (high != null && high > amount) {
-      return '$low–${high.toStringAsFixed(0)} $currency';
+    if (high == null || high <= amount) {
+      return '${amount.toStringAsFixed(0)} $currency';
     }
-    return '$low $currency';
+    final lowWhole = amount.toStringAsFixed(0);
+    final highWhole = high.toStringAsFixed(0);
+    if (lowWhole == highWhole) {
+      return '${amount.toStringAsFixed(2)}'
+          '–${high.toStringAsFixed(2)} $currency';
+    }
+    return '$lowWhole–$highWhole $currency';
   }
 
   @override

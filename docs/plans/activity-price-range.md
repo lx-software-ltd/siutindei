@@ -53,12 +53,15 @@ the lower bound.
 ## Invariants this change preserves
 
 - A row with no `amount_max` matches, sorts, imports, and displays as
-  it does today. `amount` remains the lower bound. Card search omits
-  a null `amount_max`, so a single price stays the same size.
+  it does today. `amount` remains the lower bound. Search omits a
+  null `amount_max`, so a single price and its catalogue snapshot
+  stay the same size.
 - `per_sessions` still requires `sessions_count`. `free` still stores
   amount 0 and has no upper bound.
 - Import identity stays activity, venue, and pricing type. A file that
-  omits `amount_max` is not a change against its baseline.
+  omits `amount_max` is not a change against its baseline. If the new
+  amount is no longer below the stored ceiling, that ceiling is
+  dropped and the row is one price.
 - A pending enrichment proposal is not rewritten. Corrections stay in
   overrides.
 - The class-price outlier check still reads the lower bound.
