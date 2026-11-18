@@ -45,6 +45,7 @@ import {
   itemToForm,
   normalizeCurrencyCode,
   pricingOptions,
+  pricingTypeAllowsFreeTrial,
   type PricingFormState,
 } from './pricing/pricing-types';
 
@@ -140,7 +141,6 @@ export function PricingPanel({ mode }: PricingPanelProps) {
 
   const isFreeType = formState.pricing_type === 'free';
   const showSessionsField = formState.pricing_type === 'per_sessions';
-  const showFreeTrialToggle = showSessionsField;
 
   const validate = () => {
     if (!formState.activity_id || !formState.location_id) {
@@ -247,7 +247,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
       sessions_count: isPerTerm
         ? parseOptionalNumber(resolved.sessions_count)
         : null,
-      free_trial_class_offered: isPerTerm
+      free_trial_class_offered: pricingTypeAllowsFreeTrial(resolved.pricing_type)
         ? resolved.free_trial_class_offered
         : false,
     };
@@ -294,6 +294,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
     : formState;
   const editorIsFree = editorForm.pricing_type === 'free';
   const editorShowSessions = editorForm.pricing_type === 'per_sessions';
+  const editorShowFreeTrial = pricingTypeAllowsFreeTrial(editorForm.pricing_type);
 
   const detail = (
     <CatalogInlineEditor
@@ -342,10 +343,9 @@ export function PricingPanel({ mode }: PricingPanelProps) {
                 pricing_type: value,
                 sessions_count:
                   value === 'per_sessions' ? prev.sessions_count : '',
-                free_trial_class_offered:
-                  value === 'per_sessions'
-                    ? prev.free_trial_class_offered
-                    : false,
+                free_trial_class_offered: pricingTypeAllowsFreeTrial(value)
+                  ? prev.free_trial_class_offered
+                  : false,
                 amount: value === 'free' ? '' : prev.amount,
                 amount_max: value === 'free' ? '' : prev.amount_max,
                 currency:
@@ -386,7 +386,7 @@ export function PricingPanel({ mode }: PricingPanelProps) {
             />
           </VersionField>
         ) : null}
-        {editorShowSessions ? (
+        {editorShowFreeTrial ? (
           <VersionField span={2} versionKey='free_trial_class_offered'>
             <label className='flex items-center gap-2 text-sm'>
               <input

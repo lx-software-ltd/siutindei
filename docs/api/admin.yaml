@@ -4485,6 +4485,11 @@ components:
         sessions_count:
           type: integer
           minimum: 1
+        free_trial_class_offered:
+          type: boolean
+          description: >
+            Reviewer's free-trial choice. Stored for FreeTrialPricingType.
+            Any other pricing type stores false.
 
     EnrichmentApplyRequest:
       type: object
@@ -4949,6 +4954,9 @@ components:
           minimum: 1
         free_trial_class_offered:
           type: boolean
+          description: >
+            Whether a free trial class is offered. Stored for per_class,
+            per_sessions, and per_month. Any other pricing type stores false.
 
     AdminImportSchedule:
       type: object
@@ -6683,6 +6691,11 @@ components:
           nullable: true
 
     # Pricing schemas
+    FreeTrialPricingType:
+      type: string
+      description: A pricing type that stores a free trial class.
+      enum: [per_class, per_sessions, per_month]
+
     PricingCreate:
       type: object
       required:
@@ -6735,7 +6748,9 @@ components:
           description: Classes within term (required for per_sessions, must be > 0)
         free_trial_class_offered:
           type: boolean
-          description: Whether a free trial class is offered
+          description: >
+            Whether a free trial class is offered. Stored for per_class,
+            per_sessions, and per_month. Any other pricing type stores false.
           default: false
 
     PricingUpdate:
@@ -6767,7 +6782,9 @@ components:
           description: Classes within term (must be > 0)
         free_trial_class_offered:
           type: boolean
-          description: Whether a free trial class is offered
+          description: >
+            Whether a free trial class is offered. Stored for per_class,
+            per_sessions, and per_month. Any other pricing type stores false.
 
     Pricing:
       type: object

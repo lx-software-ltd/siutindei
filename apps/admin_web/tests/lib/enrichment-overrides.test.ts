@@ -55,6 +55,24 @@ describe('enrichment pricing overrides', () => {
     ).toEqual({
       'price-1': { sessions_count: 8, currency: 'HKD' },
     });
+    expect(
+      chosenEnrichmentOverrides(
+        ['price-1'],
+        { 'price-1': { free_trial_class_offered: true, sessions_count: '8' } },
+        [price]
+      )
+    ).toEqual({
+      'price-1': { sessions_count: 8, free_trial_class_offered: true },
+    });
+    expect(
+      chosenEnrichmentOverrides(
+        ['price-1'],
+        { 'price-1': { pricing_type: 'per_hour', free_trial_class_offered: true } },
+        [price]
+      )
+    ).toEqual({
+      'price-1': { pricing_type: 'per_hour' },
+    });
   });
 
   it('keeps a partial class count on the row', () => {

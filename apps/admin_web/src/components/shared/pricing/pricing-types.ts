@@ -1,4 +1,7 @@
 import type { ActivityPricing } from '../../../types/admin';
+import { pricingTypeAllowsFreeTrial } from '../../../lib/free-trial-pricing';
+
+export { pricingTypeAllowsFreeTrial };
 
 export interface PricingFormState {
   activity_id: string;

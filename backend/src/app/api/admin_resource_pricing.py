@@ -8,8 +8,23 @@ from typing import Any
 from app.api.admin_request import _parse_uuid
 from app.api.admin_validators import _validate_currency
 from app.db.models import ActivityPricing, PricingType
+from app.db.models.enums import FREE_TRIAL_PRICING_TYPES
 from app.db.repositories import ActivityPricingRepository
 from app.exceptions import ValidationError
+
+
+def normalize_import_free_trial(
+    body: dict[str, Any], pricing_type: PricingType
+) -> None:
+    """Compare a disallowed tick as false before the merge decides.
+
+    The stored row is already false. Leaving the file value as true
+    makes the next import look like an update that changes nothing.
+    """
+    if pricing_type in FREE_TRIAL_PRICING_TYPES:
+        return
+    if body.get("free_trial_class_offered") is True:
+        body["free_trial_class_offered"] = False
 
 
 def _create_pricing(
@@ -51,6 +66,7 @@ def _create_pricing(
         _validate_sessions_count(sessions_count)
     else:
         sessions_count = None
+    if pricing_enum not in FREE_TRIAL_PRICING_TYPES:
         free_trial_class_offered = False
 
     return ActivityPricing(
@@ -118,6 +134,7 @@ def _update_pricing(
         entity.free_trial_class_offered = free_trial_class_offered
     if pricing_type != PricingType.PER_SESSIONS:
         entity.sessions_count = None
+    if pricing_type not in FREE_TRIAL_PRICING_TYPES:
         entity.free_trial_class_offered = False
     return entity
 

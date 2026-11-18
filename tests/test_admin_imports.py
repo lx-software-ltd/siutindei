@@ -30,6 +30,7 @@ from app.api.admin_imports_upsert import (
     upsert_activity,
     upsert_location,
     upsert_organization,
+    upsert_pricing,
 )
 from app.api.admin_imports_utils import (
     from_utc_weekly,
@@ -1543,3 +1544,115 @@ def test_importer_skips_existing_pricing_and_schedule(
     db_session.refresh(sample_schedule)
     assert sample_pricing.amount == original_amount
     assert len(sample_schedule.entries) == original_entry_count
+
+
+def test_per_class_free_trial_imports_and_stays_on_reimport(
+    db_session,
+    sample_activity,
+    sample_location,
+) -> None:
+    raw_pricing = {
+        "pricing_type": "per_class",
+        "amount": 150,
+        "currency": "HKD",
+        "free_trial_class_offered": True,
+    }
+    pricing, status = upsert_pricing(
+        db_session,
+        sample_activity,
+        sample_location,
+        raw_pricing,
+        allow_updates=True,
+    )
+    assert status == "created"
+    assert pricing.free_trial_class_offered is True
+
+    again, status_again = upsert_pricing(
+        db_session,
+        sample_activity,
+        sample_location,
+        raw_pricing,
+        allow_updates=True,
+    )
+    assert status_again == "unchanged"
+    assert again.id == pricing.id
+    assert again.free_trial_class_offered is True
+
+    hourly, hourly_status = upsert_pricing(
+        db_session,
+        sample_activity,
+        sample_location,
+        {
+            "pricing_type": "per_hour",
+            "amount": 80,
+            "currency": "HKD",
+            "free_trial_class_offered": True,
+        },
+        allow_updates=True,
+    )
+    assert hourly_status == "created"
+    assert hourly.free_trial_class_offered is False
+
+    again_hourly, again_hourly_status = upsert_pricing(
+        db_session,
+        sample_activity,
+        sample_location,
+        {
+            "pricing_type": "per_hour",
+            "amount": 80,
+            "currency": "HKD",
+            "free_trial_class_offered": True,
+        },
+        allow_updates=True,
+    )
+    assert again_hourly_status == "unchanged"
+    assert again_hourly.free_trial_class_offered is False
+
+
+def test_skipped_free_trial_import_can_apply_later(
+    db_session, sample_activity, sample_location
+) -> None:
+    from app.db.repositories.import_baseline import load_baseline
+
+    unticked = {
+        "pricing_type": "per_class",
+        "amount": 150,
+        "currency": "HKD",
+        "free_trial_class_offered": False,
+    }
+    pricing, status = upsert_pricing(
+        db_session,
+        sample_activity,
+        sample_location,
+        unticked,
+        allow_updates=True,
+    )
+    assert status == "created"
+    assert pricing.free_trial_class_offered is False
+
+    ticked = {**unticked, "free_trial_class_offered": True}
+    skipped, skipped_status = upsert_pricing(
+        db_session,
+        sample_activity,
+        sample_location,
+        ticked,
+        allow_updates=False,
+    )
+    db_session.refresh(skipped)
+    assert skipped_status == "skipped"
+    assert skipped.free_trial_class_offered is False
+    assert (
+        load_baseline(db_session, "pricing", skipped.id)["free_trial_class_offered"]
+        is False
+    )
+
+    applied, applied_status = upsert_pricing(
+        db_session,
+        sample_activity,
+        sample_location,
+        ticked,
+        allow_updates=True,
+    )
+    db_session.refresh(applied)
+    assert applied_status == "updated"
+    assert applied.free_trial_class_offered is True

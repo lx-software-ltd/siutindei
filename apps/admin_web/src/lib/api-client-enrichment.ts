@@ -129,6 +129,7 @@ export interface EnrichmentOverride {
   currency?: string;
   /** A whole count sent to apply, or the text still being typed. */
   sessions_count?: number | string;
+  free_trial_class_offered?: boolean;
 }
 
 export interface EnrichmentSettings {

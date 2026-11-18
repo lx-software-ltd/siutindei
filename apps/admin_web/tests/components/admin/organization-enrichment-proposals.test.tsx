@@ -420,9 +420,28 @@ describe('pricing proposal fields', () => {
         onOverride={onOverride}
       />
     );
+    expect(screen.getByRole('checkbox', { name: 'Free trial class offered' })).toBeVisible();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Free trial class offered' }));
+    expect(onOverride).toHaveBeenCalledWith(
+      'price-1',
+      expect.objectContaining({ free_trial_class_offered: true })
+    );
     expect(screen.queryByLabelText('Classes in the term')).not.toBeInTheDocument();
     expect(
       screen.queryByText('Add the number of classes for this term price')
+    ).not.toBeInTheDocument();
+    rerender(
+      <ProposalTable
+        rows={[row]}
+        venues={[{ id: 'venue-1', address: '1 Test Street' }]}
+        selected={['price-1']}
+        overrides={{ 'price-1': { pricing_type: 'per_hour' } }}
+        onToggle={() => undefined}
+        onOverride={onOverride}
+      />
+    );
+    expect(
+      screen.queryByRole('checkbox', { name: 'Free trial class offered' })
     ).not.toBeInTheDocument();
   });
 

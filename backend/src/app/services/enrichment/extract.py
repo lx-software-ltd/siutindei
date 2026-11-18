@@ -7,10 +7,14 @@ import re
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from app.db.models.enums import PricingType
+from app.db.models.enums import FREE_TRIAL_PRICING_TYPES, PricingType
 from app.services.enrichment.logos import media_proposals
 from app.services.enrichment.parse import quote_supported
-from app.services.enrichment.row_blockers import positive_sessions
+from app.services.enrichment.row_blockers import (
+    free_trial_flag,
+    positive_sessions,
+    quote_offers_trial,
+)
 from app.services.enrichment.sheet import checked_value, schedule_entries, section_rows
 
 _AMOUNT_RE = re.compile(r"\d+(?:[.,]\d+)?")
@@ -169,6 +173,14 @@ def validate_model_sheet(
             )
             if count is not None:
                 proposed["sessions_count"] = count
+        trial = checked_value(row.get("free_trial_class_offered"), pages)
+        if (
+            trial is not None
+            and pricing_type in {item.value for item in FREE_TRIAL_PRICING_TYPES}
+            and quote_offers_trial(trial.get("quote"))
+            and free_trial_flag(trial.get("value"))
+        ):
+            proposed["free_trial_class_offered"] = True
         record = _record(
             "Pricing",
             "create_pricing",

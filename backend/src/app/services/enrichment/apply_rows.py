@@ -295,7 +295,7 @@ def _apply_pricing(
         amount=fields["amount"],
         currency=fields["currency"],
         sessions_count=fields["sessions_count"],
-        free_trial_class_offered=bool(proposed.get("free_trial_class_offered")),
+        free_trial_class_offered=fields["free_trial_class_offered"],
         amount_max=fields["amount_max"],
     )
 

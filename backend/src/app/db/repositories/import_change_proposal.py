@@ -134,16 +134,17 @@ def plan_live_row(
                 _warn(warnings, warning)
             if allow_updates:
                 save_proposals(session, entity_type, entity_id, org_id, plan.changes)
-    _store_baseline(
-        session,
-        entity_type,
-        entity_id,
-        org_id,
-        incoming,
-        present,
-        _baseline_previous(stored, forced_base, version1, current),
-        source,
-    )
+    if plan.status != "skipped":
+        _store_baseline(
+            session,
+            entity_type,
+            entity_id,
+            org_id,
+            incoming,
+            present,
+            _baseline_previous(stored, forced_base, version1, current),
+            source,
+        )
     return plan
 
 

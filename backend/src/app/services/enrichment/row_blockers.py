@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from app.api.admin_validators import _validate_currency
-from app.db.models.enums import PricingType
+from app.db.models.enums import FREE_TRIAL_PRICING_TYPES, PricingType
 from app.exceptions import ValidationError
 
 PRICE_ACTIVITY = "Pick the activity this price belongs to"
@@ -21,6 +22,40 @@ TYPE_UNSUPPORTED = "Pricing type is not supported"
 CURRENCY_INVALID = "Currency must be an ISO code"
 
 PRICING_TYPES = frozenset(item.value for item in PricingType)
+_TRIAL_QUOTE = re.compile(
+    r"free trial|trial class|trial lesson|試堂|免費試",
+    re.IGNORECASE,
+)
+_TRUTHY = frozenset({"1", "true", "yes", "y"})
+
+
+def quote_offers_trial(quote: object) -> bool:
+    """True when the quoted sentence offers a trial class."""
+    return _TRIAL_QUOTE.search(str(quote or "")) is not None
+
+
+def free_trial_flag(value: object) -> bool:
+    """True for a boolean true or the words true, yes, and 1."""
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().casefold() in _TRUTHY
+
+
+def free_trial_to_store(
+    proposed: dict[str, Any], override: dict[str, Any], kind: PricingType
+) -> bool | None:
+    """Tick to write, or None when neither side mentioned it.
+
+    A type outside the allowlist stores false. An explicit false in
+    the reviewer's override wins over the proposal.
+    """
+    if kind not in FREE_TRIAL_PRICING_TYPES:
+        return False
+    if "free_trial_class_offered" in override:
+        return free_trial_flag(override["free_trial_class_offered"])
+    if "free_trial_class_offered" in proposed:
+        return free_trial_flag(proposed["free_trial_class_offered"])
+    return None
 
 
 def positive_sessions(value: object) -> int | None:
@@ -88,12 +123,14 @@ def pricing_fields(
         sessions = positive_sessions(_pick(override, proposed, "sessions_count"))
         if sessions is None:
             raise ValidationError(SESSIONS_REQUIRED, field="sessions_count")
+    offered = free_trial_to_store(proposed, override, kind)
     return {
         "pricing_type": kind,
         "amount": amount,
         "amount_max": amount_max,
         "currency": currency,
         "sessions_count": sessions,
+        "free_trial_class_offered": offered,
     }
 
 

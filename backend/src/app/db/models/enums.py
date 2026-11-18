@@ -17,6 +17,17 @@ class PricingType(enum.StrEnum):
     PER_YEAR = "per_year"
 
 
+# A free trial class is offered before a class, a term, or a monthly fee.
+# Hourly, daily, yearly, and free prices do not store the tick.
+FREE_TRIAL_PRICING_TYPES = frozenset(
+    {
+        PricingType.PER_CLASS,
+        PricingType.PER_SESSIONS,
+        PricingType.PER_MONTH,
+    }
+)
+
+
 class ScheduleType(enum.StrEnum):
     """Supported schedule types for activities."""
 
