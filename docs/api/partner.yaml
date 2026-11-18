@@ -56,6 +56,12 @@ info:
       /v1/partner/activity-categories`). A full-access `read` key can
       list and fetch categories. Creating, updating, and deleting
       require a full-access `crud` key.
+      A full-access `crud` key can also post a catalog import file at
+      `POST /v1/partner/imports`. The body is the same JSON as
+      `POST /v1/admin/imports`. `manager_id`, `dry_run`,
+      `mark_parent_verified`, and `approve` are query parameters.
+      Those flags apply only to organisations that request created.
+      The import is stored as a job with source `partner`.
       A full-access `crud` key is the partner equivalent of an admin
       for these routes. A `read` key receives `403` on website
       enrichment and enrichment settings, including GET.
@@ -493,6 +499,123 @@ paths:
           description: Read-only key or organization-scoped key
         "404":
           description: Review not found
+
+  /v1/partner/imports:
+    post:
+      summary: Import a catalog file
+      description: |
+        Full-access `crud` keys only. A full-access `crud` key is the
+        partner equivalent of an admin. Organization-scoped keys and
+        `read` keys receive `403`. This route bundles steps that key
+        can already do one organisation at a time. It does not grant
+        a new power.
+
+        The body is the same JSON object as `POST /v1/admin/imports`.
+        `parent_verified`, `parent_verified_at`, and `review_status`
+        on an organisation are unknown fields and are ignored.
+
+        Query parameters accept `true`, `false`, `1`, and `0`. Letter
+        case does not matter.
+
+        - `manager_id` fills a missing or placeholder
+          `default_manager_id`. When it is omitted,
+          `BOARD_CATALOG_MANAGER_ID` is used. A value that is not that
+          catalog manager is rejected before any write. A placeholder
+          with neither a query value nor the environment variable is
+          rejected before any write.
+        - `mark_parent_verified=true` sets the parent-verified flag and
+          its date on organisations this request created. An
+          organisation that is already verified is omitted from
+          `parent_verified`. A name match that this request did not
+          create is left unchanged.
+        - `approve=true` approves those same new organisations, and
+          only while `review_status` is `pending_review`. Release
+          blockers leave that organisation pending and return its
+          issues in `blocked`. A rejected organisation stays rejected
+          and is listed in `blocked`. This route does not accept
+          `force`. An organisation that is already approved is left
+          out of `approved`.
+        - `dry_run=true` validates and rolls back. It cannot be combined
+          with `mark_parent_verified` or `approve`.
+
+        A live import commits a running `import_jobs` row first
+        (`source` `partner`, object key `partner/imports/<sha256>.json`),
+        then commits the organisations, flags, and completed job
+        together. The same file and flags return that job
+        (`replayed: true`) and do not write again. A repeat while the
+        job is still running returns `409`. A running job older than
+        150 seconds (the 120-second admin Lambda timeout, plus a
+        short buffer) is run again. There is no
+        uploaded file. Import history shows the job and does not offer
+        a download. The same post-import data-quality run as the
+        Imports page is queued, and captured categories are enriched.
+
+        Rows the import failed or skipped are listed in `failed` and
+        `skipped` as well as in `results`. A second file that only
+        matches an existing organisation does not verify or approve
+        it. A match owned by another manager is `managed by provider`.
+
+        Public search hides an eat listing until the organisation is
+        parent-verified. `review_status=approved` is also required
+        only when `ORG_REVIEW_GATE_ENABLED` is true.
+      parameters:
+        - name: manager_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: dry_run
+          in: query
+          required: false
+          description: |
+            `true` or `false`. `1` and `0` are accepted. Letter case
+            does not matter.
+          schema:
+            type: string
+        - name: mark_parent_verified
+          in: query
+          required: false
+          description: |
+            `true` or `false`. `1` and `0` are accepted. Letter case
+            does not matter.
+          schema:
+            type: string
+        - name: approve
+          in: query
+          required: false
+          description: |
+            `true` or `false`. `1` and `0` are accepted. Letter case
+            does not matter.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Same object as an admin catalog import file.
+      responses:
+        "200":
+          description: |
+            Import summary, per-row results, and the organisation ids
+            this request newly parent-verified or approved. `blocked`
+            lists approval blockers and rejected organisations.
+            `failed` and `skipped` list import rows with those
+            statuses. `replayed` is true when the body is the stored
+            job for this same request. `id` is the import job.
+            `data_quality_run_id` is set when a run was queued.
+        "400":
+          description: |
+            Invalid file, manager id, or flag. A dry run combined with
+            parent verification or approval is rejected before any write.
+        "403":
+          description: Read-only key or organization-scoped key
+        "409":
+          description: |
+            This file and these flags already have a running import.
+            `id` is that import job.
 
   /v1/partner/organization-merges:
     post:

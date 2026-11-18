@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.db.models import ImportJob
 from app.services.org_delete import stored_deletion_skips_still_match
 
-IMPORT_JOB_SOURCES = frozenset({"ui", "board"})
+IMPORT_JOB_SOURCES = frozenset({"ui", "board", "partner"})
 
 
 def find_import_job_by_key(

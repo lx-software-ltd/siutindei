@@ -25,9 +25,9 @@ from app.api.admin_org_review import (
 )
 from app.api.admin_org_review_actions import (
     ReviewBlockedError,
-    _apply_decision,
     _apply_fields,
     _parse_fields,
+    apply_review_decision,
 )
 from app.api.admin_org_review_cursor import (
     encode_review_cursor,
@@ -327,7 +327,7 @@ def test_approve_blocks_until_forced(db_session, sample_organization) -> None:
     sample_organization.review_status = "pending_review"
     db_session.flush()
     try:
-        _apply_decision(
+        apply_review_decision(
             db_session,
             sample_organization,
             "approve",
@@ -340,7 +340,7 @@ def test_approve_blocks_until_forced(db_session, sample_organization) -> None:
         raise AssertionError("expected blockers")
     except ReviewBlockedError as exc:
         assert exc.issues
-    _apply_decision(
+    apply_review_decision(
         db_session,
         sample_organization,
         "approve",
@@ -1058,7 +1058,7 @@ def _decide(session, organization, action: str, **overrides: object) -> None:
         "reason": None,
     }
     values.update(overrides)
-    _apply_decision(session, organization, action, **values)  # type: ignore[arg-type]
+    apply_review_decision(session, organization, action, **values)  # type: ignore[arg-type]
 
 
 def test_reject_requires_a_known_reason(db_session, sample_organization) -> None:

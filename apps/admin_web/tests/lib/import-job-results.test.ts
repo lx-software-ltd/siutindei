@@ -31,6 +31,7 @@ describe('formatImportJobSource', () => {
   it('names the admin Imports page and the board catalog API', () => {
     expect(formatImportJobSource('ui')).toBe('UI import');
     expect(formatImportJobSource('board')).toBe('Board API');
+    expect(formatImportJobSource('partner')).toBe('Partner API');
   });
 
   it('uses an em dash when the job predates source', () => {

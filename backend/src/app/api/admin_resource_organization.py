@@ -152,6 +152,11 @@ def _apply_parent_verified(entity: Organization, body: dict[str, Any]) -> None:
         entity.parent_verified_at = datetime.now(UTC)
 
 
+def apply_parent_verified(entity: Organization, body: dict[str, Any]) -> None:
+    """Set the parent-verified flag the way the organisation form does."""
+    _apply_parent_verified(entity, body)
+
+
 def _ensure_unique_organization_name(
     repo: OrganizationRepository,
     name: str,
