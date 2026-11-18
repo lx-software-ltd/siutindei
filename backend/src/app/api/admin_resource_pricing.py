@@ -13,6 +13,20 @@ from app.db.repositories import ActivityPricingRepository
 from app.exceptions import ValidationError
 
 
+def normalize_import_free_trial(
+    body: dict[str, Any], pricing_type: PricingType
+) -> None:
+    """Compare a disallowed tick as false before the merge decides.
+
+    The stored row is already false. Leaving the file value as true
+    makes the next import look like an update that changes nothing.
+    """
+    if pricing_type in FREE_TRIAL_PRICING_TYPES:
+        return
+    if body.get("free_trial_class_offered") is True:
+        body["free_trial_class_offered"] = False
+
+
 def _create_pricing(
     repo: ActivityPricingRepository, body: dict[str, Any]
 ) -> ActivityPricing:

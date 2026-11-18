@@ -51,7 +51,11 @@ from app.api.admin_resource_organization import (
     _create_organization,
     _update_organization,
 )
-from app.api.admin_resource_pricing import _create_pricing, _update_pricing
+from app.api.admin_resource_pricing import (
+    _create_pricing,
+    _update_pricing,
+    normalize_import_free_trial,
+)
 from app.api.admin_validators import (
     MAX_NAME_LENGTH,
     _validate_string_length,
@@ -454,6 +458,7 @@ def upsert_pricing(
 
     body = filter_fields(raw_pricing, ALLOWED_PRICING_FIELDS)
     body["pricing_type"] = pricing_enum.value
+    normalize_import_free_trial(body, pricing_enum)
     plan = pricing_terminal(
         session,
         activity,

@@ -197,9 +197,10 @@ wins for the whole row), or `propose` (every change waits). An
 approved organization uses `approved_organizations`, which defaults
 to `propose`. A new activity under an approved organization is still
 created. `allow_updates` false still skips an existing row and writes
-no proposal. It does store the file as the new baseline, so a later
-import that allows updates treats that skipped file as what the
-source last said. Accept writes one field through the admin update
+no proposal. It also leaves the baseline where it was, so a later
+import that allows updates can still apply that file. A row the
+file does not change stays `unchanged` and its baseline is
+refreshed. Accept writes one field through the admin update
 path. Accept-all requires an organization or an import job. Listing
 the queue dismisses a proposal whose record no longer exists.
 
