@@ -241,6 +241,13 @@ def _sort_key(row: dict[str, Any]) -> tuple[int, int, str]:
     )
 
 
+def _optional_amount(value: Any) -> Decimal | None:
+    """A fixture upper bound, or None when the row is one price."""
+    if value is None or value == "":
+        return None
+    return Decimal(str(value))
+
+
 def _to_schema(
     row: dict[str, Any],
     view: str = "full",
@@ -325,6 +332,7 @@ def _to_schema(
         pricing=PricingSchema(
             pricing_type=pricing["pricing_type"],
             amount=Decimal(str(pricing["amount"])),
+            amount_max=_optional_amount(pricing.get("amount_max")),
             currency=pricing.get("currency", "HKD"),
             sessions_count=pricing.get("sessions_count"),
             free_trial_class_offered=bool(

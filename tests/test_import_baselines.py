@@ -27,7 +27,7 @@ def _baseline(session: Session, entity_id: object) -> ImportBaseline | None:
     ).first()
 
 
-def test_baseline_written_for_each_outcome(test_engine) -> None:
+def test_baseline_is_written_unless_the_row_is_skipped(test_engine) -> None:
     manager_id = "00000000-0000-0000-0000-000000000071"
     created_name = f"Baseline New {uuid4()}"
     same_name = f"Baseline Same {uuid4()}"
@@ -79,7 +79,8 @@ def test_baseline_written_for_each_outcome(test_engine) -> None:
         ).one()
         assert _baseline(session, created.id) is not None
         assert _baseline(session, same_id) is not None
-        assert _baseline(session, changed_id) is not None
+        # A skipped row does not become what the source last said.
+        assert _baseline(session, changed_id) is None
 
 
 def test_version_1_is_the_fallback_until_a_baseline_exists(test_engine) -> None:
@@ -197,6 +198,45 @@ def test_dry_run_leaves_no_baseline(test_engine) -> None:
             if (row.payload or {}).get("name") == name
         ]
         assert named == []
+
+
+def test_skipped_import_keeps_the_previous_baseline(test_engine) -> None:
+    name = f"Skip Baseline {uuid4()}"
+    manager_id = "00000000-0000-0000-0000-000000000076"
+    with Session(test_engine) as session:
+        process_import_payload(
+            session, _file(name, manager_id), [], allow_org_updates=True
+        )
+        session.commit()
+    with Session(test_engine) as session:
+        org = session.scalars(
+            select(Organization).where(Organization.name == name)
+        ).one()
+        _summary, results = process_import_payload(
+            session,
+            _file(name, manager_id, description="From the skipped file"),
+            [],
+            allow_org_updates=False,
+        )
+        session.commit()
+        assert results[0]["status"] == "skipped"
+        assert org.description == "Original"
+        stored = _baseline(session, org.id)
+        assert stored is not None
+        assert stored.payload["description"] == "Original"
+    with Session(test_engine) as session:
+        _summary, results = process_import_payload(
+            session,
+            _file(name, manager_id, description="From the skipped file"),
+            [],
+            allow_org_updates=True,
+        )
+        session.commit()
+        org = session.scalars(
+            select(Organization).where(Organization.name == name)
+        ).one()
+    assert results[0]["status"] == "updated"
+    assert org.description == "From the skipped file"
 
 
 def test_reimport_of_a_created_row_has_no_kept_later_warning(test_engine) -> None:

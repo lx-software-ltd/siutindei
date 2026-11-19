@@ -134,16 +134,17 @@ def plan_live_row(
                 _warn(warnings, warning)
             if allow_updates:
                 save_proposals(session, entity_type, entity_id, org_id, plan.changes)
-    _store_baseline(
-        session,
-        entity_type,
-        entity_id,
-        org_id,
-        incoming,
-        present,
-        _baseline_previous(stored, forced_base, version1, current),
-        source,
-    )
+    if plan.status != "skipped":
+        _store_baseline(
+            session,
+            entity_type,
+            entity_id,
+            org_id,
+            incoming,
+            present,
+            _baseline_previous(stored, forced_base, version1, current),
+            source,
+        )
     return plan
 
 
@@ -284,6 +285,11 @@ def accept_all(
     if import_job_id is not None:
         stmt = stmt.where(ImportChangeProposal.import_job_id == import_job_id)
     rows = list(session.scalars(stmt).all())
+    # A tighter range fails if the new ceiling is written while the old
+    # lower bound is still in place. Write every other field first.
+    rows.sort(
+        key=lambda row: row.entity_type == "pricing" and row.field == "amount_max"
+    )
     applied = 0
     for row in rows:
         entity = _load_entity(session, row.entity_type, row.entity_id)

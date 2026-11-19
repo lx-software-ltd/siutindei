@@ -4,6 +4,7 @@ import type {
   EnrichmentProposal,
   EnrichmentRead,
 } from './api-client-enrichment';
+import { pricingTypeAllowsFreeTrial } from './free-trial-pricing';
 
 const pricingTypes = new Set([
   'per_class',
@@ -101,12 +102,20 @@ export function visibleBlockers(
       if (override.amount !== undefined && validAmount(override.amount)) {
         continue;
       }
+    } else if (item.field === 'amount_max') {
+      if (type === 'free' || upperBoundResolved(override, proposed)) {
+        continue;
+      }
     } else if (item.field === 'currency') {
       if (override.currency && /^[A-Za-z]{3}$/.test(override.currency)) {
         continue;
       }
     }
     notes.push(item);
+  }
+  const rangeNote = priceRangeBlocker(row, override);
+  if (rangeNote && !notes.some((item) => item.field === 'amount_max')) {
+    notes.push(rangeNote);
   }
   return notes;
 }
@@ -178,6 +187,12 @@ export function chosenEnrichmentOverrides(
     ) {
       cleaned.amount = draft.amount;
     }
+    if (
+      draft.amount_max !== undefined &&
+      draft.amount_max !== String(proposed.amount_max ?? '')
+    ) {
+      cleaned.amount_max = draft.amount_max;
+    }
     const proposedCurrency = String(proposed.currency || 'HKD');
     if (draft.currency && draft.currency !== proposedCurrency) {
       cleaned.currency = draft.currency;
@@ -190,6 +205,14 @@ export function chosenEnrichmentOverrides(
       count !== positiveSessions(proposed.sessions_count)
     ) {
       cleaned.sessions_count = count;
+    }
+    const proposedTrial = Boolean(proposed.free_trial_class_offered);
+    if (
+      pricingTypeAllowsFreeTrial(type) &&
+      draft.free_trial_class_offered !== undefined &&
+      draft.free_trial_class_offered !== proposedTrial
+    ) {
+      cleaned.free_trial_class_offered = draft.free_trial_class_offered;
     }
     if (Object.keys(cleaned).length > 0) {
       body[id] = cleaned;
@@ -286,6 +309,49 @@ function fold(value: unknown): string {
     .filter(Boolean)
     .join(' ')
     .toLocaleLowerCase();
+}
+
+const AMOUNT_MAX_INVALID = 'Upper bound must be a number above the amount';
+
+function priceRangeBlocker(
+  row: EnrichmentProposal,
+  override: EnrichmentOverride
+): EnrichmentBlocker | null {
+  if (row.kind !== 'create_pricing') {
+    return null;
+  }
+  const proposed = row.proposed_value;
+  const type = override.pricing_type || String(proposed.pricing_type ?? '');
+  if (type === 'free') {
+    return null;
+  }
+  const rawMax =
+    override.amount_max !== undefined ? override.amount_max : proposed.amount_max;
+  if (rawMax == null || String(rawMax).trim() === '') {
+    return null;
+  }
+  const upper = Number(rawMax);
+  const lower = Number(override.amount ?? proposed.amount);
+  if (Number.isFinite(upper) && Number.isFinite(lower) && upper > lower) {
+    return null;
+  }
+  return { field: 'amount_max', message: AMOUNT_MAX_INVALID };
+}
+
+function upperBoundResolved(
+  override: EnrichmentOverride,
+  proposed: EnrichmentProposal['proposed_value']
+): boolean {
+  if (override.amount_max === undefined) {
+    return false;
+  }
+  if (override.amount_max.trim() === '') {
+    return true;
+  }
+  const upper = Number(override.amount_max);
+  const rawAmount = override.amount ?? proposed.amount;
+  const lower = Number(rawAmount);
+  return Number.isFinite(upper) && Number.isFinite(lower) && upper > lower;
 }
 
 function validAmount(value: string): boolean {

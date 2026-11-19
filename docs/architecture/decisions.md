@@ -81,6 +81,10 @@ parallel environments (production + staging) inside a single CDK stack
 - Area filter uses `locations.area_id` (a `geographic_areas` row).
 - Pricing is per location with `per_class`, `per_sessions`, `per_hour`,
   `per_day`, `free`, `per_month`, or `per_year`.
+- A price may be a range. `amount` is the lower bound and `amount_max`
+  is the optional upper bound. Search `price_min` and `price_max` match
+  a range that overlaps them. Sort, the per-class cap, and the
+  class-price outlier check use the lower bound.
 - Languages are stored on `activity_schedule.languages`; the same
   activity and location can have one schedule per language set.
 - Times are stored in UTC.

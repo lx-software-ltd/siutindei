@@ -120,12 +120,14 @@ class PricingEntity {
     required this.type,
     required this.amount,
     required this.currency,
+    this.amountMax,
     this.sessionsCount,
     this.freeTrialClassOffered = false,
   });
 
   final PricingType type;
   final double amount;
+  final double? amountMax;
   final String currency;
   final int? sessionsCount;
   final bool freeTrialClassOffered;
@@ -135,7 +137,15 @@ class PricingEntity {
   /// Returns formatted price string
   String get formattedPrice {
     if (isFree) return 'Free';
-    final priceStr = '${amount.toStringAsFixed(0)} $currency';
+    final high = amountMax;
+    final lowWhole = amount.toStringAsFixed(0);
+    final highWhole = high?.toStringAsFixed(0);
+    final priceStr = high != null && high > amount
+        ? (lowWhole == highWhole
+            ? '${amount.toStringAsFixed(2)}'
+                '–${high.toStringAsFixed(2)} $currency'
+            : '$lowWhole–$highWhole $currency')
+        : '$lowWhole $currency';
     return switch (type) {
       PricingType.perClass => '$priceStr/class',
       PricingType.perSessions =>

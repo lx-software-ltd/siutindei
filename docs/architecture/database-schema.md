@@ -776,16 +776,22 @@ Columns:
 - `activity_id` (UUID, FK -> activities.id, cascade delete)
 - `location_id` (UUID, FK -> locations.id, cascade delete)
 - `pricing_type` (enum `pricing_type`, required)
-- `amount` (numeric(10,2), required)
+- `amount` (numeric(10,2), required). The price, or the lower bound of a range.
+- `amount_max` (numeric(10,2), optional). The upper bound of a range. Null is one price.
 - `currency` (text, default `HKD`)
 - `sessions_count` (integer, optional)
-- `free_trial_class_offered` (boolean, default `false`)
+- `free_trial_class_offered` (boolean, default `false`).
+  The API and website enrichment store `true` for `per_class`,
+  `per_sessions`, and `per_month`. Every other pricing type
+  stores `false`. No check constraint enforces this.
 - `version` (integer, default 1)
 
 Constraints:
 - `pricing_sessions_count_check`:
   `sessions_count` is required and > 0 when
   `pricing_type = 'per_sessions'`.
+- `pricing_amount_max_check`: `amount_max` is null, or greater than
+  `amount`. A `free` row has no `amount_max`.
 
 Indexes:
 - `activity_pricing_type_amount_idx` on `pricing_type`, `amount`

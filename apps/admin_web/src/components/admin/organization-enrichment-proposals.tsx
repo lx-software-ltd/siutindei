@@ -12,6 +12,7 @@ import type {
 } from '../../lib/api-client-enrichment';
 import { adminCurrencyOptions } from '../../lib/admin-currencies';
 import { positiveSessions, visibleBlockers } from '../../lib/enrichment-overrides';
+import { pricingTypeAllowsFreeTrial } from '../../lib/free-trial-pricing';
 import { MAX_LISTING_AGE } from '../../lib/listing-age';
 import { locationListLabel } from '../../lib/location-label';
 import type { GeographicAreaNode } from '../../lib/api-client-user';
@@ -615,6 +616,7 @@ function PricingFields({
   const pricing = row.kind === 'create_pricing';
   const pricingType = override.pricing_type ?? String(proposed.pricing_type || 'per_class');
   const amount = override.amount ?? String(proposed.amount ?? '');
+  const amountMax = override.amount_max ?? String(proposed.amount_max ?? '');
   const currency = override.currency ?? String(proposed.currency || 'HKD');
   const sessions =
     typeof override.sessions_count === 'string'
@@ -623,6 +625,8 @@ function PricingFields({
         ? String(override.sessions_count)
         : proposedSessions(proposed.sessions_count);
   const knownCurrency = adminCurrencyOptions.some((option) => option.code === currency);
+  const offered =
+    override.free_trial_class_offered ?? Boolean(proposed.free_trial_class_offered);
   const sessionsErrorId = `pricing-sessions-${row.id}`;
   const notes = visibleBlockers(row, override, blockerContext);
   const sessionsNote = notes.find((item) => item.field === 'sessions_count');
@@ -679,6 +683,20 @@ function PricingFields({
           />
         </div>
         <div>
+          <Label htmlFor={`pricing-amount-max-${row.id}`}>Up to</Label>
+          <Input
+            id={`pricing-amount-max-${row.id}`}
+            name='amount_max'
+            inputMode='decimal'
+            autoComplete='off'
+            spellCheck={false}
+            value={amountMax}
+            onChange={(event) =>
+              onOverride({ ...override, amount_max: event.target.value })
+            }
+          />
+        </div>
+        <div>
           <Label htmlFor={`pricing-currency-${row.id}`}>Currency</Label>
           <Select
             id={`pricing-currency-${row.id}`}
@@ -697,6 +715,23 @@ function PricingFields({
           </Select>
         </div>
       </div>
+      {pricingTypeAllowsFreeTrial(pricingType) ? (
+        <label className='flex items-center gap-2 text-sm' htmlFor={`pricing-trial-${row.id}`}>
+          <input
+            id={`pricing-trial-${row.id}`}
+            name='free_trial_class_offered'
+            type='checkbox'
+            checked={offered}
+            onChange={(event) =>
+              onOverride({
+                ...override,
+                free_trial_class_offered: event.target.checked,
+              })
+            }
+          />
+          Free trial class offered
+        </label>
+      ) : null}
       {pricingType === 'per_sessions' ? (
         <div>
           <Label htmlFor={`pricing-sessions-${row.id}`}>Classes in the term</Label>

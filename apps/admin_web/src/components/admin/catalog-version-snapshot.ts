@@ -273,6 +273,7 @@ export function pricingFormFromSnapshot(
     'location_id',
     'pricing_type',
     'amount',
+    'amount_max',
     'currency',
     'sessions_count',
   ]);
@@ -281,6 +282,11 @@ export function pricingFormFromSnapshot(
   }
   if (next.pricing_type === 'free') {
     next.amount = '';
+    next.amount_max = '';
+  }
+  // Versions saved before the upper bound have no key. That is one price.
+  if (!('amount_max' in snapshot)) {
+    next.amount_max = '';
   }
   return next;
 }

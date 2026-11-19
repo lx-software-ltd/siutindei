@@ -37,7 +37,8 @@ info:
     | lng | -180 to 180 |
     | age_min | 0 or more; stored as at most 18 |
     | age_max | 0 or more; stored as at most 18. A higher value is saved as 18. age_min cannot exceed age_max, and the two may be equal. |
-    | amount | >= 0 |
+    | amount | >= 0. The lower bound when `amount_max` is set. |
+    | amount_max | Greater than `amount`, or omitted. `free` has none. |
     | sessions_count | > 0 |
     | day_of_week_utc | 0-6 (Sunday-Saturday) |
     | start_minutes_utc | 0-1439 |
@@ -4476,11 +4477,19 @@ components:
           type: string
         amount:
           type: string
+        amount_max:
+          type: string
+          description: Upper bound. Empty clears a proposed range.
         currency:
           type: string
         sessions_count:
           type: integer
           minimum: 1
+        free_trial_class_offered:
+          type: boolean
+          description: >
+            Reviewer's free-trial choice. Stored for FreeTrialPricingType.
+            Any other pricing type stores false.
 
     EnrichmentApplyRequest:
       type: object
@@ -4930,6 +4939,14 @@ components:
         amount:
           type: number
           minimum: 0
+          description: Price, or the lower bound when `amount_max` is set.
+        amount_max:
+          type: number
+          minimum: 0
+          nullable: true
+          description: |
+            Upper bound of a price range. Omit it for a single price.
+            Greater than `amount`. `free` has none.
         currency:
           type: string
         sessions_count:
@@ -4937,6 +4954,9 @@ components:
           minimum: 1
         free_trial_class_offered:
           type: boolean
+          description: >
+            Whether a free trial class is offered. Stored for per_class,
+            per_sessions, and per_month. Any other pricing type stores false.
 
     AdminImportSchedule:
       type: object
@@ -6671,6 +6691,11 @@ components:
           nullable: true
 
     # Pricing schemas
+    FreeTrialPricingType:
+      type: string
+      description: A pricing type that stores a free trial class.
+      enum: [per_class, per_sessions, per_month]
+
     PricingCreate:
       type: object
       required:
@@ -6702,7 +6727,14 @@ components:
         amount:
           type: number
           minimum: 0
-          description: Price amount (required, must be >= 0)
+          description: Price amount (required, must be >= 0). Lower bound of a range.
+        amount_max:
+          type: number
+          minimum: 0
+          nullable: true
+          description: |
+            Upper bound of a price range. Omit it for a single price.
+            Must be greater than `amount`. `free` has none.
         currency:
           type: string
           minLength: 3
@@ -6716,7 +6748,9 @@ components:
           description: Classes within term (required for per_sessions, must be > 0)
         free_trial_class_offered:
           type: boolean
-          description: Whether a free trial class is offered
+          description: >
+            Whether a free trial class is offered. Stored for per_class,
+            per_sessions, and per_month. Any other pricing type stores false.
           default: false
 
     PricingUpdate:
@@ -6728,7 +6762,14 @@ components:
         amount:
           type: number
           minimum: 0
-          description: Price amount (must be >= 0)
+          description: Price amount (must be >= 0). Lower bound of a range.
+        amount_max:
+          type: number
+          minimum: 0
+          nullable: true
+          description: |
+            Upper bound of a price range. Null clears it. Must be
+            greater than `amount`. `free` has none.
         currency:
           type: string
           minLength: 3
@@ -6741,7 +6782,9 @@ components:
           description: Classes within term (must be > 0)
         free_trial_class_offered:
           type: boolean
-          description: Whether a free trial class is offered
+          description: >
+            Whether a free trial class is offered. Stored for per_class,
+            per_sessions, and per_month. Any other pricing type stores false.
 
     Pricing:
       type: object
@@ -6769,6 +6812,11 @@ components:
           type: string
         amount:
           type: number
+          description: Price, or the lower bound when `amount_max` is set.
+        amount_max:
+          type: number
+          nullable: true
+          description: Upper bound of a price range. Null for a single price.
         currency:
           type: string
         sessions_count:

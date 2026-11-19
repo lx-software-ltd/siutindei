@@ -276,6 +276,9 @@ def serialize_export_pricing(
         "location_name": location_name,
         "pricing_type": pricing.pricing_type.value,
         "amount": float(pricing.amount),
+        "amount_max": (
+            None if pricing.amount_max is None else float(pricing.amount_max)
+        ),
         "currency": pricing.currency,
         "sessions_count": pricing.sessions_count,
         "free_trial_class_offered": pricing.free_trial_class_offered,

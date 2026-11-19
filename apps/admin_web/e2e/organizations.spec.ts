@@ -1319,6 +1319,92 @@ test.describe('Organizations Panel', () => {
     });
   });
 
+  test('sends a free trial the reviewer ticks on a class price', async ({
+    adminPage,
+  }) => {
+    let applyBody: { ids?: string[]; overrides?: Record<string, unknown> } = {};
+    await adminPage.route(
+      '**/api/mock/**/admin/organizations/org-1/enrichment',
+      async (route) => {
+        if (route.request().method() !== 'GET') {
+          await route.fallback();
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            run: {
+              id: 'run-trial-price',
+              org_id: 'org-1',
+              status: 'ready',
+              source: 'leaflet',
+              seed_url: 'https://leaflets.example/class.jpg',
+              pages_fetched: 1,
+              bytes_fetched: 80,
+              model: null,
+              cost_usd: 0.01,
+              error: null,
+              created_at: new Date().toISOString(),
+              finished_at: new Date().toISOString(),
+            },
+            proposals: [
+              {
+                id: 'prop-trial',
+                section: 'Pricing',
+                kind: 'create_pricing',
+                field: null,
+                label: 'Price · Painting Workshops',
+                current_value: null,
+                proposed_value: {
+                  activity_name: 'Painting Workshops',
+                  pricing_type: 'per_class',
+                  amount: '180',
+                  currency: 'HKD',
+                  location_address: '',
+                },
+                confidence: 0.8,
+                unverified: false,
+                evidence: [],
+                status: 'pending',
+                blockers: [],
+              },
+            ],
+            venues: [{ id: 'venue-1', address: '1 Test Street', status: 'open' }],
+          }),
+        });
+      }
+    );
+    await adminPage.route(
+      '**/api/mock/**/admin/organizations/org-1/enrichment/apply',
+      async (route) => {
+        applyBody = route.request().postDataJSON();
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            results: [{ id: 'prop-trial', status: 'applied' }],
+          }),
+        });
+      }
+    );
+    await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
+    const card = adminPage.getByTestId('leaflet-enrichment');
+    const trial = card.getByRole('checkbox', { name: 'Free trial class offered' });
+    await expect(trial).toBeVisible();
+    await card.getByLabel('Pricing type').selectOption('per_hour');
+    await expect(trial).toHaveCount(0);
+    await card.getByLabel('Pricing type').selectOption('per_class');
+    await expect(trial).toBeVisible();
+    await trial.check();
+    await card.getByRole('checkbox', { name: 'Select Price · Painting Workshops' }).check();
+    await card.getByRole('button', { name: 'Apply selected' }).click();
+    await expect(card.getByText('Selected changes were applied.')).toBeVisible();
+    expect(applyBody.overrides?.['prop-trial']).toEqual({
+      free_trial_class_offered: true,
+    });
+  });
+
   test('says the model is reading once the pages are stored', async ({
     adminPage,
   }) => {

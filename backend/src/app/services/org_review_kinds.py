@@ -77,7 +77,10 @@ def looks_like_opening_hours(entries: Iterable[tuple[int, int, int]]) -> bool:
 
 
 def is_class_price_outlier(pricing: ActivityPricing) -> bool:
-    """A per-class or hourly price this high is usually a term fee."""
+    """A per-class or hourly price this high is usually a term fee.
+
+    A range is judged on its lower bound.
+    """
     return (
         PricingType(pricing.pricing_type) in CLASS_PRICE_TYPES
         and str(pricing.currency).upper() == "HKD"

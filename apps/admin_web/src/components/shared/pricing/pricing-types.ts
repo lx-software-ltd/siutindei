@@ -1,10 +1,14 @@
 import type { ActivityPricing } from '../../../types/admin';
+import { pricingTypeAllowsFreeTrial } from '../../../lib/free-trial-pricing';
+
+export { pricingTypeAllowsFreeTrial };
 
 export interface PricingFormState {
   activity_id: string;
   location_id: string;
   pricing_type: string;
   amount: string;
+  amount_max: string;
   currency: string;
   sessions_count: string;
   free_trial_class_offered: boolean;
@@ -23,6 +27,7 @@ export const emptyForm: PricingFormState = {
   location_id: '',
   pricing_type: 'per_class',
   amount: '',
+  amount_max: '',
   currency: defaultCurrencyCode,
   sessions_count: '',
   free_trial_class_offered: false,
@@ -65,6 +70,10 @@ export function itemToForm(item: ActivityPricing): PricingFormState {
         : item.amount != null
           ? String(item.amount)
           : '',
+    amount_max:
+      item.pricing_type === 'free' || item.amount_max == null
+        ? ''
+        : String(item.amount_max),
     currency: normalizeCurrencyCode(item.currency),
     sessions_count: item.sessions_count ? `${item.sessions_count}` : '',
     free_trial_class_offered: Boolean(item.free_trial_class_offered),

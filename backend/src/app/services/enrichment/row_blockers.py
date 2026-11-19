@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from app.api.admin_validators import _validate_currency
-from app.db.models.enums import PricingType
+from app.db.models.enums import FREE_TRIAL_PRICING_TYPES, PricingType
 from app.exceptions import ValidationError
 
 PRICE_ACTIVITY = "Pick the activity this price belongs to"
@@ -15,10 +16,46 @@ SCHEDULE_ACTIVITY = "Pick the activity this schedule belongs to"
 SCHEDULE_VENUE = "Pick a venue for this schedule"
 SESSIONS_REQUIRED = "Add the number of classes for this term price"
 AMOUNT_INVALID = "Amount must be a number"
+AMOUNT_MAX_INVALID = "Upper bound must be a number above the amount"
+FREE_HAS_NO_RANGE = "Free pricing has no upper bound"
 TYPE_UNSUPPORTED = "Pricing type is not supported"
 CURRENCY_INVALID = "Currency must be an ISO code"
 
 PRICING_TYPES = frozenset(item.value for item in PricingType)
+_TRIAL_QUOTE = re.compile(
+    r"free trial|trial class|trial lesson|試堂|免費試",
+    re.IGNORECASE,
+)
+_TRUTHY = frozenset({"1", "true", "yes", "y"})
+
+
+def quote_offers_trial(quote: object) -> bool:
+    """True when the quoted sentence offers a trial class."""
+    return _TRIAL_QUOTE.search(str(quote or "")) is not None
+
+
+def free_trial_flag(value: object) -> bool:
+    """True for a boolean true or the words true, yes, and 1."""
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().casefold() in _TRUTHY
+
+
+def free_trial_to_store(
+    proposed: dict[str, Any], override: dict[str, Any], kind: PricingType
+) -> bool | None:
+    """Tick to write, or None when neither side mentioned it.
+
+    A type outside the allowlist stores false. An explicit false in
+    the reviewer's override wins over the proposal.
+    """
+    if kind not in FREE_TRIAL_PRICING_TYPES:
+        return False
+    if "free_trial_class_offered" in override:
+        return free_trial_flag(override["free_trial_class_offered"])
+    if "free_trial_class_offered" in proposed:
+        return free_trial_flag(proposed["free_trial_class_offered"])
+    return None
 
 
 def positive_sessions(value: object) -> int | None:
@@ -75,6 +112,7 @@ def pricing_fields(
         raise ValidationError(AMOUNT_INVALID, field="amount") from exc
     if not amount.is_finite() or amount < 0:
         raise ValidationError(AMOUNT_INVALID, field="amount")
+    amount_max = _amount_max(override, proposed, kind, amount)
     currency_raw = _pick(override, proposed, "currency") or "HKD"
     try:
         currency = _validate_currency(str(currency_raw))
@@ -85,11 +123,14 @@ def pricing_fields(
         sessions = positive_sessions(_pick(override, proposed, "sessions_count"))
         if sessions is None:
             raise ValidationError(SESSIONS_REQUIRED, field="sessions_count")
+    offered = free_trial_to_store(proposed, override, kind)
     return {
         "pricing_type": kind,
         "amount": amount,
+        "amount_max": amount_max,
         "currency": currency,
         "sessions_count": sessions,
+        "free_trial_class_offered": offered,
     }
 
 
@@ -124,6 +165,7 @@ def _pricing_blockers(proposed: dict[str, Any]) -> list[dict[str, str]]:
     if raw_type not in PRICING_TYPES:
         found.append({"field": "pricing_type", "message": TYPE_UNSUPPORTED})
     raw_amount = proposed.get("amount")
+    amount: Decimal | None = None
     if raw_amount not in (None, ""):
         try:
             amount = Decimal(str(raw_amount))
@@ -131,6 +173,8 @@ def _pricing_blockers(proposed: dict[str, Any]) -> list[dict[str, str]]:
             amount = None
         if amount is None or not amount.is_finite() or amount < 0:
             found.append({"field": "amount", "message": AMOUNT_INVALID})
+            amount = None
+    found.extend(_amount_max_blockers(proposed, raw_type, amount))
     if (
         raw_type == PricingType.PER_SESSIONS.value
         and positive_sessions(proposed.get("sessions_count")) is None
@@ -142,6 +186,50 @@ def _pricing_blockers(proposed: dict[str, Any]) -> list[dict[str, str]]:
     except ValidationError:
         found.append({"field": "currency", "message": CURRENCY_INVALID})
     return found
+
+
+def _amount_max(
+    override: dict[str, Any],
+    proposed: dict[str, Any],
+    kind: PricingType,
+    amount: Decimal,
+) -> Decimal | None:
+    """Upper bound from the override, else the proposal.
+
+    An empty override clears a proposed bound. ``free`` keeps none.
+    """
+    if "amount_max" in override:
+        raw = override.get("amount_max")
+    else:
+        raw = proposed.get("amount_max")
+    if raw in (None, ""):
+        return None
+    if kind == PricingType.FREE:
+        raise ValidationError(FREE_HAS_NO_RANGE, field="amount_max")
+    try:
+        upper = Decimal(str(raw))
+    except (InvalidOperation, ValueError) as exc:
+        raise ValidationError(AMOUNT_MAX_INVALID, field="amount_max") from exc
+    if not upper.is_finite() or upper <= amount:
+        raise ValidationError(AMOUNT_MAX_INVALID, field="amount_max")
+    return upper
+
+
+def _amount_max_blockers(
+    proposed: dict[str, Any], raw_type: str, amount: Decimal | None
+) -> list[dict[str, str]]:
+    raw = proposed.get("amount_max")
+    if raw in (None, ""):
+        return []
+    if raw_type == PricingType.FREE.value:
+        return [{"field": "amount_max", "message": FREE_HAS_NO_RANGE}]
+    try:
+        upper = Decimal(str(raw))
+    except (InvalidOperation, ValueError):
+        upper = None
+    if amount is None or upper is None or not upper.is_finite() or upper <= amount:
+        return [{"field": "amount_max", "message": AMOUNT_MAX_INVALID}]
+    return []
 
 
 def _pick(override: dict[str, Any], proposed: dict[str, Any], key: str) -> Any:

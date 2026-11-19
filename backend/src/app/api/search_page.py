@@ -280,6 +280,7 @@ def map_row_to_result(
             else PricingSchema(
                 pricing_type=pricing.pricing_type.value,
                 amount=pricing.amount,
+                amount_max=pricing.amount_max,
                 currency=pricing.currency,
                 sessions_count=pricing.sessions_count,
                 free_trial_class_offered=pricing.free_trial_class_offered,

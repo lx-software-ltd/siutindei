@@ -51,7 +51,8 @@ Warnings, with their thresholds as named constants:
   six or more days. Those are opening hours, so the kind is probably
   `place`.
 - `class_price_outlier`: a `per_class` or `per_hour` price above
-  HK$1,500, which is usually a term fee.
+  HK$1,500, which is usually a term fee. A range is judged on its
+  lower bound.
 - `verification_stale`: a parent check more than 365 days old, or one
   with no date. It prompts the owner to check again. The public badge
   and the listing stay.
@@ -196,9 +197,10 @@ wins for the whole row), or `propose` (every change waits). An
 approved organization uses `approved_organizations`, which defaults
 to `propose`. A new activity under an approved organization is still
 created. `allow_updates` false still skips an existing row and writes
-no proposal. It does store the file as the new baseline, so a later
-import that allows updates treats that skipped file as what the
-source last said. Accept writes one field through the admin update
+no proposal. It also leaves the baseline where it was, so a later
+import that allows updates can still apply that file. A row the
+file does not change stays `unchanged` and its baseline is
+refreshed. Accept writes one field through the admin update
 path. Accept-all requires an organization or an import job. Listing
 the queue dismisses a proposal whose record no longer exists.
 

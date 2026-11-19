@@ -4,16 +4,38 @@ from __future__ import annotations
 
 import json
 import re
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from app.db.models.enums import PricingType
+from app.db.models.enums import FREE_TRIAL_PRICING_TYPES, PricingType
 from app.services.enrichment.logos import media_proposals
 from app.services.enrichment.parse import quote_supported
-from app.services.enrichment.row_blockers import positive_sessions
+from app.services.enrichment.row_blockers import (
+    free_trial_flag,
+    positive_sessions,
+    quote_offers_trial,
+)
 from app.services.enrichment.sheet import checked_value, schedule_entries, section_rows
 
 _AMOUNT_RE = re.compile(r"\d+(?:[.,]\d+)?")
 _PRICING_TYPES = {item.value for item in PricingType}
+
+
+def _quote_names_amount(quote: str, value: object) -> bool:
+    """True when the quote contains this amount, not some other number."""
+    try:
+        amount = Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return False
+    if not amount.is_finite():
+        return False
+    for token in _AMOUNT_RE.findall(quote.replace(",", "")):
+        try:
+            if Decimal(token) == amount:
+                return True
+        except InvalidOperation:
+            continue
+    return False
 
 
 def proposals_from_pages(
@@ -124,7 +146,7 @@ def validate_model_sheet(
         activity = checked_value(row.get("activity_name"), pages)
         if amount is None or activity is None:
             continue
-        if not _AMOUNT_RE.search(amount["quote"]):
+        if not _quote_names_amount(amount["quote"], amount["value"]):
             continue
         pricing_type = str((row.get("pricing_type") or {}).get("value") or "per_class")
         if pricing_type not in _PRICING_TYPES:
@@ -139,6 +161,11 @@ def validate_model_sheet(
             "currency": str((row.get("currency") or {}).get("value") or "HKD")[:8]
             or "HKD",
         }
+        upper = checked_value(row.get("amount_max"), pages)
+        if upper is None or not _quote_names_amount(upper["quote"], upper["value"]):
+            upper = None
+        else:
+            proposed["amount_max"] = upper["value"]
         if pricing_type == PricingType.PER_SESSIONS.value:
             sessions = checked_value(row.get("sessions_count"), pages)
             count = (
@@ -146,15 +173,26 @@ def validate_model_sheet(
             )
             if count is not None:
                 proposed["sessions_count"] = count
-        found.append(
-            _record(
-                "Pricing",
-                "create_pricing",
-                f"Price · {activity['value'][:60]}",
-                proposed,
-                amount,
-            )
+        trial = checked_value(row.get("free_trial_class_offered"), pages)
+        if (
+            trial is not None
+            and pricing_type in {item.value for item in FREE_TRIAL_PRICING_TYPES}
+            and quote_offers_trial(trial.get("quote"))
+            and free_trial_flag(trial.get("value"))
+        ):
+            proposed["free_trial_class_offered"] = True
+        record = _record(
+            "Pricing",
+            "create_pricing",
+            f"Price · {activity['value'][:60]}",
+            proposed,
+            amount,
         )
+        if upper is not None and upper["quote"] != amount["quote"]:
+            record["evidence"].append(
+                {"url": upper["url"], "quote": str(upper["quote"])[:300]}
+            )
+        found.append(record)
     for row in section_rows(sheet, "schedules"):
         activity = checked_value(row.get("activity_name"), pages)
         entries = schedule_entries(row.get("entries"), pages)

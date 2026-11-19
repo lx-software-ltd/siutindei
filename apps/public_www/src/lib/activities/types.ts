@@ -93,6 +93,8 @@ export interface SearchLocation {
 export interface SearchPricing {
   readonly pricingType: string;
   readonly amount: number;
+  /** Upper bound of a range. Absent or null is one price. */
+  readonly amountMax?: number | null;
   readonly currency: string;
   readonly sessionsCount: number | null;
   readonly freeTrialClassOffered: boolean;
