@@ -13,19 +13,21 @@ A pull request is opened for this change.
 
 The Monday 23 Nov 2026 09:00 UTC run of **Verify GitHub Rulesets** must stop failing with `main ruleset does not require at least 1 approving review.` Gate G1 replaces `scripts/verify_github_rulesets.py` with `lx-software-ltd/actions/verify-rulesets` at `61d2a581a1d880533982bada88923ad1b6431700` (`main`, 2026-11-20). The step passes `expected-reviews: "0"` and `required-checks: lint test`. The action expects exactly 0 approving reviews. It does not keep the local script's "at least 1" error.
 
+`docs/architecture/github-rulesets.md` is corrected to that live contract. Required approvals are exactly 0. Required contexts are exactly `lint` and `test`. The doc says the weekly job fails if the count is not 0 or the check list is not exactly those two names. It no longer says the job is waiting on an admin to activate a disabled ruleset, and it no longer names the deleted script.
+
 ## Non-goals
 
 - No edit to deploy, Amplify, board, lint, test, or security workflows.
 - No runner change. No job id change. No workflow name change.
 - No `workflow_dispatch` of this job from this change, and no merge.
-- No doc edit except a sentence that says the weekly job runs `scripts/verify_github_rulesets.py` or requires at least 1 review.
+- Staging protection, tag protection, and unrelated prose in `docs/architecture/github-rulesets.md` stay as they are.
 
 ## Files
 
 - `.github/workflows/verify-rulesets.yml`
 - `scripts/verify_github_rulesets.py` (deleted)
 - `tests/test_agent_harness_checks.py` (the two tests that load the deleted script)
-- `docs/architecture/github-rulesets.md` (the weekly-job sentence)
+- `docs/architecture/github-rulesets.md` (live contract: exactly 0 approving reviews, required checks exactly `lint` and `test`)
 - `docs/plans/sa-304-verify-rulesets.md`
 
 ## Invariants this change preserves
@@ -71,7 +73,7 @@ The Monday 23 Nov 2026 09:00 UTC run of **Verify GitHub Rulesets** must stop fai
 
 ## Done when
 
-The verify step uses the pin above and passes `expected-reviews: "0"` and `required-checks: lint test`. `scripts/verify_github_rulesets.py` is gone, and the harness tests that loaded it are gone. The Monday failure string is not produced by a local script. A pull request is opened. This pull request is not merged.
+The verify step uses the pin above and passes `expected-reviews: "0"` and `required-checks: lint test`. `scripts/verify_github_rulesets.py` is gone, and the harness tests that loaded it are gone. The Monday failure string is not produced by a local script. `docs/architecture/github-rulesets.md` states exactly 0 approving reviews and required checks `lint` and `test`. A pull request is opened. This pull request is not merged.
 
 ## Rollback
 
