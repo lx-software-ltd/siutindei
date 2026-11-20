@@ -8,7 +8,7 @@ GitHub rulesets protect critical branches and tags from accidental or malicious
 changes. These rules enforce code review, CI checks, and prevent destructive
 operations.
 
-`.github/workflows/verify-rulesets.yml` runs `scripts/verify_github_rulesets.py`
+`.github/workflows/verify-rulesets.yml` runs `lx-software-ltd/actions/verify-rulesets`
 weekly. A 403 from the classic branch-protection API is treated as
 unreadable, and the ruleset API is still evaluated. The job fails while no
 active ruleset targets `main`. Activating that ruleset is a repository
