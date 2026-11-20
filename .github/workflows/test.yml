@@ -3,13 +3,8 @@ name: Test
 on:
   workflow_dispatch:
   pull_request:
-    paths:
-      - "apps/**"
-      - "packages/**"
-      - "backend/**"
-      - "tests/**"
-      - "scripts/**"
-      - ".github/workflows/test.yml"
+    # No path filter. The gate job is a required check, and a skipped
+    # required check leaves the pull request blocked.
   push:
     branches:
       - main
@@ -266,3 +261,43 @@ jobs:
 
       - name: Run edge function and Cloudflare Worker tests
         run: node --test backend/infrastructure/test/*.test.mjs scripts/cloudflare/workers/*.test.mjs
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    needs:
+      - pii-denylist
+      - test-flutter
+      - test-node
+      - test-public-www-e2e
+      - test-python
+      - test-infrastructure
+    if: always()
+    steps:
+      - name: Require every test job
+        env:
+          PII_DENYLIST: ${{ needs.pii-denylist.result }}
+          TEST_FLUTTER: ${{ needs.test-flutter.result }}
+          TEST_NODE: ${{ needs.test-node.result }}
+          TEST_PUBLIC_WWW_E2E: ${{ needs.test-public-www-e2e.result }}
+          TEST_PYTHON: ${{ needs.test-python.result }}
+          TEST_INFRASTRUCTURE: ${{ needs.test-infrastructure.result }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import sys
+
+          jobs = {
+              "pii-denylist": os.environ["PII_DENYLIST"],
+              "test-flutter": os.environ["TEST_FLUTTER"],
+              "test-node": os.environ["TEST_NODE"],
+              "test-public-www-e2e": os.environ["TEST_PUBLIC_WWW_E2E"],
+              "test-python": os.environ["TEST_PYTHON"],
+              "test-infrastructure": os.environ["TEST_INFRASTRUCTURE"],
+          }
+          failed = [f"{name}={result}" for name, result in jobs.items() if result != "success"]
+          if failed:
+              print("Test jobs did not all succeed: " + ", ".join(failed))
+              sys.exit(1)
+          print("All test jobs succeeded.")
+          PY

@@ -3,20 +3,8 @@ name: Lint
 on:
   workflow_dispatch:
   pull_request:
-    paths:
-      - "apps/**"
-      - "packages/**"
-      - "backend/**"
-      - "tests/**"
-      - "scripts/**"
-      - ".cursor/**"
-      - "AGENTS.md"
-      - ".cursorrules"
-      - "BUGBOT.md"
-      - "docs/plans/**"
-      - "docs/research/**"
-      - "docs/architecture/zones.md"
-      - ".github/workflows/lint.yml"
+    # No path filter. The gate job is a required check, and a skipped
+    # required check leaves the pull request blocked.
   push:
     branches:
       - main
@@ -211,3 +199,40 @@ jobs:
       - name: Synthesize CDK
         working-directory: backend/infrastructure
         run: npx cdk synth --quiet || echo "CDK synth requires parameters, skipping validation"
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    needs:
+      - validate-agent-harness
+      - lint-dart
+      - lint-react
+      - lint-python
+      - lint-cdk
+    if: always()
+    steps:
+      - name: Require every lint job
+        env:
+          VALIDATE_AGENT_HARNESS: ${{ needs.validate-agent-harness.result }}
+          LINT_DART: ${{ needs.lint-dart.result }}
+          LINT_REACT: ${{ needs.lint-react.result }}
+          LINT_PYTHON: ${{ needs.lint-python.result }}
+          LINT_CDK: ${{ needs.lint-cdk.result }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import sys
+
+          jobs = {
+              "validate-agent-harness": os.environ["VALIDATE_AGENT_HARNESS"],
+              "lint-dart": os.environ["LINT_DART"],
+              "lint-react": os.environ["LINT_REACT"],
+              "lint-python": os.environ["LINT_PYTHON"],
+              "lint-cdk": os.environ["LINT_CDK"],
+          }
+          failed = [f"{name}={result}" for name, result in jobs.items() if result != "success"]
+          if failed:
+              print("Lint jobs did not all succeed: " + ", ".join(failed))
+              sys.exit(1)
+          print("All lint jobs succeeded.")
+          PY
