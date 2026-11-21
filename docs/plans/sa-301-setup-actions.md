@@ -3,7 +3,7 @@
 **Status**: In progress
 **Zone**: yellow
 
-Parent plan: [Shared actions repository and CI convergence](https://github.com/lx-software-ltd/actions/blob/c850872471a02a3f6112a9c5321b485e7f181443/docs/plans/shared-actions-and-ci-convergence.md), step SA-301.
+Parent plan: [Shared actions repository and CI convergence](https://github.com/lx-software-ltd/actions/blob/61d2a581a1d880533982bada88923ad1b6431700/docs/plans/shared-actions-and-ci-convergence.md), step SA-301.
 
 This repository's board policy refuses `.github/**` to board agents. This change is a normal agent session. `lint.yml`, `test.yml`, `security.yml`, and `check-lockfiles.yml` are not on the red list in `docs/architecture/zones.md`.
 
@@ -13,7 +13,7 @@ A pull request is opened.
 
 ## Goal
 
-Call `lx-software-ltd/actions` `setup-node` and `setup-python` from the pull-request CI workflows, pinned at `c850872471a02a3f6112a9c5321b485e7f181443` with the comment `# main 2026-11-20`. Each caller passes the Node or Python version it uses today, so the action defaults Node 26 and Python 3.12 do not apply by omission. Move `require-jobs` in `lint.yml` and `test.yml` from `1a3cca7c38163f8164c262323601c34a4df5b7a4` to that same commit.
+Call `lx-software-ltd/actions` `setup-node` and `setup-python` from the pull-request CI workflows, pinned at `61d2a581a1d880533982bada88923ad1b6431700` with the comment `# main 2026-11-20`. Each caller passes the Node or Python version it uses today, so the action defaults Node 26 and Python 3.12 do not apply by omission. Move `require-jobs` in `lint.yml` and `test.yml` from `1a3cca7c38163f8164c262323601c34a4df5b7a4` to that same commit.
 
 ## Non-goals
 
@@ -25,7 +25,9 @@ Call `lx-software-ltd/actions` `setup-node` and `setup-python` from the pull-req
 
 ## Pin
 
-`c850872471a02a3f6112a9c5321b485e7f181443` `# main 2026-11-20`
+`61d2a581a1d880533982bada88923ad1b6431700` `# main 2026-11-20`
+
+The pin is `61d2a58` so this pull request and the ruleset pull request use one actions SHA.
 
 Every `lx-software-ltd/actions` reference in the workflows this change touches uses that SHA, including `require-jobs`.
 
@@ -123,7 +125,7 @@ Also left, with their current setup actions:
 
 ## Done when
 
-The four workflow files contain no `uses: actions/setup-node@` and no `uses: actions/setup-python@`, and no `1a3cca7`. Every `lx-software-ltd/actions` reference in those files is `c850872471a02a3f6112a9c5321b485e7f181443`. Node 24 and Python 3.13 are still passed explicitly. Runners are unchanged. Deploy, promote, Amplify, and board workflows are unchanged.
+The four workflow files contain no `uses: actions/setup-node@` and no `uses: actions/setup-python@`, and no `1a3cca7`. Every `lx-software-ltd/actions` reference in those files is `61d2a581a1d880533982bada88923ad1b6431700`. Node 24 and Python 3.13 are still passed explicitly. Runners are unchanged. Deploy, promote, Amplify, and board workflows are unchanged.
 
 No test asserts the old setup action text, so no test file changes.
 
