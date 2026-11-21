@@ -37,24 +37,24 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@f33bc376b6745fcf47a4af88e436ce14b8e55c9b # main 2026-11-21
+        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
         with:
           python-version: "3.12"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@f33bc376b6745fcf47a4af88e436ce14b8e55c9b # main 2026-11-21
+        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
         with:
           node-version: "24"
 
       - name: Install pytest
         run: python -m pip install 'pytest>=8.0'
 
-      - name: Run harness checks
+      - name: Run the shared harness
+        uses: lx-software-ltd/actions/agent-harness@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
+
+      - name: Run the remaining repository checks
         run: |
           set -euo pipefail
-          python3 scripts/validate_agent_rules.py
-          python3 scripts/check_python_file_length.py
-          python3 scripts/check_test_focus.py
           python3 scripts/check_openapi_routes.py
           python3 scripts/check_stack_invariants.py
           node scripts/check-lambda-docs.mjs
@@ -95,7 +95,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@f33bc376b6745fcf47a4af88e436ce14b8e55c9b # main 2026-11-21
+        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
         with:
           node-version: "24"
 
@@ -139,13 +139,13 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@f33bc376b6745fcf47a4af88e436ce14b8e55c9b # main 2026-11-21
+        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
         with:
           python-version: "3.13"
           requirements: backend/requirements.txt
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@f33bc376b6745fcf47a4af88e436ce14b8e55c9b # main 2026-11-21
+        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
         with:
           node-version: "24"
 
@@ -177,14 +177,14 @@ jobs:
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh backend
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@f33bc376b6745fcf47a4af88e436ce14b8e55c9b # main 2026-11-21
+        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
         with:
           node-version: "24"
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@f33bc376b6745fcf47a4af88e436ce14b8e55c9b # main 2026-11-21
+        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
         with:
           python-version: "3.12"
 
@@ -211,6 +211,6 @@ jobs:
     if: always()
     steps:
       - name: Require every lint job
-        uses: lx-software-ltd/actions/require-jobs@f33bc376b6745fcf47a4af88e436ce14b8e55c9b # main 2026-11-21
+        uses: lx-software-ltd/actions/require-jobs@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
         with:
           needs-json: ${{ toJson(needs) }}

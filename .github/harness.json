@@ -1,0 +1,74 @@
+{
+  "rules": {
+    "agents-phrases": [
+      "## Zones",
+      "docs/architecture/zones.md",
+      "## Cursor Cloud"
+    ],
+    "core-rule": "00-repository-core.mdc",
+    "agents-limit": 60,
+    "rule-limit": 80,
+    "skill-limit": 160,
+    "pointer-limit": 8,
+    "required-rules": {
+      "00-repository-core.mdc": true,
+      "backend-api.mdc": false,
+      "infrastructure-cdk.mdc": false,
+      "admin-web.mdc": false,
+      "public-www.mdc": false,
+      "flutter-app.mdc": false,
+      "board-runner.mdc": false
+    },
+    "required-skills": [
+      "db-migration",
+      "admin-api-endpoint",
+      "admin-crud-screen",
+      "public-www-section",
+      "verify-change",
+      "cursor-cloud"
+    ],
+    "required-files": [
+      "docs/architecture/zones.md",
+      "docs/plans/_template.md",
+      "docs/research/_template.md",
+      ".github/PULL_REQUEST_TEMPLATE.md",
+      ".cursor/hooks.json",
+      "BUGBOT.md"
+    ],
+    "extra-rules": "always-only",
+    "verify-why-commits": true,
+    "skills": "all"
+  },
+  "file-length": {
+    "mode": "python-names",
+    "limit": 500,
+    "allowlist": "scripts/python-file-length-allowlist.txt",
+    "scan-roots": [
+      "backend/src",
+      "backend/lambda"
+    ]
+  },
+  "test-focus": {
+    "mode": "all-sources",
+    "roots": [
+      "tests",
+      "apps/admin_web/e2e",
+      "apps/public_www/tests",
+      "apps/siutindei_app/test",
+      "packages",
+      "backend/infrastructure/test"
+    ],
+    "suffixes": [
+      ".py",
+      ".ts",
+      ".tsx",
+      ".js",
+      ".jsx",
+      ".mjs",
+      ".dart"
+    ],
+    "skip-parts": [
+      "node_modules"
+    ]
+  }
+}
