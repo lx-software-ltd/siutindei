@@ -8,7 +8,7 @@ GitHub rulesets protect critical branches and tags from accidental or malicious
 changes. These rules enforce code review, CI checks, and prevent destructive
 operations.
 
-`.github/workflows/verify-rulesets.yml` runs `scripts/verify_github_rulesets.py`
+`.github/workflows/verify-rulesets.yml` runs `lx-software-ltd/actions/verify-rulesets`
 weekly. A 403 from the classic branch-protection API is treated as
 unreadable, and the ruleset API is still evaluated. The job fails while no
 active ruleset targets `main`. Activating that ruleset is a repository
@@ -25,7 +25,7 @@ The `main` branch requires protection as it triggers production deployments.
 | Rule | Setting | Purpose |
 |------|---------|---------|
 | Require pull request before merging | ✅ Enabled | Prevents direct pushes |
-| Required approvals | 1+ | Ensures code review |
+| Required approvals | 0 | Exactly 0 approving reviews |
 | Dismiss stale reviews | ✅ Enabled | Re-review after changes |
 | Require status checks to pass | ✅ Enabled | CI must pass |
 | Require branches to be up to date | ✅ Enabled | Prevents stale merges |
@@ -34,20 +34,16 @@ The `main` branch requires protection as it triggers production deployments.
 
 ### Required Status Checks
 
-GitHub matches required checks by job name. `verify_github_rulesets.py`
-only asks for at least one required check whose name contains `lint` and
-one that contains `test` (case-insensitive). The job names are:
+GitHub matches required checks by job name. The weekly job calls
+`lx-software-ltd/actions/verify-rulesets` and fails unless the
+approving-review count is exactly 0 and the required checks are exactly
+the job names `lint` and `test`. The weekly job fails if the count is
+not 0 or the check list is not exactly those two names.
 
-| Workflow | Job names |
-|----------|-----------|
-| `.github/workflows/lint.yml` | `Validate agent harness`, `Lint Dart`, `Lint React`, `Lint Python`, `Lint CDK` |
-| `.github/workflows/test.yml` | `PII denylist`, `Test Flutter`, `Test Node`, `Test Python`, `Test Infrastructure` |
-
-Require the job names, not the workflow names. As of 2026-11-02 the
-`main-protection` ruleset (id `12176289`) exists but its enforcement is
-`disabled` and it has only the deletion and force-push rules, so the
-weekly verify job fails until an admin runs
-[Update the existing `main-protection` ruleset](#update-the-existing-main-protection-ruleset).
+| Workflow | Job name |
+|----------|----------|
+| `.github/workflows/lint.yml` | `lint` |
+| `.github/workflows/test.yml` | `test` |
 
 ---
 
@@ -112,11 +108,11 @@ Release tags should be protected from modification or deletion.
 4. Enable rules:
    - ✅ Restrict deletions
    - ✅ Require a pull request before merging
-     - Required approvals: `1`
+     - Required approvals: `0`
      - ✅ Dismiss stale pull request approvals when new commits are pushed
    - ✅ Require status checks to pass
      - ✅ Require branches to be up to date before merging
-     - Add checks: `Lint Python`, `Test Python` (add other job names as needed)
+     - Add checks: `lint`, `test`
    - ✅ Block force pushes
 5. Click **Create**
 
@@ -147,12 +143,12 @@ gh api repos/{owner}/{repo}/rulesets \
   --field 'rules[][type]=deletion' \
   --field 'rules[][type]=non_fast_forward' \
   --field 'rules[][type]=pull_request' \
-  --field 'rules[2][parameters][required_approving_review_count]=1' \
+  --field 'rules[2][parameters][required_approving_review_count]=0' \
   --field 'rules[2][parameters][dismiss_stale_reviews_on_push]=true' \
   --field 'rules[][type]=required_status_checks' \
   --field 'rules[3][parameters][strict_required_status_checks_policy]=true' \
-  --field 'rules[3][parameters][required_status_checks][][context]=Lint Python' \
-  --field 'rules[3][parameters][required_status_checks][][context]=Test Python'
+  --field 'rules[3][parameters][required_status_checks][][context]=lint' \
+  --field 'rules[3][parameters][required_status_checks][][context]=test'
 
 # Tag protection for releases (already exists here as `release-tags`)
 gh api repos/{owner}/{repo}/rulesets \
@@ -181,7 +177,7 @@ gh api repos/lx-software-ltd/siutindei/rulesets/12176289 \
     {"type": "deletion"},
     {"type": "non_fast_forward"},
     {"type": "pull_request", "parameters": {
-      "required_approving_review_count": 1,
+      "required_approving_review_count": 0,
       "dismiss_stale_reviews_on_push": true,
       "require_code_owner_review": false,
       "require_last_push_approval": false,
@@ -190,8 +186,8 @@ gh api repos/lx-software-ltd/siutindei/rulesets/12176289 \
     {"type": "required_status_checks", "parameters": {
       "strict_required_status_checks_policy": true,
       "required_status_checks": [
-        {"context": "Lint Python"},
-        {"context": "Test Python"}
+        {"context": "lint"},
+        {"context": "test"}
       ]
     }}
   ]
@@ -212,7 +208,9 @@ The verification checks:
 - An **active** ruleset targets `main`. A ruleset whose enforcement is
   `disabled` or `evaluate` fails this check. Classic branch protection
   is not a substitute for that disabled ruleset.
-- Required status checks are configured
+- The approving-review count is exactly 0, and the required status
+  checks are exactly `lint` and `test`. The weekly job fails if the
+  count is not 0 or the check list is not exactly those two names.
 - Force push protection is enabled
 - Deletion protection is enabled
 
