@@ -53,7 +53,7 @@ jobs:
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          node-version: "24"
+          node-version: "26"
 
       - name: Validate package-lock.json
         run: |

@@ -27,7 +27,7 @@ jobs:
       - name: Set up Python
         uses: lx-software-ltd/actions/setup-python@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          python-version: '3.13'
+          python-version: "3.12"
 
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
@@ -64,7 +64,7 @@ jobs:
       - name: Set up Python
         uses: lx-software-ltd/actions/setup-python@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          python-version: '3.13'
+          python-version: "3.12"
 
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
@@ -109,7 +109,7 @@ jobs:
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          node-version: "24"
+          node-version: "26"
           cache: npm
           working-directory: backend/infrastructure
 
