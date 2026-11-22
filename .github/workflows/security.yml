@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
         with:
           python-version: '3.13'
 
@@ -62,7 +62,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
         with:
           python-version: '3.13'
 
@@ -107,14 +107,14 @@ jobs:
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh backend
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
         with:
           node-version: "24"
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
         with:
           python-version: "3.12"
 
@@ -171,12 +171,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@c850872471a02a3f6112a9c5321b485e7f181443 # main 2026-11-20
+        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
         with:
           python-version: "3.12"
 
       - name: Check hashed PII denylist
-        run: python3 scripts/check_pii.py
+        uses: lx-software-ltd/actions/pii-denylist@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
 
       - name: Test PII check normalization
         run: python3 -m unittest scripts/test_check_pii.py -v
