@@ -29,29 +29,13 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
-
-      - name: Install pip-audit
-        run: python -m pip install pip-audit
-
-      - name: Run pip-audit
-        working-directory: backend
-        # PYSEC-2025-183: disputed PyJWT advisory (HMAC key length is chosen by the
-        # app). We pin pyjwt 2.12.1 (latest); Cognito JWT paths use RS256 via JWKS.
-        run: |
-          pip-audit -r requirements.txt --desc on --format json \
-            --output audit-results.json \
-            --ignore-vuln PYSEC-2025-183 || true
-          pip-audit -r requirements.txt --desc on --ignore-vuln PYSEC-2025-183
-
-      - name: Upload audit results
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: always()
+      # PYSEC-2025-183: disputed PyJWT advisory (HMAC key length is chosen by the
+      # app). We pin pyjwt 2.12.1 (latest); Cognito JWT paths use RS256 via JWKS.
+      - name: Audit Python requirements
+        uses: lx-software-ltd/actions/pip-audit@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          name: pip-audit-results
-          path: backend/audit-results.json
-          retention-days: 30
+          requirements: backend/requirements.txt
+          ignore-vulns: PYSEC-2025-183
 
   # Python security linting with Bandit
   bandit:
@@ -66,29 +50,17 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
-
-      - name: Install Bandit
-        run: python -m pip install bandit[toml]
-
+      # Measured 22 Nov 2026 on backend/src and backend/lambda. No high
+      # findings. The only medium findings are two B310 urlopen calls:
+      # cfn_response.py validates HTTPS and an amazonaws.com host, and
+      # aws_proxy.py allows only http or https URLs on its allow-list.
+      # B105 and B106 are not skipped.
       - name: Run Bandit
-        working-directory: backend
-        # Rule skips (centralized suppressions):
-        # - B310 (urllib_urlopen): Suppressed because cfn_response.py validates URLs
-        #   before use (HTTPS only, .amazonaws.com hosts only), preventing the
-        #   file:// scheme attack vector. See src/app/utils/cfn_response.py
-        run: |
-          bandit -r src lambda -f json -o bandit-results.json --skip B310 || true
-          bandit -r src lambda -f txt --skip B310
-
-      - name: Upload Bandit results
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: always()
+        uses: lx-software-ltd/actions/bandit@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          name: bandit-results
-          path: backend/bandit-results.json
-          retention-days: 30
+          paths: src lambda
+          root: backend
+          skip: B310
 
   # Infrastructure as Code scanning with Checkov
   checkov:
@@ -202,25 +174,39 @@ jobs:
       - name: Run Gitleaks
         uses: lx-software-ltd/actions/gitleaks@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
 
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: lx-software-ltd/actions/setup-node@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
+        with:
+          node-version: "26"
+
+      - name: Audit npm lockfiles
+        uses: lx-software-ltd/actions/npm-audit@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
+        with:
+          directories: |
+            apps/admin_web
+            apps/public_www
+            packages/react_ui
+            packages/api_client_ts
+            backend/infrastructure
+          audit-level: high
+
   # Summary job
   # Semgrep OSS lives in .github/workflows/semgrep.yml so GitHub Code
   # Scanning can discover the canonical Semgrep OSS configuration.
   security-summary:
     name: Security Summary
     runs-on: ubuntu-26.04
-    needs: [dependency-audit, bandit, checkov, codeql, pii-denylist, secrets-scan]
+    needs: [checkov, codeql, pii-denylist, secrets-scan, dependency-audit, bandit, npm-audit]
     if: always()
     steps:
-      - name: Check job results
-        run: |
-          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Dependency Audit | ${{ needs.dependency-audit.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Bandit | ${{ needs.bandit.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Checkov | ${{ needs.checkov.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| CodeQL | ${{ needs.codeql.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| PII denylist | ${{ needs.pii-denylist.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Secret Scanning | ${{ needs.secrets-scan.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Semgrep | see Semgrep workflow |" >> $GITHUB_STEP_SUMMARY
+      - name: Require every security job
+        uses: lx-software-ltd/actions/require-jobs@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
+        with:
+          needs-json: ${{ toJson(needs) }}
