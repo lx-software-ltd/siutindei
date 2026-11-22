@@ -31,14 +31,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Rule exclusions (centralized suppressions):
-      # - dynamic-urllib-use-detected: Suppressed for cfn_response.py which
-      #   validates URLs before use (HTTPS only, .amazonaws.com hosts only).
-      #   See backend/src/app/utils/cfn_response.py
-      # - gha-curl-pipe-shell: The rule parses `run:` blocks as Bash and
-      #   emits SARIF toolExecutionNotifications (level: warning) on
-      #   GitHub `${{ }}` expressions. GitHub's Security tool-status
-      #   page then reports "Semgrep OSS is reporting warnings".
+      # cfn_response.py marks its reviewed urlopen with nosemgrep. The urllib
+      # rule is not excluded for the rest of the repository.
+      # gha-curl-pipe-shell stays excluded. The rule parses `run:` blocks as
+      # Bash and emits SARIF toolExecutionNotifications (level: warning) on
+      # GitHub `${{ }}` expressions. GitHub's Security tool-status page then
+      # reports "Semgrep OSS is reporting warnings".
       # mode scan reads the whole repository. This file was already scan,
       # not semgrep ci. The added pack is p/javascript.
       - name: Run Semgrep
@@ -46,7 +44,7 @@ jobs:
         with:
           mode: scan
           rules: p/python p/javascript p/security-audit p/secrets p/owasp-top-ten
-          exclude-rules: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected yaml.github-actions.security.gha-curl-pipe-shell.gha-curl-pipe-shell
+          exclude-rules: yaml.github-actions.security.gha-curl-pipe-shell.gha-curl-pipe-shell
           upload: "false"
 
       - name: Upload SARIF results
