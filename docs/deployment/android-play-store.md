@@ -406,9 +406,10 @@ Testers can install via:
 
 ## Local Development Setup
 
-For testing release builds locally. Use JDK 17 and point Flutter at it
-with `flutter config --jdk-dir <jdk17>`; Gradle 8.14 does not start on
-JDK 25, and CI pins Temurin 17 the same way.
+For testing release builds locally. Use JDK 21 and point Flutter at it
+with `flutter config --jdk-dir <jdk21>`. Android Gradle Plugin 9.3 runs
+on Java 21, and CI pins Temurin 21 the same way. The app still compiles
+for Java 17.
 
 ### 1. Create Local Key Properties
 

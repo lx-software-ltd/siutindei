@@ -133,7 +133,7 @@ lib/
 
 - Flutter 3.41+ (stable)
 - Dart 3.10.3+ (`pubspec.yaml` `sdk: ">=3.10.3 <4.0.0"`)
-- Android: JDK 17 (Gradle 8.14 does not start on JDK 25)
+- Android: JDK 21 to run Gradle 9.5. The app still compiles for Java 17.
 - iOS: Xcode 14+
 - Android: Android Studio with SDK 33+
 
