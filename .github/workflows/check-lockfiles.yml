@@ -22,7 +22,7 @@ jobs:
         uses: lx-software-ltd/actions/flutter-lockfiles@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
         with:
           working-directory: apps/siutindei_app
-          flutter-version: "3.47.9"
+          flutter-version: "3.50.1"
 
   node-lockfiles:
     name: Check Node.js lockfiles
