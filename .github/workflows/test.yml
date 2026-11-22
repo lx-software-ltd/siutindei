@@ -249,6 +249,35 @@ jobs:
       - name: Run edge function and Cloudflare Worker tests
         run: node --test backend/infrastructure/test/*.test.mjs scripts/cloudflare/workers/*.test.mjs
 
+  build-android:
+    name: Build Android
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Java
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: "stable"
+          flutter-version: "3.50.1"
+          cache: true
+
+      # Android Gradle Plugin 9.3 lint calls List.removeLast(), which exists
+      # only on Java 21 and newer. The app still compiles for Java 17.
+      - name: Point Flutter at Java 21
+        run: flutter config --jdk-dir "$JAVA_HOME"
+
+      - name: Build debug APK
+        working-directory: apps/siutindei_app
+        run: flutter build apk --debug
+
   test:
     name: test
     runs-on: ubuntu-26.04
@@ -259,6 +288,7 @@ jobs:
       - test-public-www-e2e
       - test-python
       - test-infrastructure
+      - build-android
     if: always()
     steps:
       - name: Require every test job
