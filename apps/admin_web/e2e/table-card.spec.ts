@@ -45,17 +45,32 @@ test.describe('Table card slots', () => {
     const releaseBox = await release.boundingBox();
     const createBox = await create.boundingBox();
     const approveBox = await approve.boundingBox();
+    const actionBox = await actions.boundingBox();
     expect(applyBox).toBeTruthy();
     expect(releaseBox).toBeTruthy();
     expect(createBox).toBeTruthy();
     expect(approveBox).toBeTruthy();
-    expect(releaseBox!.x).toBeGreaterThan(applyBox!.x);
+    expect(actionBox).toBeTruthy();
+    // The actions row is flex-wrap and left-aligned. The release label is
+    // long enough to wrap onto the next row. On the same row it sits to the
+    // right of Apply. On the next row it starts at the left edge. Chromium
+    // and the installed fonts decide which of those two layouts appears.
+    // The Node 26 run put Apply at x 778 and Release at x 297.
+    const sameRow = Math.abs(releaseBox!.y - applyBox!.y) < 8;
+    if (sameRow) {
+      expect(releaseBox!.x).toBeGreaterThan(applyBox!.x);
+    } else {
+      expect(releaseBox!.y).toBeGreaterThan(applyBox!.y);
+      expect(Math.abs(releaseBox!.x - actionBox!.x)).toBeLessThan(32);
+    }
+    expect(releaseBox!.x).toBeGreaterThanOrEqual(actionBox!.x - 1);
+    expect(releaseBox!.x + releaseBox!.width).toBeLessThanOrEqual(
+      actionBox!.x + actionBox!.width + 1
+    );
     expect(Math.abs(createBox!.height - approveBox!.height)).toBeLessThan(2);
 
     const filterBox = await filters.boundingBox();
-    const actionBox = await actions.boundingBox();
     expect(filterBox).toBeTruthy();
-    expect(actionBox).toBeTruthy();
     expect(actionBox!.y).toBeGreaterThan(filterBox!.y);
     expect(Math.abs(actionBox!.x - filterBox!.x)).toBeLessThan(32);
 
