@@ -22,25 +22,22 @@ on:
 jobs:
   pii-denylist:
     name: PII denylist
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
+        uses: lx-software-ltd/actions/setup-python@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
           python-version: "3.12"
 
       - name: Check hashed PII denylist
-        uses: lx-software-ltd/actions/pii-denylist@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
-
-      - name: Test PII check normalization
-        run: python3 -m unittest scripts/test_check_pii.py -v
+        uses: lx-software-ltd/actions/pii-denylist@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
 
   test-flutter:
     name: Test Flutter
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -97,7 +94,7 @@ jobs:
 
   test-node:
     name: Test Node
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -105,9 +102,9 @@ jobs:
           lfs: true
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
+        uses: lx-software-ltd/actions/setup-node@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          node-version: "24"
+          node-version: "26"
 
       - name: Run Node tests
         run: |
@@ -128,7 +125,7 @@ jobs:
 
   test-public-www-e2e:
     name: Test Public Website E2E
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     defaults:
       run:
@@ -144,21 +141,16 @@ jobs:
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh public-www
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
+        uses: lx-software-ltd/actions/setup-node@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          node-version: "24"
+          node-version: "26"
           cache: npm
           working-directory: apps/public_www
 
       - name: Install Playwright browsers
-        # The runner image already ships Chromium's libraries, so --with-deps
-        # only adds fonts from apt. When the apt mirrors cannot be reached,
-        # install the browser alone instead of failing before any test runs.
-        run: |
-          if ! timeout 180 npx playwright install chromium --with-deps; then
-            echo "::warning::Could not install Chromium's apt packages; continuing with the browser only."
-            npx playwright install chromium
-          fi
+        uses: lx-software-ltd/actions/playwright-install@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
+        with:
+          working-directory: apps/public_www
 
       - name: Run Playwright tests
         run: npm run test:e2e
@@ -175,10 +167,10 @@ jobs:
 
   test-python:
     name: Test Python
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     services:
       postgres:
-        image: postgres:16
+        image: postgres:16@sha256:72d22ce26d04fe56a5384e9f6b026152d1cf05db602a7a3524a3ed337d5f5752 # linux/amd64 2026-11-22
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -202,7 +194,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
+        uses: lx-software-ltd/actions/setup-python@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
           python-version: "3.12"
 
@@ -231,15 +223,15 @@ jobs:
 
   test-infrastructure:
     name: Test Infrastructure
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
+        uses: lx-software-ltd/actions/setup-node@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
-          node-version: "24"
+          node-version: "26"
 
       - name: Install infrastructure dependencies
         run: |
@@ -264,7 +256,7 @@ jobs:
 
   test:
     name: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs:
       - pii-denylist
       - test-flutter
@@ -275,6 +267,6 @@ jobs:
     if: always()
     steps:
       - name: Require every test job
-        uses: lx-software-ltd/actions/require-jobs@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
+        uses: lx-software-ltd/actions/require-jobs@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
           needs-json: ${{ toJson(needs) }}

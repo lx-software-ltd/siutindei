@@ -22,40 +22,30 @@ permissions:
 jobs:
   semgrep:
     name: semgrep/ci
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     container:
-      image: semgrep/semgrep
+      image: semgrep/semgrep@sha256:f83a64e8a7d985eaa51ee3978c9c882be946964c68633fba5d2817cf297a3912 # 2026-11-17
     # Dependabot PRs do not have security-events write on the default token
     if: github.actor != 'dependabot[bot]'
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # cfn_response.py marks its reviewed urlopen with nosemgrep. The urllib
+      # rule is not excluded for the rest of the repository.
+      # gha-curl-pipe-shell stays excluded. The rule parses `run:` blocks as
+      # Bash and emits SARIF toolExecutionNotifications (level: warning) on
+      # GitHub `${{ }}` expressions. GitHub's Security tool-status page then
+      # reports "Semgrep OSS is reporting warnings".
+      # mode scan reads the whole repository. This file was already scan,
+      # not semgrep ci. The added pack is p/javascript.
       - name: Run Semgrep
-        # Rule exclusions (centralized suppressions):
-        # - dynamic-urllib-use-detected: Suppressed for cfn_response.py which
-        #   validates URLs before use (HTTPS only, .amazonaws.com hosts only).
-        #   See backend/src/app/utils/cfn_response.py
-        # - gha-curl-pipe-shell: The rule parses `run:` blocks as Bash and
-        #   emits SARIF toolExecutionNotifications (level: warning) on
-        #   GitHub `${{ }}` expressions. GitHub's Security tool-status
-        #   page then reports "Semgrep OSS is reporting warnings".
-        run: |
-          semgrep scan \
-            --config p/python \
-            --config p/security-audit \
-            --config p/secrets \
-            --config p/owasp-top-ten \
-            --sarif \
-            --sarif-output=semgrep-results.sarif \
-            --exclude-rule python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected \
-            --exclude-rule yaml.github-actions.security.gha-curl-pipe-shell.gha-curl-pipe-shell \
-            || true
-          if [ ! -f semgrep-results.sarif ]; then
-            printf '%s\n' \
-              '{"version":"2.1.0","$schema":"https://json.schemastore.org/sarif-2.1.0.json","runs":[]}' \
-              > semgrep-results.sarif
-          fi
+        uses: lx-software-ltd/actions/semgrep@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
+        with:
+          mode: scan
+          rules: p/python p/javascript p/security-audit p/secrets p/owasp-top-ten
+          exclude-rules: yaml.github-actions.security.gha-curl-pipe-shell.gha-curl-pipe-shell
+          upload: "false"
 
       - name: Upload SARIF results
         uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
