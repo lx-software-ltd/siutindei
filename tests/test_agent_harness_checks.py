@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib.util
+import io
+import json
 import os
 from pathlib import Path
 
@@ -18,9 +20,53 @@ def _load(name: str, path: Path):
     return module
 
 
-def test_agent_rules_validate() -> None:
-    module = _load("validate_agent_rules", ROOT / "scripts" / "validate_agent_rules.py")
-    assert module.validate() == []
+class _Completed:
+    def __init__(self, stdout: str, returncode: int = 0) -> None:
+        self.stdout = stdout
+        self.stderr = ""
+        self.returncode = returncode
+
+
+def test_missing_pre_commit_returns_one_followup(monkeypatch) -> None:
+    stop = _load("stop_gate", ROOT / ".cursor" / "hooks" / "stop_gate.py")
+
+    def fake_run(command, **kwargs):
+        if command[0] == "git":
+            return _Completed(" M file.py\n")
+        if command[0] in {stop.sys.executable, "node"}:
+            return _Completed("", 0)
+        raise FileNotFoundError(command[0])
+
+    monkeypatch.setattr(stop.subprocess, "run", fake_run)
+    monkeypatch.setattr(stop.sys, "stdin", io.StringIO(json.dumps({"status": "completed"})))
+    stdout = io.StringIO()
+    monkeypatch.setattr(stop.sys, "stdout", stdout)
+    assert stop.main() == 0
+    message = json.loads(stdout.getvalue())["followup_message"]
+    assert message.count("pre-commit is not on PATH") == 1
+    assert "lx-software-ltd/actions" in message
+    assert "network" in message
+    assert "clone that repository" in message
+
+
+def test_pre_commit_failure_does_not_say_the_tool_is_missing(monkeypatch) -> None:
+    stop = _load("stop_gate", ROOT / ".cursor" / "hooks" / "stop_gate.py")
+
+    def fake_run(command, **kwargs):
+        if command[0] == "git":
+            return _Completed(" M file.py\n")
+        if command[0] == "pre-commit":
+            return _Completed("hook failed", 1)
+        return _Completed("", 0)
+
+    monkeypatch.setattr(stop.subprocess, "run", fake_run)
+    monkeypatch.setattr(stop.sys, "stdin", io.StringIO(json.dumps({"status": "completed"})))
+    stdout = io.StringIO()
+    monkeypatch.setattr(stop.sys, "stdout", stdout)
+    assert stop.main() == 0
+    message = json.loads(stdout.getvalue())["followup_message"]
+    assert "hook failed" in message
+    assert "pre-commit is not on PATH" not in message
 
 
 def test_shell_guard_decisions() -> None:

@@ -9,7 +9,7 @@ Path-scoped rules and `.cursor/skills/` add procedures. The more specific path r
 
 - Never hardcode secrets, API keys, passwords, or tokens. [why: 52d61c0 masked secrets and PII]
 - Never log unmasked PII. Use `mask_email()` and `mask_pii()`. [why: 52d61c0 masked secrets and PII]
-- Do not put real personal names, phones, emails, street addresses, bank numbers, or business-registration numbers in source or docs. Tests use fictional fixtures. `scripts/check-pii.sh` enforces the hash list. [why: 57b1099 hashed PII denylist]
+- Do not put real personal names, phones, emails, street addresses, bank numbers, or business-registration numbers in source or docs. Tests use fictional fixtures. Do not add plaintext denylist entries. The `check-pii` hook enforces `scripts/pii-denylist.sha256`. [why: 57b1099 hashed PII denylist]
 - Never use `print()` in production Python. Use `get_logger()`. [why: convention]
 - Never use `random` for security tokens. Use `secrets`. [why: 52d61c0 masked secrets and PII]
 - Never use `Cors.ALL_ORIGINS`. [why: 52d61c0 masked secrets and PII]

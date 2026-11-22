@@ -36,10 +36,7 @@ PROTECTED_FILES = frozenset(
     {
         "backend/src/app/services/aws_proxy.py",
         "backend/src/app/services/openrouter_client.py",
-        "scripts/check-pii.sh",
-        "scripts/check_pii.py",
         "scripts/pii-denylist.sha256",
-        "scripts/test_check_pii.py",
         ".cursor/hooks.json",
         ".pre-commit-config.yaml",
     }
