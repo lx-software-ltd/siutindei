@@ -24,7 +24,7 @@ jobs:
     name: semgrep/ci
     runs-on: ubuntu-26.04
     container:
-      image: semgrep/semgrep
+      image: semgrep/semgrep@sha256:f83a64e8a7d985eaa51ee3978c9c882be946964c68633fba5d2817cf297a3912 # 2026-11-17
     # Dependabot PRs do not have security-events write on the default token
     if: github.actor != 'dependabot[bot]'
     steps:
