@@ -3,7 +3,9 @@
 **Status**: Draft
 **Zone**: red
 
-The pre-commit `rev` is a red path. Pair B also pins `verify-rulesets.yml`, which is red. Deploy workflows that still pass an older Node version are red. Gate G2 already covers the hook repository. This pull request does not change hook behaviour: `9235676` does not touch the hook scripts or `verify-rulesets`. No deploy workflow is run.
+The pre-commit `rev` is a red path. Pair B also pins `verify-rulesets.yml`, which is red. Deploy workflows that still pass an older Node version are red. Gate G2 already covers the hook repository. This pull request does not change hook behaviour: `9235676` does not touch the hook scripts or `verify-rulesets`.
+
+This pull request does not run a deploy, bootstrap, or key-management workflow. For the workflows that move from Node 24 to Node 26, that means the first real run is later, not at merge. The section below names those workflows.
 
 ## Goal
 
@@ -16,7 +18,29 @@ Stages 5 and 6. SA-701 and SA-702. Flutter version pins. No deploy, bootstrap, o
 ## Files
 
 `.github/workflows/*.yml`, `.pre-commit-config.yaml`, this plan.
-`board-merge-staging.yml` drops the quotes around `statuses`. Direct setup-node calls that pass `24` or `lts/*` move to `"26"`, including the deploy and promote workflows.
+`board-merge-staging.yml` drops the quotes around `statuses`. It does not set a Node version.
+
+## When Node 26 first runs
+
+`lts/*` already selects Node 26, so `cdk-diff.yml` and `deploy-backend.yml` do not change the runtime when their string becomes `"26"`.
+
+These workflows move from Node 24 to Node 26. That is a major-version jump:
+
+- `deploy-admin-web.yml`
+- `deploy-public-www.yml`
+- `promote-public-www.yml`
+- `smoke-public-www-staging.yml`
+- `cdk-bootstrap.yml`
+- `lighthouse-public-www.yml`
+- `e2e-admin-web.yml`
+
+Pull-request CI builds and tests the public site on Node 26. Those checks passed on this pull request.
+
+`e2e-admin-web.yml` runs only when someone starts it. This pull request did not start it, so the admin-web end-to-end suite has not run on Node 26.
+
+`deploy-admin-web.yml` runs on a manual start, or on a push to `main` that touches `apps/admin_web/**`, `packages/react_ui/**`, `packages/api_client_ts/**`, `packages/models_shared/**`, or `scripts/**`. This pull request does not touch those paths, so the merge does not start that deploy. The first Node 26 admin deploy will be some later push that does. A failure on that later push will not point back at this pull request.
+
+`deploy-public-www.yml` runs for `staging`, a manual start, or `repository_dispatch`. `promote-public-www.yml` runs on its schedule, a manual start, or `repository_dispatch`. `smoke-public-www-staging.yml`, `lighthouse-public-www.yml`, and `cdk-bootstrap.yml` run when someone starts them. None of those starts is this merge.
 
 ## Invariants this change preserves
 
