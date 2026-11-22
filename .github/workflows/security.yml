@@ -31,6 +31,8 @@ jobs:
 
       # PYSEC-2025-183: disputed PyJWT advisory (HMAC key length is chosen by the
       # app). We pin pyjwt 2.12.1 (latest); Cognito JWT paths use RS256 via JWKS.
+      # 22 Nov 2026: ignore-vulns is the hatch for an upstream advisory
+      # with no fix. A dated reason goes on this step when one is ignored.
       - name: Audit Python requirements
         uses: lx-software-ltd/actions/pip-audit@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
         with:
@@ -179,6 +181,8 @@ jobs:
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
 
+      # 22 Nov 2026: audit-level is the hatch for an upstream advisory
+      # with no fix. A dated reason goes on this step when the level changes.
       - name: Audit npm lockfiles
         uses: lx-software-ltd/actions/npm-audit@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
         with:
@@ -194,7 +198,7 @@ jobs:
   # Semgrep OSS lives in .github/workflows/semgrep.yml so GitHub Code
   # Scanning can discover the canonical Semgrep OSS configuration.
   security-summary:
-    name: Security Summary
+    name: security-summary
     runs-on: ubuntu-26.04
     needs: [checkov, codeql, pii-denylist, secrets-scan, dependency-audit, bandit, npm-audit]
     if: always()
