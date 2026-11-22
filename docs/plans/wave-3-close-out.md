@@ -31,7 +31,7 @@ No merge, no pull request, and no workflow run. Dependabot `cooldown.exclude` is
 - `workflow-conformance` in enforce mode reports no findings.
 - Runners are `ubuntu-26.04` and `macos-26`. Node versions are `"26"`. Python `3.13` is now `"3.12"`.
 - Semgrep runs `mode: scan`, which reads the whole repository. This file was already scan, not `semgrep ci`. The packs are `p/python`, `p/javascript`, `p/security-audit`, `p/secrets`, and `p/owasp-top-ten`. The added pack is `p/javascript`. Both exclude rules stay. `upload: "false"` keeps the existing upload step on category `semgrep`. The Dependabot skip stays.
-- Bandit on `backend/src` and `backend/lambda` exits 0 with skip `B310`. Measured 22 Nov 2026: no high findings. The only medium findings are two `B310` `urlopen` calls, in `cfn_response.py` and `aws_proxy.py`, and both validate the URL before use. `B105` and `B106` do not match, so they are not skipped and do not need `# nosec`.
+- Bandit on `backend/src` and `backend/lambda` exits 0 with no skip. Measured 22 Nov 2026: no high findings. Two `B310` `urlopen` calls are `# nosec B310` on the line, in `cfn_response.py` and `aws_proxy.py`, and both validate the URL before use. `B105` and `B106` do not match.
 - `npm audit --omit=dev --audit-level=high` reports no high advisory in `apps/admin_web`, `apps/public_www`, and `backend/infrastructure`. `packages/react_ui` and `packages/api_client_ts` have no `package.json`, and the lockfile job still skips them.
 - `pip-audit` on `backend/requirements.txt`, ignoring `PYSEC-2025-183`, reports no known vulnerabilities. Python requirement pins pass.
 - The agent harness check passes after the core-rule denylist sentence change. The `[why:]` tag is unchanged.

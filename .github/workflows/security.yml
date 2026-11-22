@@ -51,16 +51,15 @@ jobs:
           python-version: "3.12"
 
       # Measured 22 Nov 2026 on backend/src and backend/lambda. No high
-      # findings. The only medium findings are two B310 urlopen calls:
+      # findings. Two B310 urlopen calls are marked on the line:
       # cfn_response.py validates HTTPS and an amazonaws.com host, and
       # aws_proxy.py allows only http or https URLs on its allow-list.
-      # B105 and B106 are not skipped.
+      # B105 and B106 do not match.
       - name: Run Bandit
         uses: lx-software-ltd/actions/bandit@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
         with:
           paths: src lambda
           root: backend
-          skip: B310
 
   # Infrastructure as Code scanning with Checkov
   checkov:
