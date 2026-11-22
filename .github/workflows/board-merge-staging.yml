@@ -12,7 +12,7 @@ permissions:
   contents: write
   pull-requests: write
   checks: read
-  "statuses": read
+  statuses: read
 
 concurrency:
   group: board-merge-staging-${{ inputs.pr_number }}

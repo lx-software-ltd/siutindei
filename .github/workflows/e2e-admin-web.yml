@@ -30,7 +30,7 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browsers
-        uses: lx-software-ltd/actions/playwright-install@61b67ed4f686659433f6ca4cb10c80707e365cd0 # main 2026-11-22
+        uses: lx-software-ltd/actions/playwright-install@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
         with:
           working-directory: apps/admin_web
 
