@@ -1,7 +1,7 @@
 /**
  * Replaces the bundled minimatch inside aws-cdk-lib with the top-level
  * minimatch dependency (11.0.1+) that includes the GHSA-g3hv-75wg-m249
- * fix. aws-cdk-lib 2.275.0 still ships minimatch 10.2.6 in its tarball,
+ * fix. aws-cdk-lib 2.277.0 still ships minimatch 10.2.6 in its tarball,
  * so npm overrides cannot replace it. Copy the patched tree after every
  * install, and record that version on the inBundle lockfile entry.
  * Dependabot and npm audit read the lockfile, not the copied tree.
