@@ -15,7 +15,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: deploy-public-www-staging
@@ -23,6 +22,9 @@ concurrency:
 
 jobs:
   build-and-deploy:
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-26.04
     environment: staging
     steps:

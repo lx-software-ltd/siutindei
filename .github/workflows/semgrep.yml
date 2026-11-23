@@ -1,4 +1,8 @@
 # Canonical Semgrep OSS workflow path. GitHub Code Scanning's Semgrep OSS
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # setup looks for this file; keeping the job only inside security.yml left
 # the tool-status page at "1 configuration not found".
 # https://semgrep.dev/docs/semgrep-ci/sample-ci-configs
@@ -16,11 +20,13 @@ on:
 
 permissions:
   contents: read
-  security-events: write
-  actions: read
 
 jobs:
   semgrep:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     name: semgrep/ci
     runs-on: ubuntu-26.04
     container:

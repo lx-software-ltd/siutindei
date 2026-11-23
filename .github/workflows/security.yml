@@ -1,4 +1,8 @@
 name: Security Scanning
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 
 on:
   push:
@@ -12,12 +16,14 @@ on:
 
 permissions:
   contents: read
-  security-events: write
-  actions: read
 
 jobs:
   # Python dependency vulnerability scanning
   dependency-audit:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     name: Python Dependency Audit
     runs-on: ubuntu-26.04
     steps:
@@ -41,6 +47,10 @@ jobs:
 
   # Python security linting with Bandit
   bandit:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     name: Bandit Security Linter
     runs-on: ubuntu-26.04
     steps:
@@ -65,6 +75,10 @@ jobs:
 
   # Infrastructure as Code scanning with Checkov
   checkov:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     name: Checkov IaC Security
     runs-on: ubuntu-26.04
     steps:
@@ -113,6 +127,10 @@ jobs:
   # Python stays /language:python. javascript-typescript is a new
   # configuration, not a rename of the Python category.
   codeql:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     name: CodeQL Analysis (${{ matrix.language }})
     runs-on: ubuntu-26.04
     strategy:
@@ -141,6 +159,10 @@ jobs:
           category: ${{ matrix.category }}
 
   pii-denylist:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     name: PII denylist
     runs-on: ubuntu-26.04
     steps:
@@ -157,6 +179,10 @@ jobs:
 
   # Secret scanning (in addition to GitHub's built-in scanning)
   secrets-scan:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     name: Secret Scanning
     runs-on: ubuntu-26.04
     steps:
@@ -172,6 +198,10 @@ jobs:
         uses: lx-software-ltd/actions/gitleaks@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
 
   npm-audit:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     name: npm audit
     runs-on: ubuntu-26.04
     steps:
@@ -198,6 +228,10 @@ jobs:
   # Semgrep OSS lives in .github/workflows/semgrep.yml so GitHub Code
   # Scanning can discover the canonical Semgrep OSS configuration.
   security-summary:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     name: security-summary
     runs-on: ubuntu-26.04
     needs: [checkov, codeql, pii-denylist, secrets-scan, dependency-audit, bandit, npm-audit]

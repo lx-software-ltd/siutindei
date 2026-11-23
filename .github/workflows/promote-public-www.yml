@@ -26,7 +26,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: promote-public-www
@@ -34,6 +33,9 @@ concurrency:
 
 jobs:
   prepare:
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-26.04
     environment: production
     outputs:
@@ -219,6 +221,9 @@ jobs:
           retention-days: 1
 
   promote:
+    permissions:
+      contents: read
+      id-token: write
     needs: prepare
     if: needs.prepare.result == 'success'
     runs-on: ubuntu-26.04

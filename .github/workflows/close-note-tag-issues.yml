@@ -15,10 +15,12 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   close-matching:
+    permissions:
+      contents: read
+      issues: write
     name: Close matching NOTE-tag issues
     runs-on: ubuntu-26.04
     steps:

@@ -9,10 +9,7 @@ on:
         type: string
 
 permissions:
-  contents: write
-  pull-requests: write
-  checks: read
-  statuses: read
+  contents: read
 
 concurrency:
   group: board-merge-staging-${{ inputs.pr_number }}
@@ -20,6 +17,11 @@ concurrency:
 
 jobs:
   merge:
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: read
+      statuses: read
     timeout-minutes: 15
     runs-on: ubuntu-26.04
     steps:
