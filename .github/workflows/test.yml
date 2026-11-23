@@ -32,12 +32,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-python@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           python-version: "3.12"
 
       - name: Check hashed PII denylist
-        uses: lx-software-ltd/actions/pii-denylist@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/pii-denylist@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
 
   test-flutter:
     name: Test Flutter
@@ -47,7 +47,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: "stable"
+          # pubspec.lock was resolved with this SDK. Floating stable rewrites it.
+          flutter-version: "3.50.1"
+          cache: true
 
       - name: Install system SQLite for Linux native assets
         run: sudo apt-get update && sudo apt-get install -y libsqlite3-0 libsqlite3-dev
@@ -101,7 +106,7 @@ jobs:
           lfs: true
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
 
       - name: Run Node tests
         run: |
@@ -138,13 +143,13 @@ jobs:
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh public-www
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           cache: npm
           working-directory: apps/public_www
 
       - name: Install Playwright browsers
-        uses: lx-software-ltd/actions/playwright-install@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/playwright-install@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           working-directory: apps/public_www
 
@@ -190,7 +195,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-python@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           python-version: "3.12"
 
@@ -225,7 +230,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
 
       - name: Install infrastructure dependencies
         run: |
@@ -262,7 +267,11 @@ jobs:
           java-version: "21"
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: "stable"
+          flutter-version: "3.50.1"
+          cache: true
 
       # Android Gradle Plugin 9.3 lint calls List.removeLast(), which exists
       # only on Java 21 and newer. The app still compiles for Java 17.
@@ -287,6 +296,6 @@ jobs:
     if: always()
     steps:
       - name: Require every test job
-        uses: lx-software-ltd/actions/require-jobs@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
+        uses: lx-software-ltd/actions/require-jobs@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
         with:
           needs-json: ${{ toJson(needs) }}

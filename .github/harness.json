@@ -35,26 +35,21 @@
       ".cursor/hooks.json",
       "BUGBOT.md"
     ],
-    "extra-rules": "full",
+    "extra-rules": "always-only",
     "verify-why-commits": true,
     "skills": "all"
   },
   "file-length": {
-    "mode": "typed",
+    "mode": "python-names",
+    "limit": 500,
     "allowlist": "scripts/python-file-length-allowlist.txt",
-    "python-limit": 500,
-    "typescript-limit": 800,
-    "python-prefix": "backend/",
-    "typescript-app-prefix": "apps/__not_scanned__/",
-    "typescript-lib-prefix": "backend/__not_scanned__/",
-    "generated-suffix": "src/lib/contracts/generated.ts",
     "scan-roots": [
       "backend/src",
       "backend/lambda"
     ]
   },
   "test-focus": {
-    "mode": "test-names",
+    "mode": "all-sources",
     "roots": [
       "tests",
       "apps/admin_web/e2e",
