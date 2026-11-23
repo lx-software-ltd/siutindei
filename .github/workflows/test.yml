@@ -32,12 +32,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@82f7f9b4cd0d304e9ebcf6aac28c7fc123b9feb0 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-python@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
         with:
           python-version: "3.12"
 
       - name: Check hashed PII denylist
-        uses: lx-software-ltd/actions/pii-denylist@82f7f9b4cd0d304e9ebcf6aac28c7fc123b9feb0 # main 2026-11-23
+        uses: lx-software-ltd/actions/pii-denylist@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
 
   test-flutter:
     name: Test Flutter
@@ -47,7 +47,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@82f7f9b4cd0d304e9ebcf6aac28c7fc123b9feb0 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-flutter@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
         with:
           channel: "stable"
           # pubspec.lock was resolved with this SDK. Floating stable rewrites it.
@@ -106,7 +106,7 @@ jobs:
           lfs: true
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@82f7f9b4cd0d304e9ebcf6aac28c7fc123b9feb0 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
 
       - name: Run Node tests
         run: |
@@ -143,13 +143,13 @@ jobs:
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh public-www
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@82f7f9b4cd0d304e9ebcf6aac28c7fc123b9feb0 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
         with:
           cache: npm
           working-directory: apps/public_www
 
       - name: Install Playwright browsers
-        uses: lx-software-ltd/actions/playwright-install@82f7f9b4cd0d304e9ebcf6aac28c7fc123b9feb0 # main 2026-11-23
+        uses: lx-software-ltd/actions/playwright-install@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
         with:
           working-directory: apps/public_www
 
@@ -195,7 +195,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@82f7f9b4cd0d304e9ebcf6aac28c7fc123b9feb0 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-python@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
         with:
           python-version: "3.12"
 
@@ -230,7 +230,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@82f7f9b4cd0d304e9ebcf6aac28c7fc123b9feb0 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
 
       - name: Install infrastructure dependencies
         run: |
@@ -267,7 +267,7 @@ jobs:
           java-version: "21"
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@82f7f9b4cd0d304e9ebcf6aac28c7fc123b9feb0 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-flutter@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
         with:
           channel: "stable"
           flutter-version: "3.50.1"
@@ -296,6 +296,6 @@ jobs:
     if: always()
     steps:
       - name: Require every test job
-        uses: lx-software-ltd/actions/require-jobs@82f7f9b4cd0d304e9ebcf6aac28c7fc123b9feb0 # main 2026-11-23
+        uses: lx-software-ltd/actions/require-jobs@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
         with:
           needs-json: ${{ toJson(needs) }}
