@@ -28,11 +28,7 @@ npm ci
 npm run build
 ```
 
-From the repo root:
-
-```
-bash scripts/deploy/deploy-admin-web.sh
-```
+**Deploy Admin Web** uploads the build with `s3-cloudfront-deploy`.
 
 ## CORS configuration
 

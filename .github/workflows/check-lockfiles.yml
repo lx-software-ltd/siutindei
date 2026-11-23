@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check Flutter lockfile
-        uses: lx-software-ltd/actions/flutter-lockfiles@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
+        uses: lx-software-ltd/actions/flutter-lockfiles@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
         with:
           working-directory: apps/siutindei_app
           flutter-version: "3.50.1"
@@ -36,10 +36,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
 
       - name: Check Node lockfiles
-        uses: lx-software-ltd/actions/node-lockfiles@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
+        uses: lx-software-ltd/actions/node-lockfiles@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
         with:
           directories: |
             apps/admin_web
@@ -56,7 +56,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check Podfile.lock
-        uses: lx-software-ltd/actions/pod-lockfiles@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
+        uses: lx-software-ltd/actions/pod-lockfiles@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
         with:
           working-directory: apps/siutindei_app/ios
 
@@ -68,7 +68,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check requirement pins
-        uses: lx-software-ltd/actions/python-requirements-pins@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
+        uses: lx-software-ltd/actions/python-requirements-pins@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
         with:
           files: |
             backend/requirements.txt

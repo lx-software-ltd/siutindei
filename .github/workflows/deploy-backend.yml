@@ -90,7 +90,7 @@ jobs:
           fi
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
@@ -105,7 +105,7 @@ jobs:
         run: npm ci
 
       - name: Check CDK bootstrap
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
@@ -134,7 +134,7 @@ jobs:
           echo "stacks=$CDK_STACKS" >> "$GITHUB_OUTPUT"
 
       - name: Deploy stacks
-        uses: lx-software-ltd/actions/cdk-deploy@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
+        uses: lx-software-ltd/actions/cdk-deploy@daa2fd06bb4a9580a3d3302f9127a66da39d940e # main 2026-11-23
         with:
           working-directory: backend/infrastructure
           stacks: ${{ steps.prep.outputs.stacks }}
@@ -149,8 +149,7 @@ jobs:
           destroy: ${{ github.event.inputs.destroy_before_deploy || 'false' }}
           run-seed: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_seed_data || 'false' }}
           region: ${{ steps.region.outputs.region }}
-          plan: |
-            {"api-stack":"lxsoftware-siutindei","also-api":["PublicWwwOriginVerifySecret"],"routes":[{"stack":"lxsoftware-siutindei-admin-web","parameters":["AdminWebDomainName","AdminWebCertificateArn","WafWebAclArn"],"skip-empty":["WafWebAclArn"]},{"stack":"lxsoftware-siutindei-public-www","parameters":["PublicWwwDomainName","PublicWwwCertificateArn","PublicWwwStagingDomainName","PublicWwwStagingCertificateArn","WafWebAclArn","SearchApiProxyOriginDomain","PublicWwwEdgeVerifySecret","PublicWwwEdgeVerifySecretPrevious","PublicWwwStagingEdgeVerifySecret","PublicWwwStagingEdgeVerifySecretPrevious","PublicWwwOriginVerifySecret"]}],"groups":[{"stacks":["lxsoftware-siutindei","lxsoftware-siutindei-admin-web","lxsoftware-siutindei-public-www","lxsoftware-siutindei-waf"]}]}
+          plan-file: backend/infrastructure/cdk-plan.json
         env:
           AWS_REGION: ${{ steps.region.outputs.region }}
           CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
