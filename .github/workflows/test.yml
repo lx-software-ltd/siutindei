@@ -28,12 +28,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
+        uses: lx-software-ltd/actions/setup-python@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
         with:
           python-version: "3.12"
 
       - name: Check hashed PII denylist
-        uses: lx-software-ltd/actions/pii-denylist@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
+        uses: lx-software-ltd/actions/pii-denylist@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
 
   test-flutter:
     name: Test Flutter
@@ -102,7 +102,7 @@ jobs:
           lfs: true
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
+        uses: lx-software-ltd/actions/setup-node@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
 
       - name: Run Node tests
         run: |
@@ -139,13 +139,13 @@ jobs:
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh public-www
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
+        uses: lx-software-ltd/actions/setup-node@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
         with:
           cache: npm
           working-directory: apps/public_www
 
       - name: Install Playwright browsers
-        uses: lx-software-ltd/actions/playwright-install@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
+        uses: lx-software-ltd/actions/playwright-install@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
         with:
           working-directory: apps/public_www
 
@@ -191,7 +191,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
+        uses: lx-software-ltd/actions/setup-python@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
         with:
           python-version: "3.12"
 
@@ -226,7 +226,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
+        uses: lx-software-ltd/actions/setup-node@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
 
       - name: Install infrastructure dependencies
         run: |
@@ -257,7 +257,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Java
-        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
           java-version: "21"
@@ -292,6 +292,6 @@ jobs:
     if: always()
     steps:
       - name: Require every test job
-        uses: lx-software-ltd/actions/require-jobs@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
+        uses: lx-software-ltd/actions/require-jobs@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
         with:
           needs-json: ${{ toJson(needs) }}
