@@ -1,8 +1,8 @@
 -r requirements-core.txt
-boto3==1.43.126
+boto3==1.44.3
 alembic==1.20.1
 pyjwt[crypto]==2.15.1
 phonenumberslite==9.0.43
 pycountry==26.2.16
-pypdf==7.0.0
+pypdf==7.1.0
 pillow==13.0.0
