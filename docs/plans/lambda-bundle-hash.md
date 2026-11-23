@@ -5,7 +5,7 @@
 
 ## Goal
 
-Stop Deploy Backend from updating every Lambda function when the source has not changed. `PythonLambda` hashes `backend/` with `AssetHashType.SOURCE`. `backend/.lambda-build` is recreated before synth, and those bytes are not source. Exclude that directory from the hash.
+Stop Deploy Backend from updating every Lambda function when the source has not changed. `PythonLambda` hashes `backend/` with `AssetHashType.SOURCE`. `backend/.lambda-build` is recreated before synth. Bootstrap also rewrites `backend/infrastructure/cdk.out` before the deploy hash, and that directory contains zip timestamps. Exclude both. A pattern without a leading `**` does not match a directory under `infrastructure/`.
 
 ## Non-goals
 
@@ -23,7 +23,7 @@ Stop Deploy Backend from updating every Lambda function when the source has not 
 
 ## Done when
 
-The exclude list contains `.lambda-build/**`. The next source-only deploy still updates the functions once, because the hash no longer includes the build directory. A later deploy with the same source should leave the function code unchanged.
+The exclude list contains `.lambda-build/**`, `**/cdk.out/**`, `**/node_modules/**`, `**/dist/**`, and `**/build/**`. The next source-only deploy still updates the functions once, because the hash changes. A later deploy with the same source should leave the function code unchanged. The `.lambda-build/**` exclude alone did not: Deploy Backend `45142626795` ran at 16:56 HKT on #951's commit `2d70da6` and still updated all 21 functions.
 
 ## Rollback
 
