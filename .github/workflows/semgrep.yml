@@ -1,7 +1,7 @@
 # Canonical Semgrep OSS workflow path. GitHub Code Scanning's Semgrep OSS
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # setup looks for this file; keeping the job only inside security.yml left
 # the tool-status page at "1 configuration not found".
