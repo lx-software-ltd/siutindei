@@ -471,6 +471,7 @@ internal → alpha → beta → production
 ## Configuration Checklist
 
 ### Secrets
+- [ ] `AWS_ACCOUNT_ID`
 - [ ] `ANDROID_KEYSTORE_BASE64`
 - [ ] `ANDROID_KEYSTORE_PASSWORD`
 - [ ] `ANDROID_KEY_ALIAS`
@@ -482,7 +483,7 @@ internal → alpha → beta → production
 - [ ] `PLAY_STORE_UPLOAD_ENABLED` (set to `true` when ready to upload)
 - [ ] `ANDROID_PACKAGE_NAME`
 - [ ] `ANDROID_RELEASE_TRACK`
-- [ ] `AWS_ACCOUNT_ID` and `AWS_REGION` (the build assumes `GitHubActionsRole`
+- [ ] `AWS_REGION` (the account id is the `AWS_ACCOUNT_ID` secret; the build assumes `GitHubActionsRole`
   and reads the `lxsoftware-siutindei` stack outputs to generate
   `AMPLIFY_CONFIG`)
 - [ ] `CDK_PARAM_FILE` (optional, defaults to `backend/infrastructure/params/production.json`)
