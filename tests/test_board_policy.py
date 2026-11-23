@@ -90,7 +90,7 @@ def test_board_agent_declares_revision_inputs() -> None:
         assert f"\n      {key}\n" in text
         assert f"# {key}" not in text
     assert "POSTGRES_DB: backend_test" in text
-    assert 'python-version: "3.12"' in text
+    assert "lx-software-ltd/actions/setup-python@" in text
     assert "persist-credentials: false" in text
     assert "--output-format stream-json" in text
     assert "docs/architecture/zones.md" in text
