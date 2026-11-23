@@ -1,7 +1,7 @@
 # Plan: Organization website
 
 **Status**: Done. The one-off backfill was removed in
-`docs/plans/remove-one-off-scripts.md`.
+`remove-one-off-scripts.md`.
 **Zone**: red
 
 ## Goal
