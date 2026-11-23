@@ -24,6 +24,8 @@ jobs:
   diff:
     runs-on: ubuntu-26.04
     environment: production
+    env:
+      CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -64,15 +66,21 @@ jobs:
           fi
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        id: aws
+        uses: lx-software-ltd/actions/aws-oidc@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
-          aws-region: ${{ steps.region.outputs.region }}
-          role-session-name: GitHubActions-${{ github.run_id }}
+          account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          region: ${{ steps.region.outputs.region }}
 
       - name: Install infrastructure dependencies
         working-directory: backend/infrastructure
         run: npm ci
+
+      - name: Check CDK Bootstrap status
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        with:
+          qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
+          region: ${{ steps.region.outputs.region }}
 
       - name: Build CDK secret parameters file
         run: |
@@ -159,7 +167,8 @@ jobs:
           FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID }}
           FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID }}
 
-      - name: Run CDK diff
+      - name: Prepare CDK diff
+        id: prep
         working-directory: backend/infrastructure
         run: |
           npx cdk acknowledge 34892 || true
@@ -302,11 +311,15 @@ jobs:
             fi
           done
 
-          if [ ${#STACK_ARGS[@]} -gt 0 ]; then
-            npx cdk diff --no-color "${PARAM_ARGS[@]}" "${STACK_ARGS[@]}"
+          if [ ${#PARAM_ARGS[@]} -gt 0 ]; then
+            printf '%s\0' "${PARAM_ARGS[@]}" > "$RUNNER_TEMP/cdk-diff-args"
           else
-            npx cdk diff --no-color "${PARAM_ARGS[@]}"
+            : > "$RUNNER_TEMP/cdk-diff-args"
           fi
+          {
+            echo "run=true"
+            echo "stacks=${STACK_ARGS[*]}"
+          } >> "$GITHUB_OUTPUT"
         env:
           CDK_STACKS: ${{ inputs.stacks }}
           CDK_PARAM_FILE: ${{ vars.CDK_PARAM_FILE }}
@@ -325,3 +338,12 @@ jobs:
           FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
           FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID }}
           FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID }}
+
+      - name: Run CDK diff
+        if: steps.prep.outputs.run == 'true'
+        uses: lx-software-ltd/actions/cdk-diff@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        with:
+          working-directory: backend/infrastructure
+          stacks: ${{ steps.prep.outputs.stacks }}
+          args-file: ${{ runner.temp }}/cdk-diff-args
+          account-id: ${{ secrets.AWS_ACCOUNT_ID }}
