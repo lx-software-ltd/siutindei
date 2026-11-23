@@ -1,27 +1,31 @@
-# Plan: OpenAPI lint error ceiling
+# Plan: OpenAPI lint
 
 **Status**: Draft
 **Zone**: yellow
 
 ## Goal
 
-`lint` fails when `@redocly/cli@1.34.11` reports more than 176 errors in `docs/api/admin.yaml`, `docs/api/partner.yaml`, and `docs/api/search.yaml`. The 176 existing errors stay allowed. The 299 warnings are printed and are not part of the ceiling.
+`lint` runs `@redocly/cli@1.34.11` on `docs/api/admin.yaml`, `docs/api/partner.yaml`, and `docs/api/search.yaml`, and the job fails when that command fails.
+
+## What was wrong
+
+The three specs had 176 errors: 151 admin operations with no `security`, 22 `nullable` fields with no `type`, and no `servers` entry. Those are fixed in the specs. The lint does not ignore them.
 
 ## Non-goals
 
-An ignore file. Fixing the existing errors. Changing `scripts/check_openapi_routes.py`. mypy, which stays on pre-commit. A coverage change.
+An ignore file. An error ceiling. mypy, which stays on pre-commit. A coverage change. The 299 Redocly warnings (`operationId`, `4xx` responses, license, ambiguous paths, unused components) still print. They do not fail this command.
 
 ## Files
 
-`.github/workflows/lint.yml` and this plan.
+`docs/api/admin.yaml`, `docs/api/partner.yaml`, `docs/api/search.yaml`, `.github/workflows/lint.yml`, and this plan.
 
 ## Invariants this change preserves
 
-The `lint` job id and its display name stay `lint`. The actions pin stays `ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f`. A Redocly exit code above 1, or a run that prints no error count, still fails the job.
+The `lint` job id and its display name stay `lint`. The actions pin stays `ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f`. `scripts/check_openapi_routes.py` still passes. Security on each operation matches the authorizer that API Gateway already uses: admin, manager, any signed-in user, importer on the import and organization routes the authorizer allows, and IAM on `/health`.
 
 ## Done when
 
-The `lint` job needs `lint-openapi`, and that job prints `OpenAPI errors: 176 (ceiling 176)`.
+`npx --yes @redocly/cli@1.34.11 lint` on the three specs exits 0, and the `lint` job needs `lint-openapi`.
 
 ## Rollback
 
