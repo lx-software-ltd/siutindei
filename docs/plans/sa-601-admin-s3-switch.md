@@ -1,6 +1,6 @@
 # Plan: Switch the admin site to s3-cloudfront-deploy
 
-**Status**: In progress
+**Status**: Done. Deploy Admin Web `45151458927` succeeded, and the response headers matched.
 **Zone**: red
 
 ## Goal
