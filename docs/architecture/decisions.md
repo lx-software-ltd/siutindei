@@ -363,7 +363,6 @@ Lambdas or NAT Gateway.
 ## CI/CD Variables and Secrets
 
 **GitHub Variables**
-- `AWS_ACCOUNT_ID`
 - `AWS_REGION`
 - `CDK_STACKS` (optional; comma/space-separated list, e.g. `lxsoftware-siutindei`)
 - `CDK_BOOTSTRAP_QUALIFIER` (optional)
@@ -386,6 +385,7 @@ Lambdas or NAT Gateway.
 - `FIREBASE_APP_CHECK_DEBUG` (optional; "true" for debug providers)
 
 **GitHub Secrets**
+- `AWS_ACCOUNT_ID` (workflows read `secrets.AWS_ACCOUNT_ID`; a variable of the same name is not read)
 - `AMPLIFY_API_KEY` (mobile API key injected at build time)
 - `CDK_PARAM_GOOGLE_CLIENT_SECRET`
 - `CDK_PARAM_GOOGLE_PLACES_API_KEY` (optional; empty disables pin lookup)
