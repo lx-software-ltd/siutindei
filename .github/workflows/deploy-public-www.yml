@@ -85,7 +85,7 @@ jobs:
           NEXT_PUBLIC_SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@8f88f5149aab6db583e747ade3b29e38dbee7b9e # main 2026-11-23
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}

@@ -46,7 +46,7 @@ jobs:
       # mode scan reads the whole repository. This file was already scan,
       # not semgrep ci. The added pack is p/javascript.
       - name: Run Semgrep
-        uses: lx-software-ltd/actions/semgrep@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        uses: lx-software-ltd/actions/semgrep@8f88f5149aab6db583e747ade3b29e38dbee7b9e # main 2026-11-23
         with:
           rules: p/python p/javascript p/security-audit p/secrets p/owasp-top-ten
           exclude-rules: yaml.github-actions.security.gha-curl-pipe-shell.gha-curl-pipe-shell
