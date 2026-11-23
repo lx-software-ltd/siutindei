@@ -961,6 +961,19 @@ export class ApiStack extends cdk.Stack {
     );
     customHostedDomain.cfnOptions.condition = useCustomDomain;
     customHostedDomain.node.addDependency(removeCognitoDomain);
+    // CDK 2.277 checks parameter defaults against the property schema even
+    // when the resource is created only under UseCustomAuthDomain. The empty
+    // defaults are how a stack without a custom domain skips this resource.
+    cdk.Validations.of(customHostedDomain).acknowledge({
+      id: "CloudFormation-Validate::W1030",
+      reason:
+        "Custom domain name and certificate default to empty. The resource exists only when UseCustomAuthDomain is true, so those defaults are not deployed.",
+    });
+    cdk.Validations.of(this).acknowledge({
+      id: "CloudFormation-Validate::W1030",
+      reason:
+        "CognitoCustomDomainCertificateArn defaults to empty. The custom domain resource is conditional, so the default is not deployed.",
+    });
 
     const userPoolClient = new cognito.CfnUserPoolClient(
       this,

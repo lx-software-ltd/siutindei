@@ -462,10 +462,10 @@ function assertDeployTemplateIsQuiet(outdir: string, stackName: string): void {
       `Expected the two named security groups to acknowledge W3011, found ${retainedGroups.length}`,
     );
   }
-  const targetGroupTags = suppressed.filter((violation) => violation.ruleName === "F3002");
-  if (targetGroupTags.length !== 1) {
+  const customDomainDefaults = suppressed.filter((violation) => violation.ruleName === "W1030");
+  if (customDomainDefaults.length !== 3) {
     throw new Error(
-      `Expected the proxy target group to acknowledge F3002, found ${targetGroupTags.length}`,
+      `Expected the conditional custom domain defaults to acknowledge W1030, found ${customDomainDefaults.length}`,
     );
   }
 
