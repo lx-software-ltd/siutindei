@@ -392,7 +392,9 @@ rebuilt. `promote-public-www.yml` runs `refresh_production` every day at
    `releases/production-build-sha.txt` (the commit that was built), and
    `releases/production-catalogue-digests.json` (one sha256 per activity,
    from `scripts/deploy/catalogue_snapshot_digests.py`; `generated_at` is
-   ignored).
+   ignored). The promote job reads `PublicWwwStagingBucketName` from the
+   stack after it assumes the role. The bucket name includes the account
+   id, and GitHub drops a job output that contains a secret.
 2. The refresh checks out the recorded commit, so it never ships code
    that was not promoted, downloads the snapshot, and compares digests.
    When nothing changed it stops before `npm ci`. It skips with a notice
