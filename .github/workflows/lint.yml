@@ -192,6 +192,40 @@ jobs:
         working-directory: backend/infrastructure
         run: npx cdk synth --quiet || echo "CDK synth requires parameters, skipping validation"
 
+  lint-openapi:
+    name: Lint OpenAPI
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Lint OpenAPI specs
+        run: |
+          set +e
+          ceiling=176
+          npx --yes @redocly/cli@1.34.11 lint docs/api/admin.yaml docs/api/partner.yaml docs/api/search.yaml > "$RUNNER_TEMP/redocly.txt" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/redocly.txt"
+          set -e
+          if [ "$status" -gt 1 ]; then
+            echo "redocly failed to run"
+            exit "$status"
+          fi
+          errors="$(grep -oE 'with [0-9]+ errors' "$RUNNER_TEMP/redocly.txt" | grep -oE '[0-9]+' | tail -n 1 || true)"
+          if [ -z "$errors" ]; then
+            if [ "$status" -eq 0 ]; then
+              errors=0
+            else
+              echo "redocly did not print an error count"
+              exit 1
+            fi
+          fi
+          echo "OpenAPI errors: ${errors} (ceiling ${ceiling})"
+          if [ "$errors" -gt "$ceiling" ]; then
+            echo "OpenAPI error count rose above the ceiling"
+            exit 1
+          fi
+
   workflow-conformance:
     name: Workflow conformance
     runs-on: ubuntu-26.04
@@ -233,6 +267,7 @@ jobs:
       - lint-react
       - lint-python
       - lint-cdk
+      - lint-openapi
       - workflow-conformance
       - type-check
     if: always()
