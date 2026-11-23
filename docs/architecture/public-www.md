@@ -72,8 +72,8 @@ Source: [`apps/public_www`](../../apps/public_www).
 - Tailwind CSS v4 via `@tailwindcss/postcss`.
 - Vitest + Testing Library for unit/component tests.
 - Lighthouse CI configured at `apps/public_www/.lighthouserc.json`.
-  `scripts/lighthouse-runtime-config.mjs` picks collect URLs; `/` becomes
-  `/en/` so LCP does not include the locale redirect.
+  The workflow passes paths to `lighthouse-ci`. `/` becomes `/en/` so LCP
+  does not include the locale redirect.
 - Build script: `next build` → `inject-static-redirects.mjs` → `inject-html-lang.mjs` →
   `inject-structured-data.mjs` → `inject-csp-meta.mjs` →
   `validate-csp-meta.mjs`.
