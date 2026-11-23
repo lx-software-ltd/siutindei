@@ -16,7 +16,6 @@ on:
 # action_required. With the PAT as author, workflows run without approval.
 permissions:
   contents: read
-  pull-requests: write
 
 concurrency:
   group: board-promote
@@ -24,6 +23,9 @@ concurrency:
 
 jobs:
   open-pr:
+    permissions:
+      contents: read
+      pull-requests: write
     timeout-minutes: 10
     runs-on: ubuntu-26.04
     steps:

@@ -42,7 +42,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: deploy-backend
@@ -50,6 +49,9 @@ concurrency:
 
 jobs:
   deploy:
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-26.04
     environment: production
     steps:
@@ -102,19 +104,11 @@ jobs:
         working-directory: backend/infrastructure
         run: npm ci
 
-      - name: Bootstrap CDK
-        working-directory: backend/infrastructure
-        run: |
-          npx cdk acknowledge 34892 || true
-          if [ -n "$CDK_BOOTSTRAP_QUALIFIER" ]; then
-            npx cdk bootstrap --no-notices --qualifier "$CDK_BOOTSTRAP_QUALIFIER" "aws://$AWS_ACCOUNT_ID/$AWS_REGION"
-          else
-            npx cdk bootstrap --no-notices "aws://$AWS_ACCOUNT_ID/$AWS_REGION"
-          fi
-        env:
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-          AWS_REGION: ${{ steps.region.outputs.region }}
-          CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
+      - name: Check CDK bootstrap
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@ffde04dca3c78b1ccb8739f4d3a23f728ac7a05f # main 2026-11-23
+        with:
+          qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
+          region: ${{ steps.region.outputs.region }}
 
       - name: Prepare the CDK app
         id: prep

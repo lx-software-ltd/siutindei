@@ -1,6 +1,10 @@
 name: CDK Diff
 
 on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/cdk-diff.yml"
   repository_dispatch:
     types: [cdk-diff]
   workflow_dispatch:
@@ -14,16 +18,19 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
-  group: cdk-diff
-  cancel-in-progress: false
+  group: cdk-diff-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   diff:
-    runs-on: ubuntu-26.04
+    if: github.event_name != 'pull_request'
     environment: production
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-26.04
     env:
       CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
     steps:
@@ -359,3 +366,13 @@ jobs:
           stacks: ${{ steps.prep.outputs.stacks }}
           args-file: ${{ runner.temp }}/cdk-diff-args
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+
+  pull-request:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    steps:
+      - name: Skip the diff
+        run: |
+          echo "::warning::A pull request cannot use the production environment, which is limited to main, so this diff would not see the deploy inputs. Run CDK Diff manually on main. This job does not assume GitHubActionsRole."

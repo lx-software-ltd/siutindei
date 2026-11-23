@@ -37,9 +37,7 @@ on:
 # draft PR is not opened with GITHUB_TOKEN — those PRs do not start lint/test
 # and often sit in action_required. No AWS.
 permissions:
-  contents: write
-  pull-requests: write
-  actions: write
+  contents: read
 
 concurrency:
   group: board-agent-${{ inputs.task_id }}
@@ -51,6 +49,10 @@ env:
 
 jobs:
   run:
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
     timeout-minutes: 30
     runs-on: ubuntu-26.04
     services:
