@@ -35,7 +35,7 @@ jobs:
           python-version: "3.12"
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@8f88f5149aab6db583e747ade3b29e38dbee7b9e # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@385abf462c6d47a66afcb7cebc15152ffe7049e7 # main 2026-11-23
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}

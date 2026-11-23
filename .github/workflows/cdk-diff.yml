@@ -74,7 +74,7 @@ jobs:
 
       - name: Configure AWS credentials
         id: aws
-        uses: lx-software-ltd/actions/aws-oidc@8f88f5149aab6db583e747ade3b29e38dbee7b9e # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@385abf462c6d47a66afcb7cebc15152ffe7049e7 # main 2026-11-23
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
@@ -84,7 +84,7 @@ jobs:
         run: npm ci
 
       - name: Check CDK Bootstrap status
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@8f88f5149aab6db583e747ade3b29e38dbee7b9e # main 2026-11-23
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@385abf462c6d47a66afcb7cebc15152ffe7049e7 # main 2026-11-23
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
@@ -360,7 +360,7 @@ jobs:
 
       - name: Run CDK diff
         if: steps.prep.outputs.run == 'true'
-        uses: lx-software-ltd/actions/cdk-diff@8f88f5149aab6db583e747ade3b29e38dbee7b9e # main 2026-11-23
+        uses: lx-software-ltd/actions/cdk-diff@385abf462c6d47a66afcb7cebc15152ffe7049e7 # main 2026-11-23
         with:
           working-directory: backend/infrastructure
           stacks: ${{ steps.prep.outputs.stacks }}
