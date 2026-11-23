@@ -7685,7 +7685,9 @@ export interface components {
             kind: string;
             field?: string | null;
             label: string;
-            current_value?: unknown;
+            current_value?: {
+                [key: string]: unknown;
+            } | null;
             proposed_value: {
                 [key: string]: unknown;
             };
@@ -7698,8 +7700,27 @@ export interface components {
             copyright_notice?: string | null;
             blockers?: components["schemas"]["EnrichmentBlocker"][];
         };
+        EnrichmentRun: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            org_id: string;
+            /** @enum {string} */
+            status: "queued" | "running" | "extracting" | "ready" | "failed" | "render_required";
+            source: string;
+            seed_url: string;
+            pages_fetched: number;
+            bytes_fetched: number;
+            model?: string | null;
+            cost_usd: number;
+            error?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            finished_at?: string | null;
+        };
         EnrichmentRead: {
-            run: unknown;
+            run: components["schemas"]["EnrichmentRun"] | null;
             proposals: components["schemas"]["EnrichmentProposal"][];
             activities: components["schemas"]["EnrichmentActivityOption"][];
             venues: {
@@ -9937,13 +9958,13 @@ export interface components {
         OrgMergeField: {
             field: string;
             label: string;
-            survivor_value?: unknown;
+            survivor_value?: string | null;
             source_values?: {
                 id?: string;
                 name?: string;
                 value?: string;
             }[];
-            result?: unknown;
+            result?: string | null;
             conflict: boolean;
         };
         OrgMergeResult: {
