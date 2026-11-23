@@ -64,7 +64,6 @@ For the OIDC provider itself, add the same tags:
 
 ### Variables (non-secret)
 
-- `AWS_ACCOUNT_ID`
 - `AWS_REGION`
 - `CDK_STACKS` (optional; comma/space-separated list, e.g. `lxsoftware-siutindei`)
 - `CDK_BOOTSTRAP_QUALIFIER` (optional)
@@ -88,6 +87,7 @@ For the OIDC provider itself, add the same tags:
 
 ### Secrets
 
+- `AWS_ACCOUNT_ID` (repository secret. Workflows read `secrets.AWS_ACCOUNT_ID`. A variable of the same name is not read.)
 - `CDK_PARAM_GOOGLE_CLIENT_SECRET`
 - `CDK_PARAM_GOOGLE_PLACES_API_KEY` (optional; empty disables pin lookup)
 - `CDK_PARAM_OPENROUTER_API_KEY` (optional; empty keeps the

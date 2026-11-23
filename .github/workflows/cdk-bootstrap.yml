@@ -33,16 +33,15 @@ jobs:
           python-version: "3.12"
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        uses: lx-software-ltd/actions/aws-oidc@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
         with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
-          aws-region: ${{ vars.AWS_REGION }}
-          role-session-name: GitHubActions-${{ github.run_id }}
+          account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          region: ${{ vars.AWS_REGION }}
 
       - name: Bootstrap CDK
         run: |
           if [ -z "$AWS_ACCOUNT_ID" ] || [ -z "$AWS_REGION" ]; then
-            echo "AWS_ACCOUNT_ID and AWS_REGION variables are required"
+            echo "Set AWS_ACCOUNT_ID as a repository secret and AWS_REGION as a variable"
             exit 1
           fi
           if [ ! -f "backend/infrastructure/package.json" ]; then
@@ -58,6 +57,6 @@ jobs:
             npx cdk bootstrap "aws://$AWS_ACCOUNT_ID/$AWS_REGION"
           fi
         env:
-          AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
           AWS_REGION: ${{ vars.AWS_REGION }}
           CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
