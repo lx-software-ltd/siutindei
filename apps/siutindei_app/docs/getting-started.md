@@ -20,7 +20,7 @@ This guide will help you set up and run the Siutindei App locally.
 #### Android Development
 - Android Studio with Android SDK 33+
 - Android Emulator or physical device
-- JDK 17 (`flutter config --jdk-dir <jdk17>`; Gradle 8.14 does not start on JDK 25)
+- JDK 21 (`flutter config --jdk-dir <jdk21>`). Android Gradle Plugin 9.3 runs on Java 21. The app still compiles for Java 17.
 
 ## Installation
 

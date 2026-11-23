@@ -24,7 +24,7 @@ Admin Playwright reuses a server already listening on port 3000 and then skips t
 
 `scripts/codegen/sync-home-wizard-choices.sh` copies `shared/home_wizard/home_wizard_choices.json` into `apps/public_www/src/data/` and `apps/siutindei_app/assets/home_wizard/`. `scripts/codegen/sync-activity-search-staging-fixture.sh all` copies `shared/fixtures/activity_search_staging.json` (Git LFS) into `backend/fixtures/` and `apps/public_www/public/fixtures/`. `sync-home-wizard-choices.sh --check` verifies the wizard copies.
 
-`scripts/check-pii.sh` fails when tracked source matches `scripts/pii-denylist.sha256`. The file stores digests only.
+`pre-commit run check-pii --all-files` fails when tracked source matches `scripts/pii-denylist.sha256`. The file stores digests only. The hook lives in `lx-software-ltd/actions`.
 
 Do not file GitHub issues from `NOTE:`, `SECURITY NOTE:`, or `next-env.d.ts` comments.
 

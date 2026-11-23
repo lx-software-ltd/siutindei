@@ -11,7 +11,8 @@ Run the narrowest command that exercises the edit, then the area lint.
 - Admin web: `npm run lint` and `npm run typecheck` in `apps/admin_web`. Dev server is `npm run dev` on port 3000.
 - Public website: `npm run lint`, `npm run typecheck`, and `npm test` in `apps/public_www`. Dev server port is 3100.
 - CDK: `npm run build` and `npm run test:infra` in `backend/infrastructure` when a stack changed. It has no `lint` script.
-- Agent rules: `python3 scripts/validate_agent_rules.py`.
+- Personal data: `pre-commit run check-pii --all-files`.
+- Agent rules, file length, and test focus: `pre-commit run validate-agent-rules --all-files`, `pre-commit run check-file-length --all-files`, and `pre-commit run check-test-focus --all-files`.
 
 A UI behavior change is verified in the browser (click, type, submit, and the other screens that share the state), not by a single screenshot.
 

@@ -13,153 +13,58 @@ on:
 jobs:
   flutter-lockfiles:
     name: Check Flutter lockfiles
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+      - name: Check Flutter lockfile
+        uses: lx-software-ltd/actions/flutter-lockfiles@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
         with:
-          channel: "stable"
-          # pubspec.lock was resolved with this SDK. Floating stable rewrites it.
-          flutter-version: "3.47.9"
-          cache: true
-
-      - name: Validate pubspec.lock
-        run: |
-          if [ -f "apps/siutindei_app/pubspec.yaml" ]; then
-            cd apps/siutindei_app
-            flutter pub get
-            if [ ! -f "pubspec.lock" ]; then
-              echo "pubspec.lock is missing"
-              exit 1
-            fi
-            if ! git diff --exit-code pubspec.lock; then
-              echo "pubspec.lock is out of sync with pubspec.yaml"
-              exit 1
-            fi
-          else
-            echo "Skipping Flutter lockfile check (apps/siutindei_app missing)"
-          fi
+          working-directory: apps/siutindei_app
+          flutter-version: "3.50.1"
 
   node-lockfiles:
     name: Check Node.js lockfiles
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
-        with:
-          node-version: "24"
+        uses: lx-software-ltd/actions/setup-node@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
 
-      - name: Validate package-lock.json
-        run: |
-          set -e
-          for dir in apps/admin_web apps/public_www packages/react_ui packages/api_client_ts backend/infrastructure; do
-            if [ -f "$dir/package.json" ]; then
-              if [ ! -f "$dir/package-lock.json" ]; then
-                echo "Missing package-lock.json in $dir"
-                exit 1
-              fi
-              (cd "$dir" && npm ci)
-              if ! git diff --exit-code "$dir/package-lock.json"; then
-                echo "package-lock.json is out of sync in $dir"
-                exit 1
-              fi
-            else
-              echo "Skipping Node lockfile check for $dir"
-            fi
-          done
+      - name: Check Node lockfiles
+        uses: lx-software-ltd/actions/node-lockfiles@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
+        with:
+          directories: |
+            apps/admin_web
+            apps/public_www
+            packages/react_ui
+            packages/api_client_ts
+            backend/infrastructure
 
   ios-lockfiles:
     name: Check iOS lockfiles
-    runs-on: macos-latest
+    runs-on: macos-26
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install CocoaPods
-        run: sudo gem install cocoapods
-
-      - name: Validate Podfile.lock
-        run: |
-          if [ -f "apps/siutindei_app/ios/Podfile" ]; then
-            cd apps/siutindei_app/ios
-            if [ ! -f "Podfile.lock" ]; then
-              echo "Podfile.lock is missing"
-              exit 1
-            fi
-            pod install --repo-update
-            if ! git diff --exit-code Podfile.lock; then
-              echo "Podfile.lock is out of sync with Podfile"
-              exit 1
-            fi
-          else
-            echo "Skipping iOS lockfile check (Podfile missing)"
-          fi
+      - name: Check Podfile.lock
+        uses: lx-software-ltd/actions/pod-lockfiles@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
+        with:
+          working-directory: apps/siutindei_app/ios
 
   python-requirements:
     name: Check Python requirements
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Validate requirements.txt pins
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          backend = Path("backend").resolve()
-          start = backend / "requirements.txt"
-          if not start.exists():
-              raise SystemExit("backend/requirements.txt is missing")
-
-          def include_path(line: str) -> str | None:
-              if line.startswith("-r ") or line.startswith("--requirement "):
-                  return line.split(None, 1)[1]
-              if line.startswith("-r="):
-                  return line[3:]
-              if line.startswith("--requirement="):
-                  return line.split("=", 1)[1]
-              return None
-
-          errors: list[str] = []
-          seen: set[Path] = set()
-
-          def check_file(path: Path) -> None:
-              resolved = path.resolve()
-              try:
-                  resolved.relative_to(backend)
-              except ValueError:
-                  errors.append(f"include escapes backend/: {path}")
-                  return
-              if resolved in seen:
-                  errors.append(f"circular include: {path}")
-                  return
-              if not path.exists():
-                  errors.append(f"missing include: {path}")
-                  return
-              seen.add(resolved)
-              for line in path.read_text(encoding="utf-8").splitlines():
-                  stripped = line.strip()
-                  if not stripped or stripped.startswith("#"):
-                      continue
-                  included = include_path(stripped)
-                  if included is not None:
-                      check_file(path.parent / included)
-                      continue
-                  if "==" not in stripped:
-                      errors.append(f"{path}: {stripped}")
-
-          check_file(start)
-          if errors:
-              print("Unpinned requirements found:")
-              for entry in errors:
-                  print(f"- {entry}")
-              raise SystemExit(1)
-          print("All requirements are pinned.")
-          PY
+      - name: Check requirement pins
+        uses: lx-software-ltd/actions/python-requirements-pins@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
+        with:
+          files: |
+            backend/requirements.txt

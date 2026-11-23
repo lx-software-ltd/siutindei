@@ -19,81 +19,54 @@ jobs:
   # Python dependency vulnerability scanning
   dependency-audit:
     name: Python Dependency Audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
+        uses: lx-software-ltd/actions/setup-python@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
         with:
-          python-version: '3.13'
+          python-version: "3.12"
 
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
-
-      - name: Install pip-audit
-        run: python -m pip install pip-audit
-
-      - name: Run pip-audit
-        working-directory: backend
-        # PYSEC-2025-183: disputed PyJWT advisory (HMAC key length is chosen by the
-        # app). We pin pyjwt 2.12.1 (latest); Cognito JWT paths use RS256 via JWKS.
-        run: |
-          pip-audit -r requirements.txt --desc on --format json \
-            --output audit-results.json \
-            --ignore-vuln PYSEC-2025-183 || true
-          pip-audit -r requirements.txt --desc on --ignore-vuln PYSEC-2025-183
-
-      - name: Upload audit results
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: always()
+      # PYSEC-2025-183: disputed PyJWT advisory (HMAC key length is chosen by the
+      # app). We pin pyjwt 2.12.1 (latest); Cognito JWT paths use RS256 via JWKS.
+      # 22 Nov 2026: ignore-vulns is the hatch for an upstream advisory
+      # with no fix. A dated reason goes on this step when one is ignored.
+      - name: Audit Python requirements
+        uses: lx-software-ltd/actions/pip-audit@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
         with:
-          name: pip-audit-results
-          path: backend/audit-results.json
-          retention-days: 30
+          requirements: backend/requirements.txt
+          ignore-vulns: PYSEC-2025-183
 
   # Python security linting with Bandit
   bandit:
     name: Bandit Security Linter
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
+        uses: lx-software-ltd/actions/setup-python@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
         with:
-          python-version: '3.13'
+          python-version: "3.12"
 
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
-
-      - name: Install Bandit
-        run: python -m pip install bandit[toml]
-
+      # Measured 22 Nov 2026 on backend/src and backend/lambda. No high
+      # findings. Two B310 urlopen calls are marked on the line:
+      # cfn_response.py validates HTTPS and an amazonaws.com host, and
+      # aws_proxy.py allows only http or https URLs on its allow-list.
+      # B105 and B106 do not match.
       - name: Run Bandit
-        working-directory: backend
-        # Rule skips (centralized suppressions):
-        # - B310 (urllib_urlopen): Suppressed because cfn_response.py validates URLs
-        #   before use (HTTPS only, .amazonaws.com hosts only), preventing the
-        #   file:// scheme attack vector. See src/app/utils/cfn_response.py
-        run: |
-          bandit -r src lambda -f json -o bandit-results.json --skip B310 || true
-          bandit -r src lambda -f txt --skip B310
-
-      - name: Upload Bandit results
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: always()
+        uses: lx-software-ltd/actions/bandit@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
         with:
-          name: bandit-results
-          path: backend/bandit-results.json
-          retention-days: 30
+          paths: src lambda
+          root: backend
 
   # Infrastructure as Code scanning with Checkov
   checkov:
     name: Checkov IaC Security
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -107,14 +80,13 @@ jobs:
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh backend
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
+        uses: lx-software-ltd/actions/setup-node@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
         with:
-          node-version: "24"
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
+        uses: lx-software-ltd/actions/setup-python@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
         with:
           python-version: "3.12"
 
@@ -132,102 +104,106 @@ jobs:
         run: npx cdk synth --quiet --output cdk.out
 
       - name: Run Checkov
-        uses: bridgecrewio/checkov-action@45edc9d8856b664db2ec251f5f8632361f0a67aa # v12.3139.0
+        uses: lx-software-ltd/actions/checkov-cloudformation@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
         with:
           directory: backend/infrastructure/cdk.out
-          config_file: backend/infrastructure/.checkov.yaml
-          output_format: cli,sarif
-          output_file_path: console,backend/infrastructure/checkov-results.sarif
+          config-file: backend/infrastructure/.checkov.yaml
+          framework: cloudformation
 
-      - name: Upload SARIF results
-        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
-        with:
-          sarif_file: backend/infrastructure/checkov-results.sarif
-
-  # CodeQL analysis for Python
+  # Python stays /language:python. javascript-typescript is a new
+  # configuration, not a rename of the Python category.
   codeql:
-    name: CodeQL Analysis
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
-        with:
-          languages: python
-          queries: security-extended
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
-        with:
-          category: "/language:python"
-
-  pii-denylist:
-    name: PII denylist
-    runs-on: ubuntu-latest
+    name: CodeQL Analysis (${{ matrix.language }})
+    runs-on: ubuntu-26.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: python
+            category: "/language:python"
+          - language: javascript-typescript
+            category: "/language:javascript-typescript"
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
+        if: matrix.language == 'python'
+        uses: lx-software-ltd/actions/setup-python@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
+        with:
+          python-version: "3.12"
+
+      - name: Analyze
+        uses: lx-software-ltd/actions/codeql@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
+        with:
+          language: ${{ matrix.language }}
+          queries: security-extended
+          category: ${{ matrix.category }}
+
+  pii-denylist:
+    name: PII denylist
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: lx-software-ltd/actions/setup-python@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
         with:
           python-version: "3.12"
 
       - name: Check hashed PII denylist
-        uses: lx-software-ltd/actions/pii-denylist@aab84b76383d5a44838f9617ac47b23cfff7fdaf # main 2026-11-21
-
-      - name: Test PII check normalization
-        run: python3 -m unittest scripts/test_check_pii.py -v
+        uses: lx-software-ltd/actions/pii-denylist@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
 
   # Secret scanning (in addition to GitHub's built-in scanning)
   secrets-scan:
     name: Secret Scanning
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
-      # Use the MIT-licensed gitleaks CLI instead of gitleaks-action.
-      # The action requires GITLEAKS_LICENSE on organization repos, and
-      # Dependabot pull_request runs cannot read Actions secrets
-      # (Secret source: Dependabot), so the action fails with
-      # "missing gitleaks license" on every Dependabot PR. The CLI
-      # needs no license and still scans the checked-out history.
+      # The shared action downloads the MIT-licensed CLI. fetch-depth 0
+      # stays so the scan still covers history. Dependabot pull requests
+      # do not need a Gitleaks license.
       - name: Run Gitleaks
-        env:
-          GITLEAKS_VERSION: "8.30.1"
-          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
-        run: |
-          curl -sSfL \
-            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
-            -o /tmp/gitleaks.tgz
-          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tgz" | sha256sum -c -
-          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
-          /tmp/gitleaks detect --source . --verbose --redact --no-banner
+        uses: lx-software-ltd/actions/gitleaks@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
+
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: lx-software-ltd/actions/setup-node@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
+
+      # 22 Nov 2026: audit-level is the hatch for an upstream advisory
+      # with no fix. A dated reason goes on this step when the level changes.
+      - name: Audit npm lockfiles
+        uses: lx-software-ltd/actions/npm-audit@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
+        with:
+          directories: |
+            apps/admin_web
+            apps/public_www
+            packages/react_ui
+            packages/api_client_ts
+            backend/infrastructure
+          audit-level: high
 
   # Summary job
   # Semgrep OSS lives in .github/workflows/semgrep.yml so GitHub Code
   # Scanning can discover the canonical Semgrep OSS configuration.
   security-summary:
-    name: Security Summary
-    runs-on: ubuntu-latest
-    needs: [dependency-audit, bandit, checkov, codeql, pii-denylist, secrets-scan]
+    name: security-summary
+    runs-on: ubuntu-26.04
+    needs: [checkov, codeql, pii-denylist, secrets-scan, dependency-audit, bandit, npm-audit]
     if: always()
     steps:
-      - name: Check job results
-        run: |
-          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Dependency Audit | ${{ needs.dependency-audit.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Bandit | ${{ needs.bandit.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Checkov | ${{ needs.checkov.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| CodeQL | ${{ needs.codeql.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| PII denylist | ${{ needs.pii-denylist.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Secret Scanning | ${{ needs.secrets-scan.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Semgrep | see Semgrep workflow |" >> $GITHUB_STEP_SUMMARY
+      - name: Require every security job
+        uses: lx-software-ltd/actions/require-jobs@9235676200771b2f93bc01ac85f3de1392133182 # main 2026-11-22
+        with:
+          needs-json: ${{ toJson(needs) }}
