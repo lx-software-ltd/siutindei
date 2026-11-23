@@ -35,9 +35,9 @@ Public Website (Next.js static export)        Flutter Mobile / Next.js Admin
 ### Admin console (Next.js App Router)
 - Admin users manage organizations, activities, schedules, and pricing.
 - Static export synced to S3 and served by CloudFront from the
-  `lxsoftware-siutindei-admin-web` stack (`scripts/deploy/deploy-admin-web.sh`).
-  `deploy-admin-web.yml` also starts an Amplify Hosting job when the
-  `AMPLIFY_*` repository variables are set.
+  `lxsoftware-siutindei-admin-web` stack. Deploy Admin Web calls
+  `s3-cloudfront-deploy`. `scripts/deploy/deploy-admin-web.sh` remains
+  for a manual sync.
 - See [`docs/architecture/admin-web-ui.md`](admin-web-ui.md) for the
   shared layout primitives.
 
