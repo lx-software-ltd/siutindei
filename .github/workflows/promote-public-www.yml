@@ -41,7 +41,9 @@ jobs:
       skip: ${{ steps.resolve_release.outputs.skip }}
       release_id: ${{ steps.resolve_release.outputs.release_id }}
       promotion_mode: ${{ steps.resolve_release.outputs.promotion_mode }}
-      staging_bucket: ${{ steps.resolve_release.outputs.staging_bucket }}
+      # The staging bucket name includes the account id. GitHub drops a job
+      # output that contains a secret, so the promote job reads the name
+      # from the stack after it assumes the role.
       build_sha: ${{ steps.resolve_release.outputs.build_sha }}
       deploy: ${{ steps.catalogue_changes.outputs.deploy }}
       production_site_origin: ${{ steps.resolve_public_site_config.outputs.production_site_origin }}
@@ -101,6 +103,8 @@ jobs:
             echo 'Staging bucket output not found on Public Website stack'
             exit 1
           fi
+          # Step output only. A job output would be dropped because the name
+          # contains the account id.
           echo "staging_bucket=$STAGING_BUCKET" >> "$GITHUB_OUTPUT"
 
           if [ "$RESOLVED_PROMOTION_MODE" = "release_id" ]; then
@@ -323,13 +327,23 @@ jobs:
           NEXT_PUBLIC_BUILD_YEAR: ${{ vars.NEXT_PUBLIC_BUILD_YEAR }}
 
       # The daily refresh rebuilds this commit and compares against these digests.
+      # The bucket name includes the account id, so it is read here instead of
+      # from a prepare job output.
       - name: Record the live production build
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
         env:
-          STAGING_BUCKET: ${{ needs.prepare.outputs.staging_bucket }}
           RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
           CURRENT_DIGESTS: ${{ runner.temp }}/promote-inputs/catalogue-digests.json
+          STACK_NAME: lxsoftware-siutindei-public-www
         run: |
+          STAGING_BUCKET="$(aws cloudformation describe-stacks \
+            --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='PublicWwwStagingBucketName'].OutputValue" \
+            --output text)"
+          if [ -z "$STAGING_BUCKET" ] || [ "$STAGING_BUCKET" = "None" ]; then
+            echo 'Staging bucket output not found on Public Website stack'
+            exit 1
+          fi
           printf '%s\n' "$RELEASE_ID" | aws s3 cp --only-show-errors - "s3://$STAGING_BUCKET/releases/production-release-id.txt"
           git rev-parse HEAD | aws s3 cp --only-show-errors - "s3://$STAGING_BUCKET/releases/production-build-sha.txt"
           aws s3 cp --only-show-errors "$CURRENT_DIGESTS" "s3://$STAGING_BUCKET/releases/production-catalogue-digests.json"
