@@ -393,6 +393,7 @@ way to run it.
 ## Configuration Checklist
 
 ### Secrets
+- [ ] `AWS_ACCOUNT_ID`
 - [ ] `MATCH_GIT_URL`
 - [ ] `MATCH_PASSWORD`
 - [ ] `MATCH_DEPLOY_KEY`
@@ -405,7 +406,7 @@ way to run it.
 - [ ] `IOS_BUNDLE_ID`
 - [ ] `APPLE_TEAM_ID`
 - [ ] `IOS_PROVISIONING_PROFILE` (optional)
-- [ ] `AWS_ACCOUNT_ID` and `AWS_REGION` (the build assumes `GitHubActionsRole`
+- [ ] `AWS_REGION` (the account id is the `AWS_ACCOUNT_ID` secret; the build assumes `GitHubActionsRole`
   and reads the `lxsoftware-siutindei` stack outputs to generate
   `AMPLIFY_CONFIG`)
 - [ ] `CDK_PARAM_FILE` (optional, defaults to `backend/infrastructure/params/production.json`)
