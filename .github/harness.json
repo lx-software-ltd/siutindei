@@ -35,21 +35,22 @@
       ".cursor/hooks.json",
       "BUGBOT.md"
     ],
-    "extra-rules": "always-only",
+    "extra-rules": "full",
     "verify-why-commits": true,
     "skills": "all"
   },
   "file-length": {
-    "mode": "python-names",
-    "limit": 500,
+    "mode": "typed",
     "allowlist": "scripts/python-file-length-allowlist.txt",
+    "python-limit": 500,
+    "python-prefix": "backend/",
     "scan-roots": [
       "backend/src",
       "backend/lambda"
     ]
   },
   "test-focus": {
-    "mode": "all-sources",
+    "mode": "test-names",
     "roots": [
       "tests",
       "apps/admin_web/e2e",
