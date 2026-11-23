@@ -75,7 +75,7 @@ jobs:
       - name: Configure AWS credentials
         # Reads the live release and the catalogue only. The build job assumes
         # after npm ci.
-        uses: lx-software-ltd/actions/aws-oidc@385abf462c6d47a66afcb7cebc15152ffe7049e7 # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@82f7f9b4cd0d304e9ebcf6aac28c7fc123b9feb0 # main 2026-11-23
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -310,7 +310,7 @@ jobs:
       - name: Configure AWS credentials
         # After the build. npm ci and the build must not see the deploy role.
         if: ${{ success() && (needs.prepare.outputs.maintenance_mode == 'true' || needs.prepare.outputs.deploy == 'true') }}
-        uses: lx-software-ltd/actions/aws-oidc@385abf462c6d47a66afcb7cebc15152ffe7049e7 # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@82f7f9b4cd0d304e9ebcf6aac28c7fc123b9feb0 # main 2026-11-23
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
