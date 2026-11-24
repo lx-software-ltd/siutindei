@@ -46,7 +46,7 @@ jobs:
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh backend
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
@@ -55,7 +55,7 @@ jobs:
       # run-cdk-app.sh bundles Lambdas with Python 3.12. ubuntu-26.04 is
       # 26.04 and no longer includes that interpreter.
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-python@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
 
       - name: Determine deployment region
         id: region
@@ -72,7 +72,7 @@ jobs:
 
       - name: Configure AWS credentials
         id: aws
-        uses: lx-software-ltd/actions/aws-oidc@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
@@ -82,7 +82,7 @@ jobs:
         run: npm ci
 
       - name: Check CDK Bootstrap status
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
@@ -185,24 +185,22 @@ jobs:
           npx cdk acknowledge 34892 || true
           npm run build --if-present
 
-          CDK_STACKS="${CDK_STACKS:-}"
-          if [ -z "$CDK_STACKS" ]; then
-            CDK_STACKS="all stacks"
-          fi
-          if [ "$CDK_STACKS" = "all stacks" ]; then
-            CDK_STACKS="lxsoftware-siutindei lxsoftware-siutindei-admin-web lxsoftware-siutindei-public-www"
-          elif [ "$CDK_STACKS" = "lambda apis" ]; then
-            CDK_STACKS="lxsoftware-siutindei"
-          elif [ "$CDK_STACKS" = "admin web" ]; then
-            CDK_STACKS="lxsoftware-siutindei-admin-web"
-          elif [ "$CDK_STACKS" = "public website" ] || \
-            [ "$CDK_STACKS" = "public www" ] || \
-            [ "$CDK_STACKS" = "public website staging" ] || \
-            [ "$CDK_STACKS" = "public www staging" ]; then
-            CDK_STACKS="lxsoftware-siutindei-public-www"
-          elif [ "$CDK_STACKS" = "waf (us-east-1)" ]; then
-            CDK_STACKS="lxsoftware-siutindei-waf"
-          fi
+          # Empty means the all-stacks alias, which leaves the WAF stack out.
+          # The parameter list below needs concrete names. cdk-diff receives
+          # those names and the same committed plan as deploy. Parameters stay
+          # in the args file, so the plan is not asked for its extras.
+          CDK_STACKS="$(python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          plan = json.loads(Path("cdk-plan.json").read_text(encoding="utf-8"))
+          raw = os.environ.get("CDK_STACKS", "").strip() or "all stacks"
+          aliases = plan.get("aliases") or {}
+          chosen = aliases[raw] if raw in aliases else raw.split()
+          print(" ".join(chosen))
+          PY
+          )"
 
           PARAM_ARGS=()
           PARAM_FILES=()
@@ -358,19 +356,90 @@ jobs:
 
       - name: Run CDK diff
         if: steps.prep.outputs.run == 'true'
-        uses: lx-software-ltd/actions/cdk-diff@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/cdk-diff@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           working-directory: backend/infrastructure
           stacks: ${{ steps.prep.outputs.stacks }}
+          plan-file: backend/infrastructure/cdk-plan.json
           args-file: ${{ runner.temp }}/cdk-diff-args
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
 
   pull-request:
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-26.04
     permissions:
       contents: read
+      id-token: write
+    runs-on: ubuntu-26.04
     steps:
-      - name: Skip the diff
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          lfs: true
+
+      - name: Pull Git LFS objects
+        run: git lfs pull
+
+      - name: Sync staging search fixture for Lambda bundle
+        run: bash scripts/codegen/sync-activity-search-staging-fixture.sh backend
+
+      - name: Refuse the deploy role on a pull request
+        if: vars.AWS_DIFF_ROLE_NAME == 'GitHubActionsRole'
         run: |
-          echo "::warning::A pull request cannot use the production environment, which is limited to main, so this diff would not see the deploy inputs. Run CDK Diff manually on main. This job does not assume GitHubActionsRole."
+          echo "::error::AWS_DIFF_ROLE_NAME must name a read-only role. A pull request does not assume GitHubActionsRole."
+          exit 1
+
+      - name: Configure AWS credentials
+        id: aws
+        if: vars.AWS_DIFF_ROLE_NAME != ''
+        uses: lx-software-ltd/actions/aws-oidc@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+        with:
+          account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          region: ${{ vars.AWS_REGION }}
+          role-name: ${{ vars.AWS_DIFF_ROLE_NAME }}
+          required: "false"
+
+      - name: Note when a pull request diff did not run
+        if: steps.aws.outputs.ready != 'true'
+        run: |
+          echo "::warning::This pull request did not assume a role. Set AWS_DIFF_ROLE_NAME to a read-only role that trusts only pull_request. GitHubActionsRole is not assumed from a pull request."
+
+      - name: Set up Node.js
+        if: steps.aws.outputs.ready == 'true'
+        uses: lx-software-ltd/actions/setup-node@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+        with:
+          cache: npm
+          working-directory: backend/infrastructure
+          install: "false"
+
+      - name: Set up Python
+        if: steps.aws.outputs.ready == 'true'
+        uses: lx-software-ltd/actions/setup-python@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+
+      - name: Install infrastructure dependencies
+        if: steps.aws.outputs.ready == 'true'
+        working-directory: backend/infrastructure
+        run: |
+          npx cdk acknowledge 34892 || true
+          npm ci
+          npm run build --if-present
+
+      - name: Check CDK Bootstrap status
+        if: steps.aws.outputs.ready == 'true'
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+        with:
+          qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
+          region: ${{ vars.AWS_REGION }}
+
+      - name: Run CDK diff
+        if: steps.aws.outputs.ready == 'true'
+        uses: lx-software-ltd/actions/cdk-diff@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+        with:
+          working-directory: backend/infrastructure
+          stacks: "all stacks"
+          plan-file: backend/infrastructure/cdk-plan.json
+          param-file: ${{ vars.CDK_PARAM_FILE }}
+          format: plain-json
+          pass-empty: WafWebAclArn,CognitoCustomDomainName,CognitoCustomDomainCertificateArn,ApiCustomDomainName,ApiCustomDomainCertificateArn,SearchAreaScope
+          escape-newlines: "true"
+          include-extras: "false"
+          account-id: ${{ secrets.AWS_ACCOUNT_ID }}
