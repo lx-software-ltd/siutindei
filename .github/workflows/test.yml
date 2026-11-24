@@ -125,6 +125,7 @@ jobs:
         # template:set
         env:
           NEXT_PUBLIC_SITE_ORIGIN: http://localhost:3000
+          NEXT_PUBLIC_SITE_NAME: Siu Tin Dei
         # template:end
 
   # template:optional react-ui
