@@ -1,5 +1,5 @@
-name: board-promote
-run-name: board-promote ${{ inputs.kind || 'production' }}
+name: Board Promote
+run-name: Board Promote ${{ inputs.kind || 'production' }}
 
 on:
   workflow_dispatch:

@@ -1,7 +1,7 @@
 # Auto-close issues filed from NOTE / SECURITY NOTE comments.
 # Those comments are architectural documentation, not defects.
 # Product TODOs (title starts with "TODO:") are left open.
-name: Close Auto-Filed NOTE Issues
+name: Board Close Issues
 
 on:
   issues:
