@@ -64,7 +64,7 @@ jobs:
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh backend
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
@@ -73,7 +73,7 @@ jobs:
       # run-cdk-app.sh bundles Lambdas with Python 3.12. ubuntu-26.04 is
       # 26.04 and no longer includes that interpreter.
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
 
       - name: Determine deployment region
         id: region
@@ -88,7 +88,7 @@ jobs:
           fi
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
@@ -103,7 +103,7 @@ jobs:
         run: npm ci
 
       - name: Check CDK bootstrap
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
@@ -119,7 +119,7 @@ jobs:
           npm run build --if-present
 
       - name: Deploy stacks
-        uses: lx-software-ltd/actions/cdk-deploy@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-deploy@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           working-directory: backend/infrastructure
           stacks: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}

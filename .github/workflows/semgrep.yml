@@ -1,60 +1,39 @@
-# Canonical Semgrep OSS workflow path. GitHub Code Scanning's Semgrep OSS
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
-# setup looks for this file; keeping the job only inside security.yml left
-# the tool-status page at "1 configuration not found".
-# https://semgrep.dev/docs/semgrep-ci/sample-ci-configs
 name: Semgrep
 
 on:
   push:
-    branches: [main]
+    branches: ["main"]
   pull_request:
-    branches: [main]
   schedule:
-    # Align with Security Scanning (Mondays at 8:00 UTC)
-    - cron: '0 8 * * 1'
+    - cron: "0 8 * * 1"
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   semgrep:
-    permissions:
-      contents: read
-      security-events: write
-      actions: read
     name: semgrep/ci
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-26.04
     container:
       image: semgrep/semgrep@sha256:f83a64e8a7d985eaa51ee3978c9c882be946964c68633fba5d2817cf297a3912 # 2026-11-17
-    # Dependabot PRs do not have security-events write on the default token
-    if: github.actor != 'dependabot[bot]'
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # cfn_response.py marks its reviewed urlopen with nosemgrep. The urllib
-      # rule is not excluded for the rest of the repository.
-      # gha-curl-pipe-shell stays excluded. The rule parses `run:` blocks as
-      # Bash and emits SARIF toolExecutionNotifications (level: warning) on
-      # GitHub `${{ }}` expressions. GitHub's Security tool-status page then
-      # reports "Semgrep OSS is reporting warnings".
-      # mode scan reads the whole repository. This file was already scan,
-      # not semgrep ci. The added pack is p/javascript.
+      # gha-curl-pipe-shell parses run blocks as Bash and warns on
+      # GitHub expressions, which marks Semgrep OSS as reporting warnings.
       - name: Run Semgrep
-        uses: lx-software-ltd/actions/semgrep@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+        uses: lx-software-ltd/actions/semgrep@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           rules: p/python p/javascript p/security-audit p/secrets p/owasp-top-ten
           exclude-rules: yaml.github-actions.security.gha-curl-pipe-shell.gha-curl-pipe-shell
-          upload: "false"
-
-      - name: Upload SARIF results
-        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
-        if: always()
-        with:
-          sarif_file: semgrep-results.sarif
-          category: semgrep
