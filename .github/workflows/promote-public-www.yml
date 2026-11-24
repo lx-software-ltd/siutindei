@@ -75,17 +75,39 @@ jobs:
       - name: Configure AWS credentials
         # Reads the live release and the catalogue only. The build job assumes
         # after npm ci.
-        uses: lx-software-ltd/actions/aws-oidc@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          region: ${{ vars.AWS_REGION }}
+
+      - name: Choose promotion mode
+        id: promotion_mode
+        env:
+          PROMOTION_MODE: ${{ github.event_name == 'schedule' && 'refresh_production' || inputs.promotion_mode }}
+        run: |
+          MODE="${PROMOTION_MODE:-latest_staging}"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          if [ "$MODE" = "maintenance_on" ]; then
+            echo "read_staging=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "read_staging=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Read staging bucket
+        id: staging
+        if: ${{ steps.promotion_mode.outputs.read_staging == 'true' }}
+        uses: lx-software-ltd/actions/cfn-stack-outputs@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+        with:
+          stack: lxsoftware-siutindei-public-www
+          outputs: PublicWwwStagingBucketName
           region: ${{ vars.AWS_REGION }}
 
       - name: Resolve release ID
         id: resolve_release
         env:
-          PROMOTION_MODE: ${{ github.event_name == 'schedule' && 'refresh_production' || inputs.promotion_mode }}
+          PROMOTION_MODE: ${{ steps.promotion_mode.outputs.mode }}
           INPUT_RELEASE_ID: ${{ inputs.release_id }}
-          STACK_NAME: lxsoftware-siutindei-public-www
+          STACK_JSON: ${{ steps.staging.outputs.json }}
         run: |
           RESOLVED_PROMOTION_MODE="${PROMOTION_MODE:-latest_staging}"
 
@@ -97,11 +119,8 @@ jobs:
           fi
 
           # Release artifacts and the production markers live in the staging bucket.
-          STAGING_BUCKET="$(aws cloudformation describe-stacks \
-            --stack-name "$STACK_NAME" \
-            --query "Stacks[0].Outputs[?OutputKey=='PublicWwwStagingBucketName'].OutputValue" \
-            --output text)"
-          if [ -z "$STAGING_BUCKET" ] || [ "$STAGING_BUCKET" = "None" ]; then
+          STAGING_BUCKET="$(python3 -c 'import json,os; print(json.loads(os.environ["STACK_JSON"])["PublicWwwStagingBucketName"])')"
+          if [ -z "$STAGING_BUCKET" ]; then
             echo 'Staging bucket output not found on Public Website stack'
             exit 1
           fi
@@ -245,7 +264,7 @@ jobs:
 
       - name: Set up Node.js
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
-        uses: lx-software-ltd/actions/setup-node@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
@@ -304,7 +323,7 @@ jobs:
       - name: Configure AWS credentials
         # After the build. npm ci and the build must not see the deploy role.
         if: ${{ success() && (needs.prepare.outputs.maintenance_mode == 'true' || needs.prepare.outputs.deploy == 'true') }}
-        uses: lx-software-ltd/actions/aws-oidc@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -328,18 +347,24 @@ jobs:
       # The daily refresh rebuilds this commit and compares against these digests.
       # The bucket name includes the account id, so it is read here instead of
       # from a prepare job output.
+      - name: Read the production staging bucket
+        id: production_staging
+        if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
+        uses: lx-software-ltd/actions/cfn-stack-outputs@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+        with:
+          stack: lxsoftware-siutindei-public-www
+          outputs: PublicWwwStagingBucketName
+          region: ${{ vars.AWS_REGION }}
+
       - name: Record the live production build
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
         env:
           RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
           CURRENT_DIGESTS: ${{ runner.temp }}/promote-inputs/catalogue-digests.json
-          STACK_NAME: lxsoftware-siutindei-public-www
+          STACK_JSON: ${{ steps.production_staging.outputs.json }}
         run: |
-          STAGING_BUCKET="$(aws cloudformation describe-stacks \
-            --stack-name "$STACK_NAME" \
-            --query "Stacks[0].Outputs[?OutputKey=='PublicWwwStagingBucketName'].OutputValue" \
-            --output text)"
-          if [ -z "$STAGING_BUCKET" ] || [ "$STAGING_BUCKET" = "None" ]; then
+          STAGING_BUCKET="$(python3 -c 'import json,os; print(json.loads(os.environ["STACK_JSON"])["PublicWwwStagingBucketName"])')"
+          if [ -z "$STAGING_BUCKET" ]; then
             echo 'Staging bucket output not found on Public Website stack'
             exit 1
           fi

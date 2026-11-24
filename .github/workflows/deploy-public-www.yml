@@ -38,7 +38,7 @@ jobs:
         run: bash scripts/deploy/resolve-public-www-build-env.sh
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
@@ -80,7 +80,7 @@ jobs:
           NEXT_PUBLIC_SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -128,11 +128,30 @@ jobs:
           PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH: ${{ steps.catalogue_snapshot.outputs.path }}
 
       - name: Deploy public website
-        run: bash 'scripts/deploy/deploy-public-www.sh'
+        uses: lx-software-ltd/actions/s3-cloudfront-deploy@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
+        with:
+          source: apps/public_www/out
+          stack: lxsoftware-siutindei-public-www
+          region: ${{ vars.AWS_REGION }}
+          bucket-output: PublicWwwStagingBucketName
+          distribution-output: ""
+          profile: next-site
+          document-cache: public, max-age=300, must-revalidate, stale-while-revalidate=60
+          release-id: ${{ github.sha }}
+          release-marker: "true"
+          marker-cache: no-store, max-age=0
+          marker-content-type: text/plain; charset=utf-8
+          staging-robots: "true"
+          dry-run: "false"
+
+      # The action invalidates /*. Staging still invalidates the site path list.
+      - name: Invalidate the staging distribution
+        run: bash scripts/deploy/deploy-public-www.sh
         env:
           PUBLIC_WWW_STACK_NAME: lxsoftware-siutindei-public-www
           PUBLIC_WWW_ENVIRONMENT: staging
           PUBLIC_WWW_RELEASE_ID: ${{ github.sha }}
+          PUBLIC_WWW_UPLOAD: external
 
       - name: Run staging smoke checks
         run: npm run smoke:staging

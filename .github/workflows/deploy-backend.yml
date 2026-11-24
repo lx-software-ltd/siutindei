@@ -64,7 +64,7 @@ jobs:
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh backend
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
@@ -73,7 +73,7 @@ jobs:
       # run-cdk-app.sh bundles Lambdas with Python 3.12. ubuntu-26.04 is
       # 26.04 and no longer includes that interpreter.
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-python@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
 
       - name: Determine deployment region
         id: region
@@ -88,7 +88,7 @@ jobs:
           fi
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
@@ -103,7 +103,7 @@ jobs:
         run: npm ci
 
       - name: Check CDK bootstrap
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
@@ -113,29 +113,16 @@ jobs:
         working-directory: backend/infrastructure
         env:
           AWS_REGION: ${{ steps.region.outputs.region }}
-          CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
         run: |
           set -euo pipefail
           npx cdk acknowledge 34892 || true
           npm run build --if-present
-          if [ "${CDK_STACKS:-}" = "all stacks" ]; then
-            CDK_STACKS="lxsoftware-siutindei lxsoftware-siutindei-admin-web lxsoftware-siutindei-public-www"
-          elif [ "${CDK_STACKS:-}" = "lambda apis" ]; then
-            CDK_STACKS="lxsoftware-siutindei"
-          elif [ "${CDK_STACKS:-}" = "admin web" ]; then
-            CDK_STACKS="lxsoftware-siutindei-admin-web"
-          elif [ "${CDK_STACKS:-}" = "public website" ] || [ "${CDK_STACKS:-}" = "public www" ] || [ "${CDK_STACKS:-}" = "public website staging" ] || [ "${CDK_STACKS:-}" = "public www staging" ]; then
-            CDK_STACKS="lxsoftware-siutindei-public-www"
-          elif [ "${CDK_STACKS:-}" = "waf (us-east-1)" ]; then
-            CDK_STACKS="lxsoftware-siutindei-waf"
-          fi
-          echo "stacks=$CDK_STACKS" >> "$GITHUB_OUTPUT"
 
       - name: Deploy stacks
-        uses: lx-software-ltd/actions/cdk-deploy@7d93bef212616595c866a76b03862eb72abbb746 # main 2026-11-23
+        uses: lx-software-ltd/actions/cdk-deploy@48ffe6dadb6c1540b8992e8e8edfda4f8aa0933e # main 2026-11-24
         with:
           working-directory: backend/infrastructure
-          stacks: ${{ steps.prep.outputs.stacks }}
+          stacks: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
           param-file: ${{ vars.CDK_PARAM_FILE }}
           format: plain-json
           attempts: "3"
