@@ -1,6 +1,8 @@
 name: Deploy Admin Web
 
 on:
+  repository_dispatch:
+    types: [deploy-admin-web]
   workflow_dispatch:
   push:
     branches:
@@ -14,7 +16,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: deploy-admin-web
@@ -22,6 +23,9 @@ concurrency:
 
 jobs:
   build-and-deploy:
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-26.04
     environment: production
     steps:
@@ -29,15 +33,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        uses: lx-software-ltd/actions/setup-node@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
         with:
-          node-version: "26"
-          cache: "npm"
-          cache-dependency-path: apps/admin_web/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-        working-directory: apps/admin_web
+          cache: npm
+          working-directory: apps/admin_web
 
       - name: Restore Next.js build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -61,26 +60,18 @@ jobs:
           NEXT_TELEMETRY_DISABLED: "1"
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
 
-      - name: Trigger Amplify Hosting release
-        if: ${{ success() && vars.AMPLIFY_APP_ID != '' && vars.AMPLIFY_BRANCH != '' }}
-        run: |
-          aws amplify start-job \
-            --app-id "$AMPLIFY_APP_ID" \
-            --branch-name "$AMPLIFY_BRANCH" \
-            --job-type RELEASE
-        env:
-          AMPLIFY_APP_ID: ${{ vars.AMPLIFY_APP_ID }}
-          AMPLIFY_BRANCH: ${{ vars.AMPLIFY_BRANCH }}
-
       - name: Deploy admin web
-        run: |
-          if [ -f "scripts/deploy/deploy-admin-web.sh" ]; then
-            bash "scripts/deploy/deploy-admin-web.sh"
-          else
-            echo "Deploy script not found: scripts/deploy/deploy-admin-web.sh"
-          fi
+        uses: lx-software-ltd/actions/s3-cloudfront-deploy@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        with:
+          source: apps/admin_web/out
+          stack: lxsoftware-siutindei-admin-web
+          region: ${{ vars.AWS_REGION }}
+          bucket-output: AdminWebBucketName
+          distribution-output: AdminWebDistributionId
+          profile: next-export
+          dry-run: "false"

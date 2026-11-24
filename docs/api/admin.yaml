@@ -58,9 +58,16 @@ info:
     - email must be a valid email address.
     - social fields accept either an http/https URL or a handle.
 
+servers:
+  - url: https://api.siutindei.com
+    description: Production API. Paths below are appended to this URL.
+
 paths:
   /v1/admin/organizations:
     get:
+      security:
+        - AdminGroupAuth: []
+        - ImporterGroupAuth: []
       summary: List organizations
       description: Retrieve a paginated list of organizations.
       parameters:
@@ -133,6 +140,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/OrganizationListResponse'
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Create organization
       description: Create a new organization.
       requestBody:
@@ -164,6 +173,9 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - AdminGroupAuth: []
+        - ImporterGroupAuth: []
       summary: Get organization
       responses:
         "200":
@@ -175,6 +187,8 @@ paths:
         "404":
           description: Organization not found
     put:
+      security:
+        - AdminGroupAuth: []
       summary: Update organization
       requestBody:
         required: true
@@ -194,6 +208,9 @@ paths:
         "404":
           description: Organization not found
     patch:
+      security:
+        - AdminGroupAuth: []
+        - ImporterGroupAuth: []
       summary: Patch organization listing fields
       description: |
         Partial update used by the owner UI to set `status` (with optional
@@ -216,6 +233,8 @@ paths:
         "404":
           description: Organization not found
     delete:
+      security:
+        - AdminGroupAuth: []
       summary: Delete organization
       description: |
         Removes the organization and its venues and activities.
@@ -245,6 +264,8 @@ paths:
           type: string
           format: uuid
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Create organization media upload URL
       description: Generate a presigned URL for uploading organization media.
       requestBody:
@@ -263,6 +284,8 @@ paths:
         "400":
           description: Validation error
     delete:
+      security:
+        - AdminGroupAuth: []
       summary: Delete organization media
       requestBody:
         required: true
@@ -547,6 +570,8 @@ paths:
 
   /v1/admin/imports:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List import jobs
       description: |
         Newest-first cursor page of stored import jobs. Admin only.
@@ -907,6 +932,9 @@ paths:
 
   /v1/admin/imports/{job_id}:
     get:
+      security:
+        - AdminGroupAuth: []
+        - ImporterGroupAuth: []
       summary: Get a stored import job
       description: |
         Return the stored summary and per-row results for a previous
@@ -931,6 +959,8 @@ paths:
 
   /v1/admin/imports/export:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Export admin data
       description: |
         Generate a presigned download URL for an export JSON file. The exported
@@ -960,6 +990,8 @@ paths:
 
   /v1/admin/org-review:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List organizations for review
       description: |
         Cursor page of organizations with completeness issues, ordered by
@@ -1061,6 +1093,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/OrgReviewList'
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Bulk review action
       description: |
         `POST /v1/admin/org-review/bulk`. Apply one action to up to 200
@@ -1081,6 +1115,8 @@ paths:
 
   /v1/admin/org-review/summary:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Review queue counts
       description: |
         Aggregated in SQL. `by_issue` counts organizations once per issue
@@ -1114,6 +1150,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Organization review detail
       responses:
         "200":
@@ -1134,6 +1172,8 @@ paths:
           type: string
           format: uuid
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Approve, reject, or reopen one organization
       description: |
         Approve returns 400 with `issues` when blockers remain unless
@@ -1161,6 +1201,8 @@ paths:
 
   /v1/admin/org-duplicates:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List likely duplicate organizations
       description: |
         Groups organizations that share a normalized name, contact, source id,
@@ -1219,6 +1261,8 @@ paths:
 
   /v1/admin/org-duplicates/search:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Search organizations to merge
       parameters:
         - name: q
@@ -1243,6 +1287,8 @@ paths:
 
   /v1/admin/org-duplicates/dismiss:
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Mark organizations as not duplicates
       requestBody:
         required: true
@@ -1272,6 +1318,8 @@ paths:
 
   /v1/admin/org-duplicates/merge:
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Merge organizations into one survivor
       description: |
         Fills blank survivor fields from the sources. `field_overrides`
@@ -1322,6 +1370,8 @@ paths:
 
   /v1/admin/org-duplicates/{id}:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Load one duplicate group
       description: |
         `id` is the comma-separated organization ids from the list.
@@ -1345,6 +1395,8 @@ paths:
 
   /v1/admin/deleted-organizations:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List organizations an admin delete kept out of import
       description: |
         Each item is one remembered identity. Contact details are
@@ -1382,6 +1434,8 @@ paths:
 
   /v1/admin/deleted-organizations/{id}:
     delete:
+      security:
+        - AdminGroupAuth: []
       summary: Allow one deleted identity to be imported again
       description: |
         Removes that remembered identity. Forgetting the deleted
@@ -1404,6 +1458,8 @@ paths:
 
   /v1/admin/name-fixes:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List name cleanup proposals
       description: |
         Pending rows come from `POST /v1/admin/name-fixes/scan` and from
@@ -1461,6 +1517,8 @@ paths:
 
   /v1/admin/name-fixes/summary:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Count name-fix proposals
       responses:
         "200":
@@ -1472,6 +1530,8 @@ paths:
 
   /v1/admin/name-fixes/settings:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Read name cleanup rules
       responses:
         "200":
@@ -1481,6 +1541,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/NameFixSettings'
     put:
+      security:
+        - AdminGroupAuth: []
       summary: Replace name cleanup rules
       requestBody:
         required: true
@@ -1498,6 +1560,8 @@ paths:
 
   /v1/admin/name-fixes/settings/preview:
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Preview cleanup for one name
       requestBody:
         required: true
@@ -1523,6 +1587,8 @@ paths:
 
   /v1/admin/name-fixes/scan:
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Sweep names and store proposals
       description: |
         Re-evaluates every name in `review_scope` and deletes pending
@@ -1558,6 +1624,8 @@ paths:
 
   /v1/admin/name-fixes/bulk:
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Apply or dismiss name proposals
       requestBody:
         required: true
@@ -1575,6 +1643,8 @@ paths:
 
   /v1/admin/name-fixes/{id}:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Load one name proposal
       parameters:
         - name: id
@@ -1593,6 +1663,8 @@ paths:
         "404":
           description: Proposal not found
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Apply or dismiss one name proposal
       parameters:
         - name: id
@@ -1627,6 +1699,8 @@ paths:
 
   /v1/admin/location-fixes:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List venue proposals
       description: |
         Pending rows come from `POST /v1/admin/location-fixes/scan`.
@@ -1699,6 +1773,8 @@ paths:
 
   /v1/admin/location-fixes/summary:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Count venue proposals and the active sweep
       responses:
         "200":
@@ -1710,6 +1786,8 @@ paths:
 
   /v1/admin/location-fixes/settings:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Read the location-sweep monthly budget
       responses:
         "200":
@@ -1719,6 +1797,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/LocationFixSettings'
     put:
+      security:
+        - AdminGroupAuth: []
       summary: Replace the location-sweep monthly budget
       requestBody:
         required: true
@@ -1736,6 +1816,8 @@ paths:
 
   /v1/admin/location-fixes/scan:
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Sweep venues and store proposals
       description: |
         Applies venue rules for `review_scope` (`pending_review` or
@@ -1783,6 +1865,8 @@ paths:
 
   /v1/admin/location-fixes/bulk:
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Apply or dismiss venue proposals
       requestBody:
         required: true
@@ -1800,6 +1884,8 @@ paths:
 
   /v1/admin/location-fixes/{id}:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Load one venue proposal
       parameters:
         - name: id
@@ -1818,6 +1904,8 @@ paths:
         "404":
           description: Proposal not found
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Apply or dismiss one venue proposal
       parameters:
         - name: id
@@ -1864,6 +1952,8 @@ paths:
 
   /v1/admin/translation-fixes:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List translation proposals
       description: |
         Pending rows come from `POST /v1/admin/translation-fixes/scan`.
@@ -1915,6 +2005,8 @@ paths:
 
   /v1/admin/translation-fixes/summary:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Count translation proposals and the active sweep
       responses:
         "200":
@@ -1926,6 +2018,8 @@ paths:
 
   /v1/admin/translation-fixes/settings:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Read the translation-sweep monthly budget
       responses:
         "200":
@@ -1935,6 +2029,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/TranslationFixSettings'
     put:
+      security:
+        - AdminGroupAuth: []
       summary: Replace the translation-sweep monthly budget
       requestBody:
         required: true
@@ -1952,6 +2048,8 @@ paths:
 
   /v1/admin/translation-fixes/scan:
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Sweep missing translations and queue the model
       description: |
         Looks at organizations and activities in `review_scope`
@@ -1993,6 +2091,8 @@ paths:
 
   /v1/admin/translation-fixes/bulk:
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Apply or dismiss translation proposals
       requestBody:
         required: true
@@ -2010,6 +2110,8 @@ paths:
 
   /v1/admin/translation-fixes/{id}:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Load one translation proposal
       parameters:
         - name: id
@@ -2028,6 +2130,8 @@ paths:
         "404":
           description: Proposal not found
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Apply or dismiss one translation proposal
       parameters:
         - name: id
@@ -2066,6 +2170,8 @@ paths:
 
   /v1/admin/category-suggestions:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List category suggestions
       description: |
         Admin group only. Unknown import `category_name` values are
@@ -2118,6 +2224,8 @@ paths:
 
   /v1/admin/category-suggestions/summary:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Category suggestion counts and month cost
       parameters:
         - name: org_id
@@ -2139,6 +2247,8 @@ paths:
 
   /v1/admin/category-suggestions/settings:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Read category suggestion settings
       responses:
         "200":
@@ -2148,6 +2258,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/CategorySuggestionSettings'
     put:
+      security:
+        - AdminGroupAuth: []
       summary: Update category suggestion settings
       requestBody:
         required: true
@@ -2165,6 +2277,8 @@ paths:
 
   /v1/admin/category-suggestions/settings/test:
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Send a short OpenRouter ping with the configured model
       description: |
         One attempt, about 15 seconds. API Gateway REST integrations
@@ -2199,6 +2313,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Category suggestion detail and evidence links
       responses:
         "200":
@@ -2219,6 +2335,8 @@ paths:
           type: string
           format: uuid
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Approve, map, or reject a category suggestion
       description: |
         Approve creates a category and moves linked activities that are
@@ -2252,6 +2370,8 @@ paths:
           type: string
           format: uuid
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Queue enrichment for one suggestion
       requestBody:
         required: false
@@ -2267,6 +2387,8 @@ paths:
 
   /v1/admin/category-suggestions/scan:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List recent category-check runs
       responses:
         "200":
@@ -2282,6 +2404,8 @@ paths:
                     items:
                       $ref: '#/components/schemas/CategoryScanRun'
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Sweep activity categories and store reviews
       description: |
         Admin group only. Selects activities in `review_scope`,
@@ -2319,6 +2443,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Read one category-check run
       responses:
         "200":
@@ -2332,6 +2458,8 @@ paths:
 
   /v1/admin/category-suggestions/reviews:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List category-check reviews
       parameters:
         - name: status
@@ -2384,6 +2512,8 @@ paths:
 
   /v1/admin/category-suggestions/reviews/bulk:
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Apply or dismiss matching pending category-check reviews
       description: |
         One page of pending reviews that match the filters. `dry_run`
@@ -2417,6 +2547,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Read one category-check review
       responses:
         "200":
@@ -2428,6 +2560,8 @@ paths:
         "404":
           description: Review not found
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Apply, dismiss, or revert a category-check review
       description: |
         Apply assigns `category_id` when the body or the review has one,
@@ -2454,6 +2588,8 @@ paths:
 
   /v1/admin/locations:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List locations
       parameters:
         - name: org_id
@@ -2484,6 +2620,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/LocationListResponse'
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Create location
       requestBody:
         required: true
@@ -2510,6 +2648,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Get location
       responses:
         "200":
@@ -2521,6 +2661,8 @@ paths:
         "404":
           description: Location not found
     put:
+      security:
+        - AdminGroupAuth: []
       summary: Update location
       requestBody:
         required: true
@@ -2536,6 +2678,8 @@ paths:
         "404":
           description: Location not found
     delete:
+      security:
+        - AdminGroupAuth: []
       summary: Delete location
       responses:
         "204":
@@ -2545,6 +2689,8 @@ paths:
 
   /v1/admin/activity-categories:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List activity categories
       description: Retrieve a paginated list of activity categories.
       parameters:
@@ -2569,6 +2715,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ActivityCategoryListResponse'
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Create activity category
       requestBody:
         required: true
@@ -2595,6 +2743,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Get activity category
       responses:
         "200":
@@ -2606,6 +2756,8 @@ paths:
         "404":
           description: Activity category not found
     put:
+      security:
+        - AdminGroupAuth: []
       summary: Update activity category
       requestBody:
         required: true
@@ -2621,6 +2773,8 @@ paths:
         "404":
           description: Activity category not found
     delete:
+      security:
+        - AdminGroupAuth: []
       summary: Delete activity category
       responses:
         "204":
@@ -2632,6 +2786,8 @@ paths:
 
   /v1/admin/feedback-labels:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List feedback labels
       description: Retrieve a paginated list of feedback labels.
       parameters:
@@ -2656,6 +2812,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/FeedbackLabelListResponse'
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Create feedback label
       requestBody:
         required: true
@@ -2682,6 +2840,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Get feedback label
       responses:
         "200":
@@ -2693,6 +2853,8 @@ paths:
         "404":
           description: Feedback label not found
     put:
+      security:
+        - AdminGroupAuth: []
       summary: Update feedback label
       requestBody:
         required: true
@@ -2708,6 +2870,8 @@ paths:
         "404":
           description: Feedback label not found
     delete:
+      security:
+        - AdminGroupAuth: []
       summary: Delete feedback label
       responses:
         "204":
@@ -2719,6 +2883,8 @@ paths:
 
   /v1/admin/organization-feedback:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List organization feedback
       description: Retrieve a paginated list of feedback entries.
       parameters:
@@ -2743,6 +2909,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/OrganizationFeedbackListResponse'
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Create organization feedback
       requestBody:
         required: true
@@ -2769,6 +2937,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Get organization feedback
       responses:
         "200":
@@ -2780,6 +2950,8 @@ paths:
         "404":
           description: Feedback entry not found
     put:
+      security:
+        - AdminGroupAuth: []
       summary: Update organization feedback
       requestBody:
         required: true
@@ -2795,6 +2967,8 @@ paths:
         "404":
           description: Feedback entry not found
     delete:
+      security:
+        - AdminGroupAuth: []
       summary: Delete organization feedback
       responses:
         "204":
@@ -2806,6 +2980,8 @@ paths:
 
   /v1/admin/activities:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List activities
       parameters:
         - name: org_id
@@ -2836,6 +3012,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ActivityListResponse'
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Create activity
       requestBody:
         required: true
@@ -2862,6 +3040,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Get activity
       responses:
         "200":
@@ -2873,6 +3053,8 @@ paths:
         "404":
           description: Activity not found
     put:
+      security:
+        - AdminGroupAuth: []
       summary: Update activity
       requestBody:
         required: true
@@ -2888,6 +3070,8 @@ paths:
         "404":
           description: Activity not found
     delete:
+      security:
+        - AdminGroupAuth: []
       summary: Delete activity
       responses:
         "204":
@@ -2897,6 +3081,8 @@ paths:
 
   /v1/admin/pricing:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List pricing entries
       parameters:
         - name: org_id
@@ -2927,6 +3113,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/PricingListResponse'
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Create pricing entry
       requestBody:
         required: true
@@ -2953,6 +3141,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Get pricing entry
       responses:
         "200":
@@ -2964,6 +3154,8 @@ paths:
         "404":
           description: Pricing not found
     put:
+      security:
+        - AdminGroupAuth: []
       summary: Update pricing entry
       requestBody:
         required: true
@@ -2979,6 +3171,8 @@ paths:
         "404":
           description: Pricing not found
     delete:
+      security:
+        - AdminGroupAuth: []
       summary: Delete pricing entry
       responses:
         "204":
@@ -2988,6 +3182,8 @@ paths:
 
   /v1/admin/schedules:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List schedules
       parameters:
         - name: org_id
@@ -3018,6 +3214,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScheduleListResponse'
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Create schedule
       requestBody:
         required: true
@@ -3044,6 +3242,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Get schedule
       responses:
         "200":
@@ -3055,6 +3255,8 @@ paths:
         "404":
           description: Schedule not found
     put:
+      security:
+        - AdminGroupAuth: []
       summary: Update schedule
       requestBody:
         required: true
@@ -3070,6 +3272,8 @@ paths:
         "404":
           description: Schedule not found
     delete:
+      security:
+        - AdminGroupAuth: []
       summary: Delete schedule
       responses:
         "204":
@@ -3085,6 +3289,8 @@ paths:
         schema:
           type: string
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Add user to group
       requestBody:
         content:
@@ -3099,6 +3305,8 @@ paths:
         "200":
           description: User added to group
     delete:
+      security:
+        - AdminGroupAuth: []
       summary: Remove user from group
       responses:
         "200":
@@ -3108,6 +3316,8 @@ paths:
 
   /v1/admin/cognito-users:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List Cognito users
       description: |
         List all Cognito user pool users with their group memberships.
@@ -3155,6 +3365,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/CognitoUserListResponse'
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Add a manager by email
       description: |
         Create a passwordless Cognito user for this email, or return
@@ -3199,6 +3411,8 @@ paths:
         schema:
           type: string
     delete:
+      security:
+        - AdminGroupAuth: []
       summary: Delete Cognito user
       description: |
         Delete a Cognito user and transfer their managed organizations
@@ -3235,6 +3449,8 @@ paths:
 
   /v1/admin/tickets:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List tickets
       description: |
         List all tickets for admin review. Supports filtering by
@@ -3284,6 +3500,8 @@ paths:
           type: string
           format: uuid
     put:
+      security:
+        - AdminGroupAuth: []
       summary: Review ticket
       description: |
         Approve or reject a ticket. Approval behaviour depends on the
@@ -3311,6 +3529,8 @@ paths:
 
   /v1/admin/versions:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List catalog versions
       description: |
         History of organizations, media, locations, activities, pricing,
@@ -3369,6 +3589,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Get one catalog version
       responses:
         "200":
@@ -3389,6 +3611,8 @@ paths:
           type: string
           format: uuid
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Forget a removed child version
       description: |
         Marks version 1 of a removed location, activity, pricing row,
@@ -3405,6 +3629,8 @@ paths:
 
   /v1/admin/audit-logs:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List audit logs
       description: |
         Query audit logs with optional filtering by table, record, user,
@@ -3472,6 +3698,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Get audit log entry
       responses:
         "200":
@@ -3487,6 +3715,8 @@ paths:
 
   /v1/admin/api-keys:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List partner API keys
       description: |
         Paginated list of partner API keys used to authenticate the
@@ -3516,6 +3746,8 @@ paths:
         "403":
           description: Not an admin
     post:
+      security:
+        - AdminGroupAuth: []
       summary: Create partner API key
       description: |
         Generate a new partner API key. The plaintext key value is
@@ -3551,6 +3783,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - AdminGroupAuth: []
       summary: Get partner API key metadata
       responses:
         "200":
@@ -3562,6 +3796,8 @@ paths:
         "404":
           description: API key not found
     delete:
+      security:
+        - AdminGroupAuth: []
       summary: Revoke partner API key
       description: |
         Revoke a key (idempotent soft delete; the record is kept for the
@@ -3581,6 +3817,8 @@ paths:
 
   /v1/manager/organizations:
     get:
+      security:
+        - ManagerGroupAuth: []
       summary: List managed organizations
       description: |
         List organizations managed by the authenticated user.
@@ -3614,6 +3852,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/OrganizationListResponse'
     post:
+      security:
+        - ManagerGroupAuth: []
       summary: Create organization (manager)
       requestBody:
         required: true
@@ -3640,6 +3880,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - ManagerGroupAuth: []
       summary: Get managed organization
       responses:
         "200":
@@ -3653,6 +3895,8 @@ paths:
         "404":
           description: Organization not found
     put:
+      security:
+        - ManagerGroupAuth: []
       summary: Update managed organization
       description: Managers cannot change the manager_id field.
       requestBody:
@@ -3671,6 +3915,8 @@ paths:
         "404":
           description: Organization not found
     delete:
+      security:
+        - ManagerGroupAuth: []
       summary: Delete managed organization
       description: |
         Removes the organization and its venues and activities.
@@ -3686,6 +3932,8 @@ paths:
 
   /v1/manager/locations:
     get:
+      security:
+        - ManagerGroupAuth: []
       summary: List locations in managed organizations
       parameters:
         - name: org_id
@@ -3716,6 +3964,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/LocationListResponse'
     post:
+      security:
+        - ManagerGroupAuth: []
       summary: Create location in managed organization
       requestBody:
         required: true
@@ -3740,6 +3990,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - ManagerGroupAuth: []
       summary: Get location in managed organization
       responses:
         "200":
@@ -3749,6 +4001,8 @@ paths:
         "404":
           description: Location not found
     put:
+      security:
+        - ManagerGroupAuth: []
       summary: Update location in managed organization
       requestBody:
         required: true
@@ -3766,6 +4020,8 @@ paths:
         "404":
           description: Location not found
     delete:
+      security:
+        - ManagerGroupAuth: []
       summary: Delete location in managed organization
       responses:
         "204":
@@ -3777,6 +4033,8 @@ paths:
 
   /v1/manager/activities:
     get:
+      security:
+        - ManagerGroupAuth: []
       summary: List activities in managed organizations
       parameters:
         - name: org_id
@@ -3807,6 +4065,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ActivityListResponse'
     post:
+      security:
+        - ManagerGroupAuth: []
       summary: Create activity in managed organization
       requestBody:
         required: true
@@ -3831,6 +4091,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - ManagerGroupAuth: []
       summary: Get activity in managed organization
       responses:
         "200":
@@ -3840,6 +4102,8 @@ paths:
         "404":
           description: Activity not found
     put:
+      security:
+        - ManagerGroupAuth: []
       summary: Update activity in managed organization
       requestBody:
         required: true
@@ -3857,6 +4121,8 @@ paths:
         "404":
           description: Activity not found
     delete:
+      security:
+        - ManagerGroupAuth: []
       summary: Delete activity in managed organization
       responses:
         "204":
@@ -3868,6 +4134,8 @@ paths:
 
   /v1/manager/pricing:
     get:
+      security:
+        - ManagerGroupAuth: []
       summary: List pricing in managed organizations
       parameters:
         - name: org_id
@@ -3898,6 +4166,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/PricingListResponse'
     post:
+      security:
+        - ManagerGroupAuth: []
       summary: Create pricing in managed organization
       requestBody:
         required: true
@@ -3922,6 +4192,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - ManagerGroupAuth: []
       summary: Get pricing in managed organization
       responses:
         "200":
@@ -3931,6 +4203,8 @@ paths:
         "404":
           description: Pricing not found
     put:
+      security:
+        - ManagerGroupAuth: []
       summary: Update pricing in managed organization
       requestBody:
         required: true
@@ -3948,6 +4222,8 @@ paths:
         "404":
           description: Pricing not found
     delete:
+      security:
+        - ManagerGroupAuth: []
       summary: Delete pricing in managed organization
       responses:
         "204":
@@ -3959,6 +4235,8 @@ paths:
 
   /v1/manager/schedules:
     get:
+      security:
+        - ManagerGroupAuth: []
       summary: List schedules in managed organizations
       parameters:
         - name: org_id
@@ -3989,6 +4267,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ScheduleListResponse'
     post:
+      security:
+        - ManagerGroupAuth: []
       summary: Create schedule in managed organization
       requestBody:
         required: true
@@ -4013,6 +4293,8 @@ paths:
           type: string
           format: uuid
     get:
+      security:
+        - ManagerGroupAuth: []
       summary: Get schedule in managed organization
       responses:
         "200":
@@ -4022,6 +4304,8 @@ paths:
         "404":
           description: Schedule not found
     put:
+      security:
+        - ManagerGroupAuth: []
       summary: Update schedule in managed organization
       requestBody:
         required: true
@@ -4039,6 +4323,8 @@ paths:
         "404":
           description: Schedule not found
     delete:
+      security:
+        - ManagerGroupAuth: []
       summary: Delete schedule in managed organization
       responses:
         "204":
@@ -4052,6 +4338,8 @@ paths:
 
   /v1/admin/areas:
     get:
+      security:
+        - AdminGroupAuth: []
       summary: List all geographic areas
       description: |
         Returns the full geographic area tree including inactive countries.
@@ -4073,6 +4361,8 @@ paths:
           type: string
           format: uuid
     patch:
+      security:
+        - AdminGroupAuth: []
       summary: Toggle area active status
       description: |
         Activate or deactivate a geographic area (typically a country).
@@ -4154,6 +4444,8 @@ paths:
 
   /v1/user/areas:
     get:
+      security:
+        - UserAuth: []
       summary: List active geographic areas
       description: |
         Returns the geographic area tree for active countries only.
@@ -4168,6 +4460,8 @@ paths:
 
   /v1/user/activity-categories:
     get:
+      security:
+        - UserAuth: []
       summary: List activity categories
       description: |
         Returns the activity category tree for use in selection UIs.
@@ -4182,6 +4476,8 @@ paths:
 
   /v1/user/access-request:
     get:
+      security:
+        - UserAuth: []
       summary: Check access request status
       description: |
         Check if the authenticated user has a pending manager access request
@@ -4203,6 +4499,8 @@ paths:
                     type: integer
                     description: Number of organizations the user manages
     post:
+      security:
+        - UserAuth: []
       summary: Submit access request
       description: |
         Submit a request to become a manager of an organization.
@@ -4232,6 +4530,8 @@ paths:
 
   /v1/user/organization-suggestion:
     get:
+      security:
+        - UserAuth: []
       summary: Get suggestion history
       description: |
         Get the authenticated user's organization suggestion history
@@ -4251,6 +4551,8 @@ paths:
                     items:
                       $ref: '#/components/schemas/Ticket'
     post:
+      security:
+        - UserAuth: []
       summary: Submit organization suggestion
       description: |
         Suggest a new organization/place for the platform.
@@ -4279,6 +4581,8 @@ paths:
 
   /v1/user/feedback-labels:
     get:
+      security:
+        - UserAuth: []
       summary: List feedback labels
       description: Retrieve feedback labels for user selection.
       responses:
@@ -4291,6 +4595,8 @@ paths:
 
   /v1/user/organization-feedback:
     get:
+      security:
+        - UserAuth: []
       summary: Get feedback history
       description: |
         Get the authenticated user's feedback history and check
@@ -4303,6 +4609,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/UserFeedbackResponse'
     post:
+      security:
+        - UserAuth: []
       summary: Submit organization feedback
       description: |
         Submit feedback for an organization. Only one pending
@@ -4330,6 +4638,8 @@ paths:
 
   /v1/user/organizations:
     get:
+      security:
+        - UserAuth: []
       summary: Search organizations
       description: Search organizations by name for feedback selection.
       parameters:
@@ -4521,6 +4831,8 @@ components:
         label:
           type: string
         current_value:
+          type: object
+          additionalProperties: true
           nullable: true
         proposed_value:
           type: object
@@ -4544,12 +4856,52 @@ components:
           items:
             $ref: '#/components/schemas/EnrichmentBlocker'
 
+    EnrichmentRun:
+      type: object
+      required: [id, org_id, status, source, seed_url, pages_fetched, bytes_fetched, cost_usd, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [queued, running, extracting, ready, failed, render_required]
+        source:
+          type: string
+        seed_url:
+          type: string
+        pages_fetched:
+          type: integer
+        bytes_fetched:
+          type: integer
+        model:
+          type: string
+          nullable: true
+        cost_usd:
+          type: number
+        error:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+
     EnrichmentRead:
       type: object
       required: [run, proposals, activities, venues]
       properties:
         run:
           nullable: true
+          allOf:
+            - $ref: '#/components/schemas/EnrichmentRun'
+          type: object
         proposals:
           type: array
           items:
@@ -8238,9 +8590,10 @@ components:
             not already a category and still need a model call.
             Not capped. Rejected labels are not included.
         active_scan_run:
+          type: object
+          nullable: true
           allOf:
             - $ref: '#/components/schemas/CategoryScanRun'
-          nullable: true
         month_cost_usd:
           type: number
           description: >-
@@ -8779,6 +9132,7 @@ components:
         label:
           type: string
         survivor_value:
+          type: string
           nullable: true
         source_values:
           type: array
@@ -8792,6 +9146,7 @@ components:
               value:
                 type: string
         result:
+          type: string
           nullable: true
         conflict:
           type: boolean
@@ -9132,9 +9487,10 @@ components:
           additionalProperties:
             type: integer
         active_run:
+          type: object
+          nullable: true
           allOf:
             - $ref: '#/components/schemas/LocationFixScanResult'
-          nullable: true
 
     LocationFixSettings:
       type: object
@@ -9369,14 +9725,16 @@ components:
         monthly_cost_limit_usd:
           type: number
         active_run:
+          type: object
+          nullable: true
           allOf:
             - $ref: '#/components/schemas/TranslationFixScanResult'
-          nullable: true
         latest_run:
           description: Most recent translation sweep, including one that already finished.
+          type: object
+          nullable: true
           allOf:
             - $ref: '#/components/schemas/TranslationFixScanResult'
-          nullable: true
 
     TranslationFixSettings:
       type: object

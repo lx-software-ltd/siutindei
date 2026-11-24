@@ -32,10 +32,10 @@ or `all stacks`). Deploy static site artifacts with
 | Parameter | Purpose |
 |-----------|---------|
 | `PublicWwwDomainName` | Production CloudFront alias (e.g. `siutindei.com`). |
-| `PublicWwwCertificateArn` | ACM cert ARN in **us-east-1** that covers the production alias. |
+| `PublicWwwCertificateArn` | `<FROM_GITHUB_SECRET: CDK_PARAM_PUBLIC_WWW_CERTIFICATE_ARN>`, ACM in **us-east-1** for the production alias. |
 | `PublicWwwStagingDomainName` | Staging CloudFront alias (e.g. `www-staging.siutindei.com`). |
-| `PublicWwwStagingCertificateArn` | ACM cert ARN in **us-east-1** that covers the staging alias. |
-| `WafWebAclArn` | (Optional) us-east-1 WAF WebACL ARN; reuse the admin-web ACL. |
+| `PublicWwwStagingCertificateArn` | `<FROM_GITHUB_SECRET: CDK_PARAM_PUBLIC_WWW_STAGING_CERTIFICATE_ARN>`, ACM in **us-east-1** for the staging alias. |
+| `WafWebAclArn` | `<FROM_GITHUB_SECRET: CDK_PARAM_WAF_WEB_ACL_ARN>`, the us-east-1 WAF WebACL ARN. Empty keeps the previous value only when the parameter is omitted; this key is still sent when the secret is empty. |
 | `SearchApiProxyOriginDomain` | API custom domain CloudFront forwards `/v1/activities/search` to. |
 | `PublicWwwOriginVerifySecret` | Shared secret CloudFront sends to the API origin as `X-Origin-Verify`; the API authorizer checks it. Empty disables the header; otherwise at least 32 characters. CI passes it to both the API and public website stacks. Store it in GitHub secret `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY`. |
 | `PublicWwwOriginVerifySecretPrevious` | (API stack only) Previous value the authorizer still accepts during rotation. GitHub secret `CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY_PREVIOUS`. |
@@ -59,7 +59,7 @@ certificate SANs if a hostname is not yet covered before deploying.
 | Parameter | Purpose |
 |-----------|---------|
 | `ApiCustomDomainName` / `ApiCustomDomainCertificateArn` | Original API host slot. Empty in production since `siutindei-api.lx-software.com` was retired; `deploy-backend.yml` passes the empty values so the domain is deleted. |
-| `ApiSecondaryCustomDomainName` / `ApiSecondaryCustomDomainCertificateArn` | Production API host `api.siutindei.com` and its **ap-southeast-1** `*.siutindei.com` certificate. Both must be set; either empty creates nothing. |
+| `ApiSecondaryCustomDomainName` / `ApiSecondaryCustomDomainCertificateArn` | Production API host `api.siutindei.com`. The certificate is `<FROM_GITHUB_SECRET: CDK_PARAM_API_SECONDARY_CUSTOM_DOMAIN_CERTIFICATE_ARN>` in **ap-southeast-1**. Both must be set; either empty creates nothing. |
 | `ApiDisableExecuteApiEndpoint` | `true` refuses the raw `execute-api` hostname. It only applies while the secondary domain is configured. |
 
 When the secondary domain exists, `ApiSecondaryCustomDomainUrl` is the

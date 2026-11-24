@@ -1,4 +1,8 @@
 name: Lint
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 
 permissions:
   contents: read
@@ -37,18 +41,18 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-python@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
         with:
           python-version: "3.12"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
 
       - name: Install pytest
         run: python -m pip install 'pytest>=8.0'
 
       - name: Run the shared harness
-        uses: lx-software-ltd/actions/agent-harness@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        uses: lx-software-ltd/actions/agent-harness@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
 
       - name: Run the remaining repository checks
         run: |
@@ -66,12 +70,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Flutter
-        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        uses: lx-software-ltd/actions/setup-flutter@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
         with:
           channel: "stable"
           # pubspec.lock was resolved with this SDK. Floating stable rewrites it.
           flutter-version: "3.50.1"
-          cache: true
+          cache: "true"
 
       - name: Run Dart/Flutter lint
         run: |
@@ -93,7 +97,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
 
       - name: Run React lint
         run: |
@@ -135,13 +139,13 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-python@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
         with:
           python-version: "3.12"
           requirements: backend/requirements.txt
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
 
       - name: Install pre-commit
         run: |
@@ -171,13 +175,13 @@ jobs:
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh backend
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-python@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
         with:
           python-version: "3.12"
 
@@ -192,6 +196,16 @@ jobs:
         working-directory: backend/infrastructure
         run: npx cdk synth --quiet || echo "CDK synth requires parameters, skipping validation"
 
+  lint-openapi:
+    name: Lint OpenAPI
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Lint OpenAPI specs
+        run: npx --yes @redocly/cli@1.34.11 lint docs/api/admin.yaml docs/api/partner.yaml docs/api/search.yaml
+
   workflow-conformance:
     name: Workflow conformance
     runs-on: ubuntu-26.04
@@ -200,7 +214,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check workflows
-        uses: lx-software-ltd/actions/workflow-conformance@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        uses: lx-software-ltd/actions/workflow-conformance@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
         with:
           mode: enforce
           profile: product
@@ -213,7 +227,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
 
       - name: Type-check Node apps
         run: |
@@ -233,11 +247,12 @@ jobs:
       - lint-react
       - lint-python
       - lint-cdk
+      - lint-openapi
       - workflow-conformance
       - type-check
     if: always()
     steps:
       - name: Require every lint job
-        uses: lx-software-ltd/actions/require-jobs@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        uses: lx-software-ltd/actions/require-jobs@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
         with:
           needs-json: ${{ toJson(needs) }}

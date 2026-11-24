@@ -42,7 +42,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: deploy-backend
@@ -50,6 +49,9 @@ concurrency:
 
 jobs:
   deploy:
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-26.04
     environment: production
     steps:
@@ -62,18 +64,16 @@ jobs:
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh backend
 
       - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        uses: lx-software-ltd/actions/setup-node@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
         with:
-          node-version: "26"
-          cache: "npm"
-          cache-dependency-path: backend/infrastructure/package-lock.json
+          cache: npm
+          working-directory: backend/infrastructure
+          install: "false"
 
       # run-cdk-app.sh bundles Lambdas with Python 3.12. ubuntu-26.04 is
       # 26.04 and no longer includes that interpreter.
       - name: Set up Python
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: "3.12"
+        uses: lx-software-ltd/actions/setup-python@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
 
       - name: Determine deployment region
         id: region
@@ -88,7 +88,7 @@ jobs:
           fi
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
@@ -102,361 +102,52 @@ jobs:
         working-directory: backend/infrastructure
         run: npm ci
 
-      - name: Bootstrap CDK
-        working-directory: backend/infrastructure
-        run: |
-          npx cdk acknowledge 34892 || true
-          if [ -n "$CDK_BOOTSTRAP_QUALIFIER" ]; then
-            npx cdk bootstrap --no-notices --qualifier "$CDK_BOOTSTRAP_QUALIFIER" "aws://$AWS_ACCOUNT_ID/$AWS_REGION"
-          else
-            npx cdk bootstrap --no-notices "aws://$AWS_ACCOUNT_ID/$AWS_REGION"
-          fi
-        env:
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-          AWS_REGION: ${{ steps.region.outputs.region }}
-          CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
+      - name: Check CDK bootstrap
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        with:
+          qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
+          region: ${{ steps.region.outputs.region }}
 
-      - name: Deploy stacks
+      - name: Prepare the CDK app
+        id: prep
         working-directory: backend/infrastructure
+        env:
+          AWS_REGION: ${{ steps.region.outputs.region }}
+          CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
         run: |
+          set -euo pipefail
           npx cdk acknowledge 34892 || true
           npm run build --if-present
-
           if [ "${CDK_STACKS:-}" = "all stacks" ]; then
             CDK_STACKS="lxsoftware-siutindei lxsoftware-siutindei-admin-web lxsoftware-siutindei-public-www"
           elif [ "${CDK_STACKS:-}" = "lambda apis" ]; then
             CDK_STACKS="lxsoftware-siutindei"
           elif [ "${CDK_STACKS:-}" = "admin web" ]; then
             CDK_STACKS="lxsoftware-siutindei-admin-web"
-          elif [ "${CDK_STACKS:-}" = "public website" ] || \
-            [ "${CDK_STACKS:-}" = "public www" ] || \
-            [ "${CDK_STACKS:-}" = "public website staging" ] || \
-            [ "${CDK_STACKS:-}" = "public www staging" ]; then
+          elif [ "${CDK_STACKS:-}" = "public website" ] || [ "${CDK_STACKS:-}" = "public www" ] || [ "${CDK_STACKS:-}" = "public website staging" ] || [ "${CDK_STACKS:-}" = "public www staging" ]; then
             CDK_STACKS="lxsoftware-siutindei-public-www"
           elif [ "${CDK_STACKS:-}" = "waf (us-east-1)" ]; then
             CDK_STACKS="lxsoftware-siutindei-waf"
           fi
+          echo "stacks=$CDK_STACKS" >> "$GITHUB_OUTPUT"
 
-          PARAM_ARGS=()
-
-          resolve_param_file() {
-            local path="$1"
-            if [ -z "$path" ]; then
-              return 1
-            fi
-            if [ -f "$path" ]; then
-              echo "$path"
-              return 0
-            fi
-            if [ -n "$GITHUB_WORKSPACE" ] && [ -f "$GITHUB_WORKSPACE/$path" ]; then
-              echo "$GITHUB_WORKSPACE/$path"
-              return 0
-            fi
-            return 1
-          }
-
-          if [ -n "${CDK_PARAM_FILE:-}" ]; then
-            RESOLVED_PARAM_FILE=$(resolve_param_file "$CDK_PARAM_FILE" || true)
-            if [ -z "$RESOLVED_PARAM_FILE" ]; then
-              echo "CDK_PARAM_FILE '$CDK_PARAM_FILE' not found"
-              exit 1
-            fi
-            PARAM_ARGS_FILE="$(mktemp)"
-            PARAM_FILE="$RESOLVED_PARAM_FILE" STACKS="$CDK_STACKS" python3 - <<'PY' > "$PARAM_ARGS_FILE"
-          import json
-          import os
-          import sys
-
-          with open(os.environ["PARAM_FILE"], "r", encoding="utf-8") as handle:
-              params = json.load(handle)
-
-          stack_set = set(os.environ.get("STACKS", "").split())
-          api_stack = "lxsoftware-siutindei"
-          admin_web_stack = "lxsoftware-siutindei-admin-web"
-          public_stack = "lxsoftware-siutindei-public-www"
-          admin_web_params = {"AdminWebDomainName", "AdminWebCertificateArn", "WafWebAclArn"}
-          public_params = {
-              "PublicWwwDomainName",
-              "PublicWwwCertificateArn",
-              "PublicWwwStagingDomainName",
-              "PublicWwwStagingCertificateArn",
-              "WafWebAclArn",
-              "SearchApiProxyOriginDomain",
-              "PublicWwwEdgeVerifySecret",
-              "PublicWwwEdgeVerifySecretPrevious",
-              "PublicWwwStagingEdgeVerifySecret",
-              "PublicWwwStagingEdgeVerifySecretPrevious",
-          }
-          # Authorizer (API stack) and CloudFront origin header (public stack).
-          origin_verify_param = "PublicWwwOriginVerifySecret"
-          # Omitted parameters keep their previous stack value, so an empty
-          # value would never reach CloudFormation. Switching the Cognito
-          # custom domain or removing the API custom domain needs a deploy
-          # with these empty.
-          pass_empty_params = {
-              "WafWebAclArn",
-              "CognitoCustomDomainName",
-              "CognitoCustomDomainCertificateArn",
-              "ApiCustomDomainName",
-              "ApiCustomDomainCertificateArn",
-              # Clearing SEARCH_AREA_SCOPE must reach CloudFormation.
-              # An omitted parameter would keep the previous neighbourhood list.
-              "SearchAreaScope",
-          }
-
-          def resolve_value(raw: str) -> str:
-              """Replace <FROM_GITHUB_SECRET: X> / <FROM_GITHUB_VAR: X> placeholders."""
-              raw = raw.strip()
-              if raw.startswith("<FROM_GITHUB_SECRET:") and raw.endswith(">"):
-                  env_name = raw[len("<FROM_GITHUB_SECRET:") : -1].strip()
-                  return os.environ.get(env_name, "")
-              if raw.startswith("<FROM_GITHUB_VAR:") and raw.endswith(">"):
-                  env_name = raw[len("<FROM_GITHUB_VAR:") : -1].strip()
-                  return os.environ.get(env_name, "")
-              return raw
-
-          for key, value in params.items():
-              value_str = ""
-              if value is not None:
-                  value_str = resolve_value(str(value))
-              value_str = value_str.replace("\r\n", "\n").replace("\r", "\n")
-              value_str = value_str.replace("\n", "\\n").strip()
-              if key not in pass_empty_params and not value_str:
-                  continue
-
-              targets = []
-              if key == origin_verify_param:
-                  targets.extend([api_stack, public_stack])
-              if key in admin_web_params:
-                  if value_str or key != "WafWebAclArn":
-                      targets.append(admin_web_stack)
-              if key in public_params:
-                  targets.append(public_stack)
-              if not targets:
-                  targets.append(api_stack)
-
-              for target in targets:
-                  if target not in stack_set:
-                      continue
-                  sys.stdout.buffer.write(b"--parameters\0")
-                  sys.stdout.buffer.write(
-                      f"{target}:{key}={value_str}".encode("utf-8") + b"\0"
-                  )
-          PY
-            mapfile -d '' -t PARAM_ARGS < "$PARAM_ARGS_FILE"
-          fi
-
-          RUN_SEED_DATA_NORMALIZED="$(printf '%s' "${RUN_SEED_DATA:-false}" | tr '[:upper:]' '[:lower:]')"
-          if [ "$RUN_SEED_DATA_NORMALIZED" = "true" ]; then
-            if [[ " $CDK_STACKS " == *" lxsoftware-siutindei "* ]]; then
-              FILTERED_PARAM_ARGS=()
-              for arg in "${PARAM_ARGS[@]}"; do
-                if [[ "$arg" == "lxsoftware-siutindei:RunSeedData="* ]]; then
-                  continue
-                fi
-                FILTERED_PARAM_ARGS+=("$arg")
-              done
-              PARAM_ARGS=("${FILTERED_PARAM_ARGS[@]}")
-              PARAM_ARGS+=("--parameters" "lxsoftware-siutindei:RunSeedData=true")
-              echo "RunSeedData override enabled for lxsoftware-siutindei stack."
-            else
-              echo "run_seed_data=true requested, but API stack is not selected; skipping seed override."
-            fi
-          fi
-
-          # bin/app.ts reads CDK_BOOTSTRAP_QUALIFIER. deploy and destroy
-          # reject --qualifier (it is a bootstrap-only flag) and print
-          # "Unknown option(s): --qualifier".
-          IFS=$', \n\t' read -r -a STACK_LIST <<< "$CDK_STACKS"
-
-          if [ "${DESTROY_BEFORE_DEPLOY:-false}" = "true" ]; then
-            if [ ${#STACK_LIST[@]} -gt 0 ]; then
-              npx cdk destroy --no-notices --force "${STACK_LIST[@]}"
-            else
-              npx cdk destroy --no-notices --force lxsoftware-siutindei
-            fi
-          fi
-
-          MANAGED_STACKS=(
-            lxsoftware-siutindei
-            lxsoftware-siutindei-admin-web
-            lxsoftware-siutindei-public-www
-            lxsoftware-siutindei-waf
-          )
-
-          # One continue-update-rollback plus its waiter. The AWS call's
-          # own exit code is captured without a pipe: with or without
-          # pipefail, tee must not hide it. A failed waiter is retried
-          # once with RunMigrations skipped, because CloudFormation
-          # accepts the first call and only the waiter sees the resource
-          # fail again.
-          rollback_stack_once() {
-            local managed="$1"
-            shift
-            local -a skip_args=("$@")
-            local rollback_log status
-            rollback_log="$(mktemp)"
-            if [ ${#skip_args[@]} -eq 0 ]; then
-              echo "Stack ${managed} is in UPDATE_ROLLBACK_FAILED; calling continue-update-rollback."
-            else
-              echo "Stack ${managed} is in UPDATE_ROLLBACK_FAILED; calling continue-update-rollback with ${skip_args[*]}."
-            fi
-            if ! aws cloudformation continue-update-rollback \
-              --stack-name "$managed" \
-              --region "$AWS_REGION" \
-              "${skip_args[@]}" >"$rollback_log" 2>&1; then
-              cat "$rollback_log"
-              if [ ${#skip_args[@]} -eq 0 ] && grep -q RunMigrations "$rollback_log"; then
-                rm -f "$rollback_log"
-                echo "Retrying continue-update-rollback for ${managed} with RunMigrations skipped."
-                if ! rollback_stack_once "$managed" --resources-to-skip RunMigrations; then
-                  return 1
-                fi
-                return 0
-              fi
-              rm -f "$rollback_log"
-              echo "continue-update-rollback failed for ${managed}."
-              return 1
-            fi
-            cat "$rollback_log"
-            rm -f "$rollback_log"
-            echo "Waiting for ${managed} to reach UPDATE_ROLLBACK_COMPLETE (timeout ~15m)."
-            if ! aws cloudformation wait stack-rollback-complete \
-              --stack-name "$managed" \
-              --region "$AWS_REGION"; then
-              status="$(aws cloudformation describe-stacks \
-                --stack-name "$managed" \
-                --region "$AWS_REGION" \
-                --query 'Stacks[0].StackStatus' \
-                --output text 2>&1 || true)"
-              echo "Stack ${managed} did not reach UPDATE_ROLLBACK_COMPLETE (status: ${status})."
-              if [ ${#skip_args[@]} -eq 0 ]; then
-                echo "Retrying continue-update-rollback for ${managed} with RunMigrations skipped."
-                if ! rollback_stack_once "$managed" --resources-to-skip RunMigrations; then
-                  return 1
-                fi
-                return 0
-              fi
-              return 1
-            fi
-            status="$(aws cloudformation describe-stacks \
-              --stack-name "$managed" \
-              --region "$AWS_REGION" \
-              --query 'Stacks[0].StackStatus' \
-              --output text)"
-            echo "Stack ${managed} status after rollback: ${status}"
-            if [ "$status" != "UPDATE_ROLLBACK_COMPLETE" ]; then
-              echo "Stack ${managed} is ${status}, expected UPDATE_ROLLBACK_COMPLETE."
-              return 1
-            fi
-          }
-
-          continue_rollback_for_wedged_stacks() {
-            for managed in "${MANAGED_STACKS[@]}"; do
-              if [[ ! " $CDK_STACKS " == *" $managed "* ]]; then
-                continue
-              fi
-              local status
-              status="$(aws cloudformation describe-stacks \
-                --stack-name "$managed" \
-                --region "$AWS_REGION" \
-                --query 'Stacks[0].StackStatus' \
-                --output text 2>/dev/null || echo MISSING)"
-              if [ "$status" != "UPDATE_ROLLBACK_FAILED" ]; then
-                continue
-              fi
-              # RunMigrations cannot roll back after a new migration has been
-              # applied: the rolled-back Lambda bundle no longer contains the
-              # revision the database is at. Skipping it is safe (migrations
-              # are forward-only) and unwedges the rollback.
-              local skip_args=()
-              local describe_err
-              describe_err="$(mktemp)"
-              local failed_resources=""
-              if ! failed_resources="$(aws cloudformation describe-stack-resources \
-                --stack-name "$managed" \
-                --region "$AWS_REGION" \
-                --query "StackResources[?ResourceStatus=='UPDATE_FAILED' || ResourceStatus=='UPDATE_ROLLBACK_FAILED'].LogicalResourceId" \
-                --output text 2>"$describe_err")"; then
-                echo "describe-stack-resources failed for ${managed}:"
-                cat "$describe_err"
-                failed_resources=""
-              fi
-              rm -f "$describe_err"
-              echo "Resources in UPDATE_FAILED or UPDATE_ROLLBACK_FAILED for ${managed}: ${failed_resources:-<none>}"
-              describe_err="$(mktemp)"
-              local migration_events=""
-              if ! migration_events="$(aws cloudformation describe-stack-events \
-                --stack-name "$managed" \
-                --region "$AWS_REGION" \
-                --max-items 50 \
-                --query "StackEvents[?contains(LogicalResourceId, 'RunMigrations')].[ResourceStatus,ResourceStatusReason]" \
-                --output text 2>"$describe_err")"; then
-                echo "describe-stack-events failed for ${managed}:"
-                cat "$describe_err"
-                migration_events=""
-              fi
-              rm -f "$describe_err"
-              echo "RunMigrations recent events for ${managed}: ${migration_events:-<none>}"
-              if grep -q RunMigrations <<< "$failed_resources" \
-                || grep -q "Can't locate revision" <<< "$migration_events" \
-                || grep -q "did not finish" <<< "$migration_events"; then
-                echo "RunMigrations blocked the rollback; skipping it in continue-update-rollback."
-                skip_args=(--resources-to-skip RunMigrations)
-              fi
-              if ! rollback_stack_once "$managed" "${skip_args[@]}"; then
-                return 1
-              fi
-            done
-          }
-
-          MAX_CDK_DEPLOY_ATTEMPTS=3
-          attempt=1
-          deploy_exit=1
-          while [ "$attempt" -le "$MAX_CDK_DEPLOY_ATTEMPTS" ]; do
-            echo "CDK deploy attempt ${attempt} of ${MAX_CDK_DEPLOY_ATTEMPTS}"
-            ATTEMPT_LOG="$(mktemp)"
-            npx cdk deploy --no-notices --require-approval never \
-              "${PARAM_ARGS[@]}" "${STACK_LIST[@]}" \
-              2>&1 | tee "$ATTEMPT_LOG"
-            deploy_exit=${PIPESTATUS[0]}
-            if [ "$deploy_exit" -eq 0 ]; then
-              rm -f "$ATTEMPT_LOG"
-              exit 0
-            fi
-
-            if grep -Eiq 'HandlerErrorCode: (InvalidRequest|AlreadyExists)|must be in ARN format or "\\*"|already exists\.' "$ATTEMPT_LOG"; then
-              echo "Detected non-retryable CloudFormation error; failing fast without additional retries."
-              rm -f "$ATTEMPT_LOG"
-              exit "$deploy_exit"
-            fi
-
-            saw_rollback_failed=0
-            # The wedged status is already in this attempt's log. Waiting for
-            # the next attempt's "can not be updated" spends a deploy first.
-            if grep -Eiq 'UPDATE_ROLLBACK_FAILED' "$ATTEMPT_LOG"; then
-              saw_rollback_failed=1
-            fi
-
-            rm -f "$ATTEMPT_LOG"
-            if [ "$attempt" -eq "$MAX_CDK_DEPLOY_ATTEMPTS" ]; then
-              break
-            fi
-
-            if [ "$saw_rollback_failed" -eq 1 ]; then
-              echo "Detected UPDATE_ROLLBACK_FAILED; attempting continue-update-rollback before retry."
-              if ! continue_rollback_for_wedged_stacks; then
-                echo "Could not recover the wedged stack."
-                exit 1
-              fi
-            fi
-
-            delay=$((45 * attempt))
-            echo "CDK deploy failed (exit ${deploy_exit}); waiting ${delay}s before retry..."
-            sleep "$delay"
-            attempt=$((attempt + 1))
-          done
-          exit "$deploy_exit"
+      - name: Deploy stacks
+        uses: lx-software-ltd/actions/cdk-deploy@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        with:
+          working-directory: backend/infrastructure
+          stacks: ${{ steps.prep.outputs.stacks }}
+          param-file: ${{ vars.CDK_PARAM_FILE }}
+          format: plain-json
+          attempts: "3"
+          no-notices: "true"
+          pass-empty: WafWebAclArn,CognitoCustomDomainName,CognitoCustomDomainCertificateArn,ApiCustomDomainName,ApiCustomDomainCertificateArn,SearchAreaScope
+          escape-newlines: "true"
+          rollback-match: UPDATE_ROLLBACK_FAILED
+          skip-resource: RunMigrations
+          destroy: ${{ github.event.inputs.destroy_before_deploy || 'false' }}
+          run-seed: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_seed_data || 'false' }}
+          region: ${{ steps.region.outputs.region }}
+          plan-file: backend/infrastructure/cdk-plan.json
         env:
           AWS_REGION: ${{ steps.region.outputs.region }}
           CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
@@ -465,6 +156,12 @@ jobs:
           CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           DESTROY_BEFORE_DEPLOY: ${{ github.event.inputs.destroy_before_deploy || 'false' }}
           CDK_PARAM_GOOGLE_CLIENT_SECRET: ${{ secrets.CDK_PARAM_GOOGLE_CLIENT_SECRET }}
+          CDK_PARAM_COGNITO_CUSTOM_DOMAIN_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_COGNITO_CUSTOM_DOMAIN_CERTIFICATE_ARN }}
+          CDK_PARAM_ADMIN_WEB_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_ADMIN_WEB_CERTIFICATE_ARN }}
+          CDK_PARAM_PUBLIC_WWW_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_CERTIFICATE_ARN }}
+          CDK_PARAM_PUBLIC_WWW_STAGING_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_CERTIFICATE_ARN }}
+          CDK_PARAM_API_SECONDARY_CUSTOM_DOMAIN_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_API_SECONDARY_CUSTOM_DOMAIN_CERTIFICATE_ARN }}
+          CDK_PARAM_WAF_WEB_ACL_ARN: ${{ secrets.CDK_PARAM_WAF_WEB_ACL_ARN }}
           CDK_PARAM_GOOGLE_PLACES_API_KEY: ${{ secrets.CDK_PARAM_GOOGLE_PLACES_API_KEY }}
           CDK_PARAM_OPENROUTER_API_KEY: ${{ secrets.CDK_PARAM_OPENROUTER_API_KEY }}
           CDK_PARAM_APPLE_PRIVATE_KEY: ${{ secrets.CDK_PARAM_APPLE_PRIVATE_KEY }}

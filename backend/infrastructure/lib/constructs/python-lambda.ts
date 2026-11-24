@@ -279,13 +279,19 @@ export class PythonLambda extends Construct {
             ".pytest_cache/**",
             ".ruff_cache/**",
             ".mypy_cache/**",
-            "node_modules/**",
-            "dist/**",
-            "build/**",
-            "cdk.out/**",
+            // These directories sit under infrastructure/, so a pattern
+            // without a leading ** does not match them. cdk.out is rewritten
+            // by bootstrap before this hash and includes zip timestamps.
+            "**/node_modules/**",
+            "**/dist/**",
+            "**/build/**",
+            "**/cdk.out/**",
             "**/__pycache__/**",
             "**/*.pyc",
             "**/*.pyo",
+            // Rebuilt before every synth. Its bytes are not source, and
+            // hashing them makes every function look changed.
+            ".lambda-build/**",
           ],
           bundling: {
             image: lambda.Runtime.PYTHON_3_12.bundlingImage,

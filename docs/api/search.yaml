@@ -32,6 +32,10 @@ info:
     - `age` cannot be combined with `age_min` or `age_max`
     - `age_min` must be less than or equal to `age_max` when both provided
 
+servers:
+  - url: https://api.siutindei.com
+    description: Production API. Paths below are appended to this URL.
+
 paths:
   /v1/activities/search:
     get:
@@ -541,6 +545,7 @@ components:
         location:
           $ref: "#/components/schemas/Location"
         pricing:
+          type: object
           nullable: true
           description: |
             Null when `include_incomplete=true` and the activity has no
@@ -548,6 +553,7 @@ components:
           allOf:
             - $ref: "#/components/schemas/Pricing"
         schedule:
+          type: object
           nullable: true
           description: |
             Null when `include_incomplete=true` and the activity has no
@@ -629,11 +635,13 @@ components:
           nullable: true
           description: Last change to the organization. `view=card` omits it.
         contact:
+          type: object
           nullable: true
           description: Public contact details. `view=card` omits it.
           allOf:
             - $ref: "#/components/schemas/OrganizationContact"
         rating:
+          type: object
           nullable: true
           description: |
             Approved parent feedback for the organization. Null when it

@@ -259,7 +259,7 @@ is missing or empty in production mode.
    Tin Dei" in Chinese, matching the `Organization` node.
 4. Keep `zh-HK` pages in Chinese. Where an activity has no Chinese
    name or description, the data-quality translation work
-   (`docs/plans/data-quality-translations.md`) is the fix; track the
+   (`data-quality-translations.md`) is the fix; track the
    share of untranslated activities as a launch metric.
 5. Optional and low priority: generate `/llms.txt` from the same
    snapshot, listing the about page and landing pages. No major AI

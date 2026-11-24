@@ -1,6 +1,10 @@
 name: CDK Diff
 
 on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/cdk-diff.yml"
   repository_dispatch:
     types: [cdk-diff]
   workflow_dispatch:
@@ -14,16 +18,19 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
-  group: cdk-diff
-  cancel-in-progress: false
+  group: cdk-diff-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   diff:
-    runs-on: ubuntu-26.04
+    if: github.event_name != 'pull_request'
     environment: production
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-26.04
     env:
       CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
     steps:
@@ -39,18 +46,16 @@ jobs:
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh backend
 
       - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        uses: lx-software-ltd/actions/setup-node@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
         with:
-          node-version: "26"
-          cache: "npm"
-          cache-dependency-path: backend/infrastructure/package-lock.json
+          cache: npm
+          working-directory: backend/infrastructure
+          install: "false"
 
       # run-cdk-app.sh bundles Lambdas with Python 3.12. ubuntu-26.04 is
       # 26.04 and no longer includes that interpreter.
       - name: Set up Python
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: "3.12"
+        uses: lx-software-ltd/actions/setup-python@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
 
       - name: Determine deployment region
         id: region
@@ -67,7 +72,7 @@ jobs:
 
       - name: Configure AWS credentials
         id: aws
-        uses: lx-software-ltd/actions/aws-oidc@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
@@ -77,7 +82,7 @@ jobs:
         run: npm ci
 
       - name: Check CDK Bootstrap status
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
@@ -121,6 +126,12 @@ jobs:
           PY
         env:
           CDK_PARAM_GOOGLE_CLIENT_SECRET: ${{ secrets.CDK_PARAM_GOOGLE_CLIENT_SECRET }}
+          CDK_PARAM_COGNITO_CUSTOM_DOMAIN_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_COGNITO_CUSTOM_DOMAIN_CERTIFICATE_ARN }}
+          CDK_PARAM_ADMIN_WEB_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_ADMIN_WEB_CERTIFICATE_ARN }}
+          CDK_PARAM_PUBLIC_WWW_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_CERTIFICATE_ARN }}
+          CDK_PARAM_PUBLIC_WWW_STAGING_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_CERTIFICATE_ARN }}
+          CDK_PARAM_API_SECONDARY_CUSTOM_DOMAIN_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_API_SECONDARY_CUSTOM_DOMAIN_CERTIFICATE_ARN }}
+          CDK_PARAM_WAF_WEB_ACL_ARN: ${{ secrets.CDK_PARAM_WAF_WEB_ACL_ARN }}
           CDK_PARAM_APPLE_PRIVATE_KEY: ${{ secrets.CDK_PARAM_APPLE_PRIVATE_KEY }}
           CDK_PARAM_PUBLIC_API_KEY_VALUE: ${{ secrets.CDK_PARAM_PUBLIC_API_KEY_VALUE }}
           CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN }}
@@ -327,6 +338,12 @@ jobs:
           CDK_NON_SECRET_PARAM_FILE: ${{ env.CDK_NON_SECRET_PARAM_FILE }}
           CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           CDK_PARAM_GOOGLE_CLIENT_SECRET: ${{ secrets.CDK_PARAM_GOOGLE_CLIENT_SECRET }}
+          CDK_PARAM_COGNITO_CUSTOM_DOMAIN_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_COGNITO_CUSTOM_DOMAIN_CERTIFICATE_ARN }}
+          CDK_PARAM_ADMIN_WEB_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_ADMIN_WEB_CERTIFICATE_ARN }}
+          CDK_PARAM_PUBLIC_WWW_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_CERTIFICATE_ARN }}
+          CDK_PARAM_PUBLIC_WWW_STAGING_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_CERTIFICATE_ARN }}
+          CDK_PARAM_API_SECONDARY_CUSTOM_DOMAIN_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_API_SECONDARY_CUSTOM_DOMAIN_CERTIFICATE_ARN }}
+          CDK_PARAM_WAF_WEB_ACL_ARN: ${{ secrets.CDK_PARAM_WAF_WEB_ACL_ARN }}
           CDK_PARAM_APPLE_PRIVATE_KEY: ${{ secrets.CDK_PARAM_APPLE_PRIVATE_KEY }}
           CDK_PARAM_PUBLIC_API_KEY_VALUE: ${{ secrets.CDK_PARAM_PUBLIC_API_KEY_VALUE }}
           CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN }}
@@ -341,9 +358,19 @@ jobs:
 
       - name: Run CDK diff
         if: steps.prep.outputs.run == 'true'
-        uses: lx-software-ltd/actions/cdk-diff@b40bb0725bf84f25a38641f6ca5ec6f4c2f14f98 # main 2026-11-23
+        uses: lx-software-ltd/actions/cdk-diff@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
         with:
           working-directory: backend/infrastructure
           stacks: ${{ steps.prep.outputs.stacks }}
           args-file: ${{ runner.temp }}/cdk-diff-args
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+
+  pull-request:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    steps:
+      - name: Skip the diff
+        run: |
+          echo "::warning::A pull request cannot use the production environment, which is limited to main, so this diff would not see the deploy inputs. Run CDK Diff manually on main. This job does not assume GitHubActionsRole."

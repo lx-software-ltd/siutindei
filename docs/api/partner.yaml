@@ -83,6 +83,10 @@ info:
 security:
   - PartnerKeyAuth: []
 
+servers:
+  - url: https://api.siutindei.com
+    description: Production API. Paths below are appended to this URL.
+
 paths:
   /v1/partner/activities/search:
     get:
@@ -1828,18 +1832,20 @@ components:
         - type: object
           properties:
             category_review:
+              type: object
+              nullable: true
               allOf:
                 - $ref: "#/components/schemas/PartnerCategoryReview"
-              nullable: true
             location_ids:
               type: array
               items:
                 type: string
                 format: uuid
             pending_location_fix:
+              type: object
+              nullable: true
               allOf:
                 - $ref: "#/components/schemas/PartnerLocationFix"
-              nullable: true
     PartnerActivityListResponse:
       type: object
       required: [items]

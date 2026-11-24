@@ -27,11 +27,11 @@ jobs:
         run: bash scripts/deploy/resolve-public-www-build-env.sh
 
       - name: Set up Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        uses: lx-software-ltd/actions/setup-node@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
         with:
-          node-version: "26"
-          cache: 'npm'
-          cache-dependency-path: apps/public_www/package-lock.json
+          cache: npm
+          working-directory: apps/public_www
+          install: "false"
 
       - name: Restore Next.js build cache (public_www)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -56,14 +56,14 @@ jobs:
         run: npm run build
 
       - name: Run Lighthouse CI
-        working-directory: apps/public_www
-        env:
-          LIGHTHOUSE_PAGE_PATHS: ${{ inputs.page_paths }}
-          STAGING_SITE_ORIGIN: ${{ steps.resolve_public_site_config.outputs.staging_site_origin }}
-          STAGING_BYPASS_SECRET: ${{ secrets.STAGING_BYPASS_SECRET }}
-        run: |
-          node scripts/lighthouse-runtime-config.mjs
-          npx lhci autorun --config=.lighthouserc.runtime.json
+        uses: lx-software-ltd/actions/lighthouse-ci@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        with:
+          working-directory: apps/public_www
+          page-paths: ${{ inputs.page_paths }}
+          default-paths: /en/,/zh-HK/,/en/activities/,/en/activities/arts/,/en/activity/81622378-60bf-506b-b132-9b71f0fa4913/
+          root-alias: /en/
+          staging-origin: ${{ steps.resolve_public_site_config.outputs.staging_site_origin }}
+          bypass-secret: ${{ secrets.STAGING_BYPASS_SECRET }}
 
       - name: Upload Lighthouse artifacts
         if: always()

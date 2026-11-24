@@ -72,8 +72,8 @@ Source: [`apps/public_www`](../../apps/public_www).
 - Tailwind CSS v4 via `@tailwindcss/postcss`.
 - Vitest + Testing Library for unit/component tests.
 - Lighthouse CI configured at `apps/public_www/.lighthouserc.json`.
-  `scripts/lighthouse-runtime-config.mjs` picks collect URLs; `/` becomes
-  `/en/` so LCP does not include the locale redirect.
+  The workflow passes paths to `lighthouse-ci`. `/` becomes `/en/` so LCP
+  does not include the locale redirect.
 - Build script: `next build` → `inject-static-redirects.mjs` → `inject-html-lang.mjs` →
   `inject-structured-data.mjs` → `inject-csp-meta.mjs` →
   `validate-csp-meta.mjs`.
@@ -392,7 +392,9 @@ rebuilt. `promote-public-www.yml` runs `refresh_production` every day at
    `releases/production-build-sha.txt` (the commit that was built), and
    `releases/production-catalogue-digests.json` (one sha256 per activity,
    from `scripts/deploy/catalogue_snapshot_digests.py`; `generated_at` is
-   ignored).
+   ignored). The promote job reads `PublicWwwStagingBucketName` from the
+   stack after it assumes the role. The bucket name includes the account
+   id, and GitHub drops a job output that contains a secret.
 2. The refresh checks out the recorded commit, so it never ships code
    that was not promoted, downloads the snapshot, and compares digests.
    When nothing changed it stops before `npm ci`. It skips with a notice

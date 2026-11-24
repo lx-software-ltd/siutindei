@@ -77,4 +77,4 @@ None. The Google key is supplied at deploy time; see the pull request.
 
 ## Follow-up
 
-Corrections after review are in `docs/plans/location-enrichment-fixes.md`.
+Corrections after review are in `location-enrichment-fixes.md`.
