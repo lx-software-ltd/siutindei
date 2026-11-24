@@ -379,4 +379,3 @@ void main() {
 
 - [Data Repositories](repositories.md) - Use mappers for transformation
 - [Domain Entities](../domain/entities.md) - Target of API-to-Entity mapping
-- [Legacy Models](../models/README.md) - API data models being mapped

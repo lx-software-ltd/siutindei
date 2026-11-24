@@ -119,9 +119,9 @@ See [`docs/architecture/database-schema.md`](database-schema.md) for full table 
 ## CI/CD
 
 - GitHub Actions with OIDC for AWS access.
-- Security Scanning runs `scripts/check_pii.py` on every pull request.
-  The Test workflow runs the same check. Pre-commit runs
-  `scripts/check-pii.sh`.
+- Security Scanning and Test run the `pii-denylist` action on every
+  pull request. Pre-commit runs the `check-pii` hook from
+  `lx-software-ltd/actions`.
 - Deploy workflows for mobile, admin, backend, iOS.
 - Board engineering runner: `board-agent.yml` (Cursor CLI on
   `staging`; optional `pr_number` revises an existing `board/*` PR),
@@ -130,7 +130,6 @@ See [`docs/architecture/database-schema.md`](database-schema.md) for full table 
   [`executive-board-autonomy-siutindei-appendix-a.md`](executive-board-autonomy-siutindei-appendix-a.md).
 - CDK bootstrap workflow for initial environment setup.
 - Lockfile checks for Flutter, Node, iOS, and Python requirement pins.
-- `amplify-promote.yml` promotes an Amplify branch on manual dispatch.
 - Dependabot enabled for automated dependency updates (see below).
 - Infrastructure tests validate CDK templates for new and imported
   database resources.

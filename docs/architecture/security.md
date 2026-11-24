@@ -461,11 +461,12 @@ warnings were surfacing on the Code Scanning tool-status page).
 
 Personal names, phone numbers, personal inboxes, street addresses, bank
 account numbers, and business-registration numbers stay out of source and
-docs. `scripts/check-pii.sh` compares normalized text to SHA-256 digests in
+docs. The `pii-denylist` action and the `check-pii` pre-commit hook
+compare normalized text to SHA-256 digests in
 `scripts/pii-denylist.sha256` (digests only; a hit is a path and line).
-Role mailboxes (`hello@`, `support@`, `no-reply@`) remain. Pre-commit,
-the Test workflow, and Security Scanning all run the check. Git author
-trailers are outside it. The scanned suffixes are `.py`, `.ts`, `.tsx`,
+Role mailboxes (`hello@`, `support@`, `no-reply@`) remain. Pre-commit
+runs the hook. The Test workflow and Security Scanning run the action. Git author
+trailers are outside the check. The scanned suffixes are `.py`, `.ts`, `.tsx`,
 `.js`, `.mjs`, `.dart`, `.sql`, `.md`, `.mdc`, `.yml`, `.yaml`, `.sh`,
 `.html`, and `.css`. Parameter JSON is outside that list; do not commit
 personal inboxes there either. `FallbackManagerEmail` in
@@ -504,7 +505,7 @@ Before approving any PR, verify:
 
 ### Logging
 - [ ] No PII (emails, names, etc.) logged without masking
-- [ ] No denylisted personal data in source (`scripts/check-pii.sh`)
+- [ ] No denylisted personal data in source (the `pii-denylist` action)
 - [ ] No `print()` statements in production code
 - [ ] Error messages don't expose internal details
 
