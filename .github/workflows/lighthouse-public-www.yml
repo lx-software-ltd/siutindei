@@ -1,12 +1,18 @@
 name: Lighthouse Public Website
+# template:set
+# template:end
 
 on:
   workflow_dispatch:
     inputs:
       page_paths:
+        # template:set
         description: 'Comma/newline-separated page paths or full URLs to audit. Empty uses /en/, /zh-HK/, /en/activities/, /en/activities/classes/, and one activity page from the committed catalogue fixture. A bare / is rewritten to /en/ because / is a locale redirect. /en/search/ is omitted because this build has no search API.'
+        # template:end
         required: false
+        # template:set
         default: ''
+        # template:end
   pull_request:
     paths:
       - "apps/public_www/**"
@@ -27,17 +33,26 @@ jobs:
       contents: read
       statuses: write
     name: Lighthouse audit
+
+
     runs-on: ubuntu-26.04
     timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # template:set
         with:
           lfs: true
+        # template:end
 
+      # template:optional public-origin
       - name: Resolve public site build config from infrastructure params
+        # template:set
         id: resolve_public_site_config
+        # template:end
         run: bash scripts/deploy/resolve-public-www-build-env.sh
+
+      # template:end
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
@@ -45,22 +60,29 @@ jobs:
           cache: npm
           working-directory: apps/public_www
 
+      # template:optional next-cache
       - name: Restore Next.js build cache (public_www)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: apps/public_www/.next/cache
+          # template:set
           key: ${{ runner.os }}-nextjs-public-www-lh-${{ hashFiles('apps/public_www/package-lock.json') }}-${{ hashFiles('apps/public_www/src/**/*.{ts,tsx,css}', 'apps/public_www/scripts/**/*.mjs', 'apps/public_www/next.config.*') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-public-www-lh-${{ hashFiles('apps/public_www/package-lock.json') }}-
+          # template:end
+
+      # template:end
 
       - name: Build public website
         working-directory: apps/public_www
+        # template:set
         env:
           NEXT_TELEMETRY_DISABLED: '1'
           NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_config.outputs.production_site_origin }}
           NEXT_PUBLIC_SITE_NAME: ${{ vars.NEXT_PUBLIC_SITE_NAME || steps.resolve_public_site_config.outputs.site_name }}
           NEXT_PUBLIC_SITE_TAGLINE: ${{ vars.NEXT_PUBLIC_SITE_TAGLINE || steps.resolve_public_site_config.outputs.site_tagline }}
           PUBLIC_WWW_CATALOGUE_SNAPSHOT_PATH: ${{ github.workspace }}/apps/public_www/tests/fixtures/catalogue-snapshot.json
+        # template:end
         run: npm run build
 
       - name: Run Lighthouse CI
@@ -68,10 +90,12 @@ jobs:
         with:
           working-directory: apps/public_www
           page-paths: ${{ inputs.page_paths }}
+          # template:set
           default-paths: /en/,/zh-HK/,/en/activities/,/en/activities/classes/,/en/activity/81622378-60bf-506b-b132-9b71f0fa4913/
           root-alias: /en/
           staging-origin: ${{ steps.resolve_public_site_config.outputs.staging_site_origin }}
           bypass-secret: ${{ secrets.STAGING_BYPASS_SECRET }}
+          # template:end
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Lighthouse artifacts
@@ -82,3 +106,4 @@ jobs:
           path: apps/public_www/.lighthouseci/**
           if-no-files-found: warn
           include-hidden-files: true
+
