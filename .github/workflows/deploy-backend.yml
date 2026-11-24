@@ -5,16 +5,20 @@ on:
     types: [deploy-backend]
   workflow_dispatch:
     inputs:
+      # template:optional migration-recovery
       destroy_before_deploy:
         description: "Run cdk destroy before deploy"
         required: false
         default: false
         type: boolean
+      # template:end
+      # template:optional database
       force_migration_run:
         description: "Force RunMigrations custom resource"
         required: false
         default: false
         type: boolean
+      # template:end
       cdk_stacks:
         description: "CDK stacks to deploy"
         required: false
@@ -28,11 +32,13 @@ on:
           - "public website"
           - "waf (us-east-1)"
           # template:end
+      # template:optional database
       run_seed_data:
         description: "Run seed data after migrations (backend stack only)"
         required: false
         default: false
         type: boolean
+      # template:end
   push:
     branches:
       - main
@@ -72,13 +78,13 @@ jobs:
       # template:end
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@2c0ccd2fdf6d2ab7cec932bcebc33f05d24bdd1a # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@2c0ccd2fdf6d2ab7cec932bcebc33f05d24bdd1a # main 2026-11-24
 
       - name: Determine deployment region
         id: region
@@ -89,7 +95,7 @@ jobs:
 
       - name: Configure AWS credentials
         id: aws
-        uses: lx-software-ltd/actions/aws-oidc@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@2c0ccd2fdf6d2ab7cec932bcebc33f05d24bdd1a # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
@@ -101,7 +107,7 @@ jobs:
 
 
       - name: Check CDK bootstrap
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@2c0ccd2fdf6d2ab7cec932bcebc33f05d24bdd1a # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
@@ -117,7 +123,7 @@ jobs:
 
 
       - name: Deploy stacks
-        uses: lx-software-ltd/actions/cdk-deploy@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-deploy@2c0ccd2fdf6d2ab7cec932bcebc33f05d24bdd1a # main 2026-11-24
         with:
           working-directory: backend/infrastructure
           plan-file: backend/infrastructure/cdk-plan.json
