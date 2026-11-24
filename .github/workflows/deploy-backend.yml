@@ -76,7 +76,7 @@ jobs:
       # template:end
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
@@ -85,7 +85,7 @@ jobs:
       # 26.04 and no longer includes that interpreter.
       # template:end
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
 
       # template:optional waf-region
       - name: Determine deployment region
@@ -105,7 +105,7 @@ jobs:
       - name: Configure AWS credentials
         # template:set
         # template:end
-        uses: lx-software-ltd/actions/aws-oidc@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           # template:set
@@ -114,7 +114,7 @@ jobs:
 
 
       - name: Check CDK bootstrap
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           # template:set
@@ -132,7 +132,7 @@ jobs:
 
 
       - name: Deploy stacks
-        uses: lx-software-ltd/actions/cdk-deploy@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-deploy@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
         with:
           working-directory: backend/infrastructure
           plan-file: backend/infrastructure/cdk-plan.json
