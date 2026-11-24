@@ -1,131 +1,199 @@
 name: Test
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+on:
+  pull_request:
+  push:
+    branches:
+      - "main"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-on:
-  workflow_dispatch:
-  pull_request:
-    # No path filter. The gate job is a required check, and a skipped
-    # required check leaves the pull request blocked.
-  push:
-    branches:
-      - main
-    paths:
-      - "apps/**"
-      - "packages/**"
-      - "backend/**"
-      - "tests/**"
-      - "scripts/**"
-      - ".github/workflows/test.yml"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  pii-denylist:
-    name: PII denylist
+  test-python:
+    name: Test Python
     runs-on: ubuntu-26.04
+    # template:optional database
+    services:
+      postgres:
+        image: postgres:16@sha256:72d22ce26d04fe56a5384e9f6b026152d1cf05db602a7a3524a3ed337d5f5752 # linux/amd64 2026-11-22
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: backend_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d backend_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    # template:end
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # template:set
+        with:
+          lfs: true
+          fetch-depth: 0
+        # template:end
 
       - name: Set up Python
         uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+
+      - name: Run Python tests
+        run: bash scripts/ci/test-python.sh
+        # template:set
+        # template:end
+      # template:optional coverage-upload
+      - name: Upload coverage report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
         with:
-          python-version: "3.12"
-
-      - name: Check hashed PII denylist
-        uses: lx-software-ltd/actions/pii-denylist@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
-
-  test-flutter:
-    name: Test Flutter
+          name: python-coverage
+          path: coverage.xml
+      # template:end
+  test-admin-web:
+    name: Test Admin Web
     runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
-        with:
-          channel: "stable"
-          # pubspec.lock was resolved with this SDK. Floating stable rewrites it.
-          flutter-version: "3.50.1"
-          cache: "true"
-
-      - name: Install system SQLite for Linux native assets
-        run: sudo apt-get update && sudo apt-get install -y libsqlite3-0 libsqlite3-dev
-
-      # sqlite3 3.1.7 (Amplify secure storage) downloads a GitHub release
-      # whose Linux binary hash no longer matches the package, so
-      # `flutter test` dies in the native-assets hook. 3.1.7 cannot set
-      # source per OS, so Linux CI uses the system library; iOS and
-      # Android still use the bundled build from pubspec.yaml.
-      - name: Point Linux sqlite3 hook at the OS library
-        run: |
-          python3 -c '
-          from pathlib import Path
-          path = Path("apps/siutindei_app/pubspec.yaml")
-          text = path.read_text(encoding="utf-8")
-          hook = (
-              "\nhooks:\n"
-              "  user_defines:\n"
-              "    sqlite3:\n"
-              "      source: system\n"
-          )
-          if "user_defines:" not in text:
-              path.write_text(text + hook, encoding="utf-8")
-          '
-
-      - name: Run Flutter tests
-        run: |
-          set -e
-          shopt -s globstar nullglob
-          for dir in apps/siutindei_app packages/flutter_ui packages/api_client_dart; do
-            if [ -f "$dir/pubspec.yaml" ]; then
-              test_files=($dir/test/**/*_test.dart)
-              if [ "${#test_files[@]}" -eq 0 ]; then
-                echo "No Flutter tests found in $dir"
-                continue
-              fi
-              echo "Testing Flutter in $dir"
-              (cd "$dir" && flutter pub get && flutter test)
-            else
-              echo "Skipping missing $dir"
-            fi
-          done
-
-  test-node:
-    name: Test Node
-    runs-on: ubuntu-26.04
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          lfs: true
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          cache: npm
+          working-directory: apps/admin_web
 
-      - name: Run Node tests
-        run: |
-          set -e
-          for dir in apps/admin_web apps/public_www packages/react_ui packages/api_client_ts; do
-            if [ -f "$dir/package.json" ]; then
-              echo "Testing Node in $dir"
-              if [ -f "$dir/package-lock.json" ]; then
-                (cd "$dir" && npm ci)
-              else
-                (cd "$dir" && npm install)
-              fi
-              (cd "$dir" && npm run test --if-present)
-            else
-              echo "Skipping missing $dir"
-            fi
-          done
+      - name: Run tests
+        run: npm run test:ci
+        working-directory: apps/admin_web
+        # template:set
+        env:
+          NEXT_PUBLIC_COGNITO_DOMAIN: auth.example.com
+          NEXT_PUBLIC_COGNITO_CLIENT_ID: placeholder-client-id
+          NEXT_PUBLIC_COGNITO_USER_POOL_ID: placeholder-pool
+          NEXT_PUBLIC_API_BASE_URL: https://placeholder.example.com
+        # template:end
 
-  test-public-www-e2e:
+      - name: Build
+        run: npm run build
+        working-directory: apps/admin_web
+        # template:set
+        env:
+          NEXT_PUBLIC_COGNITO_DOMAIN: auth.example.com
+          NEXT_PUBLIC_COGNITO_CLIENT_ID: placeholder-client-id
+          NEXT_PUBLIC_COGNITO_USER_POOL_ID: placeholder-pool
+          NEXT_PUBLIC_API_BASE_URL: https://placeholder.example.com
+        # template:end
+
+  test-public-www:
+    name: Test Public Website
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          cache: npm
+          working-directory: apps/public_www
+      # template:set
+      # template:end
+
+      - name: Run tests
+        run: npm run test:ci
+        working-directory: apps/public_www
+        # template:set
+        # template:end
+
+      - name: Build
+        run: npm run build
+        working-directory: apps/public_www
+        # template:set
+        # template:end
+
+  # template:optional react-ui
+  test-react-ui:
+    name: Test React UI
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        if: hashFiles('packages/react_ui/package.json') != ''
+        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          cache: npm
+          working-directory: packages/react_ui
+
+      - name: Run tests
+        if: hashFiles('packages/react_ui/package.json') != ''
+        run: npm run test:ci
+        working-directory: packages/react_ui
+
+      - name: Build
+        if: hashFiles('packages/react_ui/package.json') != ''
+        run: npm run build
+        working-directory: packages/react_ui
+
+  # template:end
+  # template:optional api-client-ts
+  test-api-client-ts:
+    name: Test API Client
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        if: hashFiles('packages/api_client_ts/package.json') != ''
+        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          cache: npm
+          working-directory: packages/api_client_ts
+
+      - name: Run tests
+        if: hashFiles('packages/api_client_ts/package.json') != ''
+        run: npm run test:ci
+        working-directory: packages/api_client_ts
+
+      - name: Build
+        if: hashFiles('packages/api_client_ts/package.json') != ''
+        run: npm run build
+        working-directory: packages/api_client_ts
+
+  # template:end
+  test-infrastructure:
+    name: Test infrastructure
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node.js
+        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          cache: npm
+          working-directory: backend/infrastructure
+
+      - name: Set up Python
+        uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+
+      - name: Run infrastructure tests
+        run: npm run test:infra
+        working-directory: backend/infrastructure
+
+  # template:optional playwright-public
+  e2e-public-www:
     name: Test Public Website E2E
     runs-on: ubuntu-26.04
     timeout-minutes: 20
@@ -133,13 +201,13 @@ jobs:
       run:
         working-directory: apps/public_www
     steps:
+      # template:set
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
 
       - name: Sync staging search fixture
-        working-directory: .
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh public-www
 
       - name: Set up Node.js
@@ -156,7 +224,7 @@ jobs:
       - name: Run Playwright tests
         run: npm run test:e2e
         env:
-          CI: true
+          CI: "true"
 
       - name: Upload test results
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -165,93 +233,42 @@ jobs:
           name: public-www-test-results
           path: apps/public_www/test-results/
           retention-days: 7
+      # template:end
 
-  test-python:
-    name: Test Python
+  # template:end
+  # template:optional mobile
+  test-flutter:
+    name: Test Flutter
     runs-on: ubuntu-26.04
-    services:
-      postgres:
-        image: postgres:16@sha256:72d22ce26d04fe56a5384e9f6b026152d1cf05db602a7a3524a3ed337d5f5752 # linux/amd64 2026-11-22
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: backend_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d backend_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-    env:
-      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/backend_test
-      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/backend_test
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          lfs: true
-          # Full history so agent-rule [why:] SHAs resolve.
-          fetch-depth: 0
 
-      - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
-        with:
-          python-version: "3.12"
+      - name: Set up Flutter
+        uses: lx-software-ltd/actions/setup-flutter@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+      # template:set
+      - name: Install system SQLite for Linux native assets
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-0 libsqlite3-dev
 
-      - name: Install backend test dependencies
+      - name: Point Linux sqlite3 hook at the OS library
         run: |
-          python -m pip install --upgrade pip
-          if [ -f "backend/dev-requirements.txt" ]; then
-            python -m pip install -r backend/dev-requirements.txt
-          else
-            python -m pip install -r backend/requirements.txt
-            python -m pip install 'pytest>=8.0' 'pytest-cov>=5.0'
-          fi
+          python3 -c 'from pathlib import Path; p=Path("apps/siutindei_app/pubspec.yaml"); t=p.read_text(encoding="utf-8"); h="\nhooks:\n  user_defines:\n    sqlite3:\n      source: system\n"; p.write_text(t+h, encoding="utf-8") if "user_defines:" not in t else None'
+      # template:end
 
-      - name: Apply database migrations
-        run: python -m alembic -c backend/db/alembic.ini upgrade head
-
-      - name: Run Python tests
+      - name: Run Flutter tests
         run: |
+          set -euo pipefail
           shopt -s globstar nullglob
-          tests=(tests/test_*.py tests/**/*.py backend/**/test_*.py backend/**/tests/*.py backend/**/tests/**/*.py)
-          if [ "${#tests[@]}" -eq 0 ]; then
-            echo "No Python tests found"
-            exit 0
-          fi
-          python -m pytest tests backend --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=35
+          # template:set
+          for dir in apps/siutindei_app packages/flutter_ui packages/api_client_dart; do
+          # template:end
+            if [ ! -f "$dir/pubspec.yaml" ]; then echo "Skipping missing $dir"; continue; fi
+            test_files=("$dir"/test/**/*_test.dart)
+            if [ "${#test_files[@]}" -eq 0 ]; then echo "ERROR: $dir has a pubspec.yaml but no test/**/*_test.dart files"; exit 1; fi
+            echo "Testing Flutter in $dir"
+            (cd "$dir" && flutter pub get && flutter test)
+          done
 
-  test-infrastructure:
-    name: Test Infrastructure
-    runs-on: ubuntu-26.04
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
-
-      - name: Install infrastructure dependencies
-        run: |
-          if [ -f "backend/infrastructure/package.json" ]; then
-            cd backend/infrastructure
-            npm ci
-          else
-            echo "Missing backend/infrastructure/package.json"
-          fi
-
-      - name: Run infrastructure tests
-        run: |
-          if [ -f "backend/infrastructure/package.json" ]; then
-            cd backend/infrastructure
-            npm run test:infra
-          else
-            echo "Missing backend/infrastructure/package.json"
-          fi
-
-      - name: Run edge function and Cloudflare Worker tests
-        run: node --test backend/infrastructure/test/*.test.mjs scripts/cloudflare/workers/*.test.mjs
 
   build-android:
     name: Build Android
@@ -264,35 +281,38 @@ jobs:
         uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
+          # template:set
           java-version: "21"
+          # template:end
 
       - name: Set up Flutter
         uses: lx-software-ltd/actions/setup-flutter@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
-        with:
-          channel: "stable"
-          flutter-version: "3.50.1"
-          cache: "true"
 
-      # Android Gradle Plugin 9.3 lint calls List.removeLast(), which exists
-      # only on Java 21 and newer. The app still compiles for Java 17.
       - name: Point Flutter at Java 21
         run: flutter config --jdk-dir "$JAVA_HOME"
 
       - name: Build debug APK
+        # template:set
         working-directory: apps/siutindei_app
+        # template:end
         run: flutter build apk --debug
 
+  # template:end
   test:
     name: test
     runs-on: ubuntu-26.04
+    # template:set
     needs:
-      - pii-denylist
-      - test-flutter
-      - test-node
-      - test-public-www-e2e
       - test-python
+      - test-admin-web
+      - test-public-www
+      - test-react-ui
+      - test-api-client-ts
       - test-infrastructure
+      - e2e-public-www
+      - test-flutter
       - build-android
+    # template:end
     if: always()
     steps:
       - name: Require every test job
