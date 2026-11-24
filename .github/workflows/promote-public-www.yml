@@ -75,7 +75,7 @@ jobs:
       - name: Configure AWS credentials
         # Reads the live release and the catalogue only. The build job assumes
         # after npm ci.
-        uses: lx-software-ltd/actions/aws-oidc@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -96,7 +96,7 @@ jobs:
       - name: Read staging bucket
         id: staging
         if: ${{ steps.promotion_mode.outputs.read_staging == 'true' }}
-        uses: lx-software-ltd/actions/cfn-stack-outputs@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/cfn-stack-outputs@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
         with:
           stack: lxsoftware-siutindei-public-www
           outputs: PublicWwwStagingBucketName
@@ -264,7 +264,7 @@ jobs:
 
       - name: Set up Node.js
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
-        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
@@ -323,7 +323,7 @@ jobs:
       - name: Configure AWS credentials
         # After the build. npm ci and the build must not see the deploy role.
         if: ${{ success() && (needs.prepare.outputs.maintenance_mode == 'true' || needs.prepare.outputs.deploy == 'true') }}
-        uses: lx-software-ltd/actions/aws-oidc@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -350,7 +350,7 @@ jobs:
       - name: Read the production staging bucket
         id: production_staging
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
-        uses: lx-software-ltd/actions/cfn-stack-outputs@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        uses: lx-software-ltd/actions/cfn-stack-outputs@f68a62d345907c7da3a929e12e5a2ded28af3514 # main 2026-11-24
         with:
           stack: lxsoftware-siutindei-public-www
           outputs: PublicWwwStagingBucketName
