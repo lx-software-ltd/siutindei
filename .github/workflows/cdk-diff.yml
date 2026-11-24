@@ -46,7 +46,7 @@ jobs:
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh backend
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
@@ -55,7 +55,7 @@ jobs:
       # run-cdk-app.sh bundles Lambdas with Python 3.12. ubuntu-26.04 is
       # 26.04 and no longer includes that interpreter.
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
 
       - name: Determine deployment region
         id: region
@@ -72,7 +72,7 @@ jobs:
 
       - name: Configure AWS credentials
         id: aws
-        uses: lx-software-ltd/actions/aws-oidc@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
@@ -82,7 +82,7 @@ jobs:
         run: npm ci
 
       - name: Check CDK Bootstrap status
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
@@ -356,7 +356,7 @@ jobs:
 
       - name: Run CDK diff
         if: steps.prep.outputs.run == 'true'
-        uses: lx-software-ltd/actions/cdk-diff@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-diff@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           working-directory: backend/infrastructure
           stacks: ${{ steps.prep.outputs.stacks }}
@@ -391,7 +391,7 @@ jobs:
       - name: Configure AWS credentials
         id: aws
         if: vars.AWS_DIFF_ROLE_NAME != ''
-        uses: lx-software-ltd/actions/aws-oidc@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -405,7 +405,7 @@ jobs:
 
       - name: Set up Node.js
         if: steps.aws.outputs.ready == 'true'
-        uses: lx-software-ltd/actions/setup-node@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
@@ -413,7 +413,7 @@ jobs:
 
       - name: Set up Python
         if: steps.aws.outputs.ready == 'true'
-        uses: lx-software-ltd/actions/setup-python@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
 
       - name: Install infrastructure dependencies
         if: steps.aws.outputs.ready == 'true'
@@ -425,14 +425,14 @@ jobs:
 
       - name: Check CDK Bootstrap status
         if: steps.aws.outputs.ready == 'true'
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ vars.AWS_REGION }}
 
       - name: Run CDK diff
         if: steps.aws.outputs.ready == 'true'
-        uses: lx-software-ltd/actions/cdk-diff@1d66ad00053fdbea390c4d2c3f4b89d8c31cfdfc # main 2026-11-24
+        uses: lx-software-ltd/actions/cdk-diff@498ccef500b37e3b04314213aa10f49a2b5c02e5 # main 2026-11-24
         with:
           working-directory: backend/infrastructure
           stacks: "all stacks"
