@@ -242,4 +242,3 @@ fi
   echo "run=true"
   echo "stacks=${STACK_ARGS[*]}"
 } >> "$GITHUB_OUTPUT"
-

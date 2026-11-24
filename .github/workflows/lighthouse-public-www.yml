@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       page_paths:
-        description: 'Comma/newline-separated page paths or full URLs to audit. Empty uses /en/, /zh-HK/, /en/activities/, /en/activities/arts/, and one activity page from the committed catalogue fixture. A bare / is rewritten to /en/ because / is a locale redirect. /en/search/ is omitted because this build has no search API.'
+        description: 'Comma/newline-separated page paths or full URLs to audit. Empty uses /en/, /zh-HK/, /en/activities/, /en/activities/classes/, and one activity page from the committed catalogue fixture. A bare / is rewritten to /en/ because / is a locale redirect. /en/search/ is omitted because this build has no search API.'
         required: false
         default: ''
   pull_request:
@@ -73,7 +73,7 @@ jobs:
         with:
           working-directory: apps/public_www
           page-paths: ${{ inputs.page_paths }}
-          default-paths: /en/,/zh-HK/,/en/activities/,/en/activities/arts/,/en/activity/81622378-60bf-506b-b132-9b71f0fa4913/
+          default-paths: /en/,/zh-HK/,/en/activities/,/en/activities/classes/,/en/activity/81622378-60bf-506b-b132-9b71f0fa4913/
           root-alias: /en/
           staging-origin: ${{ steps.resolve_public_site_config.outputs.staging_site_origin }}
           bypass-secret: ${{ secrets.STAGING_BYPASS_SECRET }}

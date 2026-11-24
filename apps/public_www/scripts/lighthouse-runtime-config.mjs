@@ -30,7 +30,7 @@ export const DEFAULT_PAGE_PATHS = [
   '/en/',
   '/zh-HK/',
   '/en/activities/',
-  '/en/activities/arts/',
+  '/en/activities/classes/',
   `/en/activity/${FIXTURE_ACTIVITY_ID}/`,
 ];
 export const STATIC_COLLECT_ORIGIN = 'http://localhost:9000';
