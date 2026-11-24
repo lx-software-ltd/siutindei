@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 # Resolve the release id for a public website promotion.
 set -euo pipefail
-RESOLVED_PROMOTION_MODE="${PROMOTION_MODE:-latest_staging}"
+if [ "${GITHUB_EVENT_NAME:-}" = "schedule" ]; then
+  RESOLVED_PROMOTION_MODE="refresh_production"
+else
+  RESOLVED_PROMOTION_MODE="${PROMOTION_MODE:-latest_staging}"
+fi
 
 if [ "$RESOLVED_PROMOTION_MODE" = "maintenance_on" ]; then
   echo "release_id=" >> "$GITHUB_OUTPUT"
   echo "maintenance_mode=true" >> "$GITHUB_OUTPUT"
   echo "promotion_mode=$RESOLVED_PROMOTION_MODE" >> "$GITHUB_OUTPUT"
+  echo "deploy=false" >> "$GITHUB_OUTPUT"
+  echo "skip=false" >> "$GITHUB_OUTPUT"
+  echo "build_sha=" >> "$GITHUB_OUTPUT"
   exit 0
 fi
 
@@ -33,6 +40,8 @@ elif [ "$RESOLVED_PROMOTION_MODE" = "refresh_production" ]; then
     || ! aws s3 cp --only-show-errors "s3://$STAGING_BUCKET/releases/production-build-sha.txt" "$BUILD_MARKER"; then
     echo '::notice::No production build is recorded yet. Promote a release once to start daily refreshes.'
     echo "skip=true" >> "$GITHUB_OUTPUT"
+    echo "deploy=false" >> "$GITHUB_OUTPUT"
+    echo "build_sha=" >> "$GITHUB_OUTPUT"
     echo "maintenance_mode=false" >> "$GITHUB_OUTPUT"
     echo "promotion_mode=$RESOLVED_PROMOTION_MODE" >> "$GITHUB_OUTPUT"
     exit 0
@@ -68,3 +77,8 @@ fi
 echo "release_id=$SELECTED_RELEASE_ID" >> "$GITHUB_OUTPUT"
 echo "maintenance_mode=false" >> "$GITHUB_OUTPUT"
 echo "promotion_mode=$RESOLVED_PROMOTION_MODE" >> "$GITHUB_OUTPUT"
+echo "deploy=true" >> "$GITHUB_OUTPUT"
+echo "skip=false" >> "$GITHUB_OUTPUT"
+if [ "$RESOLVED_PROMOTION_MODE" != "refresh_production" ]; then
+  echo "build_sha=" >> "$GITHUB_OUTPUT"
+fi

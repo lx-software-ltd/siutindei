@@ -3,6 +3,14 @@
 set -euo pipefail
 mode="${1:-}"
 case "$mode" in
+  region)
+    if [ "${INPUT_CDK_STACKS:-}" = "waf (us-east-1)" ] || [ "${INPUT_CDK_STACKS:-}" = "lxsoftware-siutindei-waf" ]; then
+      echo "region=us-east-1" >> "${GITHUB_OUTPUT:?}"
+    else
+      echo "region=${INPUT_AWS_REGION:-}" >> "${GITHUB_OUTPUT:?}"
+    fi
+    exit 0
+    ;;
   diff|deploy) ;;
   *) echo "::error::cdk-prepare.sh requires diff or deploy" >&2; exit 1 ;;
 esac
