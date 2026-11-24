@@ -1,11 +1,19 @@
 {
   "api-stack": "lxsoftware-siutindei",
-  "also-api": ["PublicWwwOriginVerifySecret"],
+  "also-api": [
+    "PublicWwwOriginVerifySecret"
+  ],
   "routes": [
     {
       "stack": "lxsoftware-siutindei-admin-web",
-      "parameters": ["AdminWebDomainName", "AdminWebCertificateArn", "WafWebAclArn"],
-      "skip-empty": ["WafWebAclArn"]
+      "parameters": [
+        "AdminWebDomainName",
+        "AdminWebCertificateArn",
+        "WafWebAclArn"
+      ],
+      "skip-empty": [
+        "WafWebAclArn"
+      ]
     },
     {
       "stack": "lxsoftware-siutindei-public-www",
@@ -33,5 +41,33 @@
         "lxsoftware-siutindei-waf"
       ]
     }
-  ]
+  ],
+  "aliases": {
+    "all stacks": [
+      "lxsoftware-siutindei",
+      "lxsoftware-siutindei-admin-web",
+      "lxsoftware-siutindei-public-www"
+    ],
+    "lambda apis": [
+      "lxsoftware-siutindei"
+    ],
+    "admin web": [
+      "lxsoftware-siutindei-admin-web"
+    ],
+    "public website": [
+      "lxsoftware-siutindei-public-www"
+    ],
+    "public www": [
+      "lxsoftware-siutindei-public-www"
+    ],
+    "public website staging": [
+      "lxsoftware-siutindei-public-www"
+    ],
+    "public www staging": [
+      "lxsoftware-siutindei-public-www"
+    ],
+    "waf (us-east-1)": [
+      "lxsoftware-siutindei-waf"
+    ]
+  }
 }
