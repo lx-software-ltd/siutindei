@@ -40,7 +40,7 @@ jobs:
         run: bash scripts/deploy/resolve-public-www-build-env.sh
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
@@ -74,7 +74,7 @@ jobs:
 # template:end
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -131,7 +131,7 @@ jobs:
           PUBLIC_WWW_PHASE: optimize
 
       - name: Deploy public website
-        uses: lx-software-ltd/actions/s3-cloudfront-deploy@936d3fad83b00b4cc23a603717fdf804576c300c # main 2026-11-24
+        uses: lx-software-ltd/actions/s3-cloudfront-deploy@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
         with:
           source: apps/public_www/out
 # template:set
@@ -141,9 +141,15 @@ jobs:
           bucket-output: PublicWwwStagingBucketName
           distribution-output: ""
           profile: next-site
+          # template:set
+          document-cache: public, max-age=300, must-revalidate, stale-while-revalidate=60
+          # template:end
           release-id: ${{ github.sha }}
           release-marker: "true"
-          sync-exclude: landing-pages-manifest.json
+          # template:set
+          marker-cache: no-store, max-age=0
+          marker-content-type: text/plain; charset=utf-8
+          # template:end
           staging-robots: "true"
           dry-run: "false"
 
