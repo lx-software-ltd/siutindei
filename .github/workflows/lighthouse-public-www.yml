@@ -1,17 +1,15 @@
 name: Lighthouse Public Website
-# template:set
-# template:end
 
 on:
   workflow_dispatch:
     inputs:
       page_paths:
         # template:set
-        description: 'Comma/newline-separated page paths or full URLs to audit. Empty uses /en/, /zh-HK/, /en/activities/, /en/activities/classes/, and one activity page from the committed catalogue fixture. A bare / is rewritten to /en/ because / is a locale redirect. /en/search/ is omitted because this build has no search API.'
+        description: "Comma/newline-separated page paths or full URLs to audit. Empty uses /en/, /zh-HK/, /en/activities/, /en/activities/classes/, and one activity page from the committed catalogue fixture. A bare / is rewritten to /en/ because / is a locale redirect. /en/search/ is omitted because this build has no search API."
         # template:end
         required: false
         # template:set
-        default: ''
+        default: ""
         # template:end
   pull_request:
     paths:
@@ -33,8 +31,6 @@ jobs:
       contents: read
       statuses: write
     name: Lighthouse audit
-
-
     runs-on: ubuntu-26.04
     timeout-minutes: 20
     steps:
@@ -45,31 +41,28 @@ jobs:
           lfs: true
         # template:end
 
-      # template:optional public-origin
-      - name: Resolve public site build config from infrastructure params
-        # template:set
+      # template:optional public-build-env
+      - name: Resolve public site build config
         id: resolve_public_site_config
-        # template:end
         run: bash scripts/deploy/resolve-public-www-build-env.sh
+        env:
+          REQUIRE_ASSET: "false"
 
       # template:end
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
 
-      # template:optional next-cache
-      - name: Restore Next.js build cache (public_www)
+      # template:optional next-public
+      - name: Restore Next.js build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: apps/public_www/.next/cache
-          # template:set
-          key: ${{ runner.os }}-nextjs-public-www-lh-${{ hashFiles('apps/public_www/package-lock.json') }}-${{ hashFiles('apps/public_www/src/**/*.{ts,tsx,css}', 'apps/public_www/scripts/**/*.mjs', 'apps/public_www/next.config.*') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-public-www-lh-${{ hashFiles('apps/public_www/package-lock.json') }}-
-          # template:end
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('apps/public_www/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-nextjs-
 
       # template:end
 
@@ -77,7 +70,7 @@ jobs:
         working-directory: apps/public_www
         # template:set
         env:
-          NEXT_TELEMETRY_DISABLED: '1'
+          NEXT_TELEMETRY_DISABLED: "1"
           NEXT_PUBLIC_SITE_ORIGIN: ${{ steps.resolve_public_site_config.outputs.production_site_origin }}
           NEXT_PUBLIC_SITE_NAME: ${{ vars.NEXT_PUBLIC_SITE_NAME || steps.resolve_public_site_config.outputs.site_name }}
           NEXT_PUBLIC_SITE_TAGLINE: ${{ vars.NEXT_PUBLIC_SITE_TAGLINE || steps.resolve_public_site_config.outputs.site_tagline }}
@@ -86,7 +79,7 @@ jobs:
         run: npm run build
 
       - name: Run Lighthouse CI
-        uses: lx-software-ltd/actions/lighthouse-ci@7274dbbda035e283bf0d2a78c98d45deae348344 # main 2026-11-24
+        uses: lx-software-ltd/actions/lighthouse-ci@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           working-directory: apps/public_www
           page-paths: ${{ inputs.page_paths }}

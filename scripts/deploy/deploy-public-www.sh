@@ -28,6 +28,10 @@
 # -----------------------------------------------------------------------------
 set -euo pipefail
 
+if [ "${PUBLIC_WWW_PHASE:-}" = "optimize" ]; then
+  exit 0
+fi
+
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 APP_DIR="$ROOT_DIR/apps/public_www"
 BUILD_DIR="$APP_DIR/out"

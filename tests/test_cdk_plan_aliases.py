@@ -36,6 +36,8 @@ def test_pull_request_diff_uses_the_read_only_role_and_the_plan() -> None:
     assert "environment: production" not in job
     assert "vars.AWS_DIFF_ROLE_NAME" in job
     assert "GitHubActionsRole is not assumed from a pull request" in job
-    assert 'stacks: "all stacks"' in job
-    assert "include-extras: \"false\"" in job
+    assert "stacks: ${{ steps.prep.outputs.stacks }}" in job
+    assert 'include-extras: "false"' in job
     assert "plan-file: backend/infrastructure/cdk-plan.json" in job
+    prepare = (ROOT / "scripts" / "deploy" / "cdk-prepare.sh").read_text(encoding="utf-8")
+    assert 'or "all stacks"' in prepare
