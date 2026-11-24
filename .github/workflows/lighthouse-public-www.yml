@@ -106,4 +106,3 @@ jobs:
           path: apps/public_www/.lighthouseci/**
           if-no-files-found: warn
           include-hidden-files: true
-

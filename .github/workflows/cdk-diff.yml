@@ -149,7 +149,6 @@ jobs:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
 # template:set
 # template:end
-
 # template:optional pull-request-diff
   pull-request:
     if: github.event_name == 'pull_request'
