@@ -182,7 +182,6 @@ jobs:
         id: prep
         working-directory: backend/infrastructure
         run: |
-          npx cdk acknowledge 34892 || true
           npm run build --if-present
 
           # Empty means the all-stacks alias, which leaves the WAF stack out.
@@ -419,7 +418,6 @@ jobs:
         if: steps.aws.outputs.ready == 'true'
         working-directory: backend/infrastructure
         run: |
-          npx cdk acknowledge 34892 || true
           npm ci
           npm run build --if-present
 

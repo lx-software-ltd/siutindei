@@ -115,7 +115,6 @@ jobs:
           AWS_REGION: ${{ steps.region.outputs.region }}
         run: |
           set -euo pipefail
-          npx cdk acknowledge 34892 || true
           npm run build --if-present
 
       - name: Deploy stacks
@@ -126,7 +125,6 @@ jobs:
           param-file: ${{ vars.CDK_PARAM_FILE }}
           format: plain-json
           attempts: "3"
-          no-notices: "true"
           pass-empty: WafWebAclArn,CognitoCustomDomainName,CognitoCustomDomainCertificateArn,ApiCustomDomainName,ApiCustomDomainCertificateArn,SearchAreaScope
           escape-newlines: "true"
           rollback-match: UPDATE_ROLLBACK_FAILED
