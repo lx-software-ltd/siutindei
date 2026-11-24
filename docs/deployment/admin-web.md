@@ -28,11 +28,8 @@ npm ci
 npm run build
 ```
 
-From the repo root:
-
-```
-bash scripts/deploy/deploy-admin-web.sh
-```
+From the repo root, run the Deploy Admin Web workflow. It reads the
+admin stack outputs and uploads the built site.
 
 ## CORS configuration
 

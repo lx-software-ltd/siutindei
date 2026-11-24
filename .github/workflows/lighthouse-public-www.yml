@@ -44,7 +44,6 @@ jobs:
         with:
           cache: npm
           working-directory: apps/public_www
-          install: "false"
 
       - name: Restore Next.js build cache (public_www)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -54,11 +53,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nextjs-public-www-lh-${{ hashFiles('apps/public_www/package-lock.json') }}-
 
-      - name: Install dependencies
-        working-directory: apps/public_www
-        run: npm ci
-
-      - name: Build static website
+      - name: Build public website
         working-directory: apps/public_www
         env:
           NEXT_TELEMETRY_DISABLED: '1'
@@ -77,6 +72,7 @@ jobs:
           root-alias: /en/
           staging-origin: ${{ steps.resolve_public_site_config.outputs.staging_site_origin }}
           bypass-secret: ${{ secrets.STAGING_BYPASS_SECRET }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Lighthouse artifacts
         if: always()

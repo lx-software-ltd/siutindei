@@ -38,6 +38,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Set up Java
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
       - name: Set up Flutter
         uses: lx-software-ltd/actions/setup-flutter@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
@@ -49,12 +55,6 @@ jobs:
       # This job runs on ubuntu-26.04. Android Gradle Plugin 9.3 lint calls
       # List.removeLast(), which exists only on Java 21 and newer. The app
       # still compiles for Java 17.
-      - name: Set up Java
-        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
-        with:
-          distribution: temurin
-          java-version: "21"
-
       - name: Point Flutter at Java 21
         run: flutter config --jdk-dir "$JAVA_HOME"
 

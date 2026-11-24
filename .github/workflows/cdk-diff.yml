@@ -138,6 +138,15 @@ jobs:
       - name: Sync staging search fixture for Lambda bundle
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh backend
 
+      - name: Set up Node.js
+        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+        with:
+          cache: npm
+          working-directory: backend/infrastructure
+
+      - name: Set up Python
+        uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
+
       - name: Refuse the deploy role on a pull request
         if: vars.AWS_DIFF_ROLE_NAME == 'GitHubActionsRole'
         run: |
@@ -158,17 +167,6 @@ jobs:
         if: steps.aws.outputs.ready != 'true'
         run: |
           echo "::warning::This pull request did not assume a role. Set AWS_DIFF_ROLE_NAME to a read-only role that trusts only pull_request. GitHubActionsRole is not assumed from a pull request."
-
-      - name: Set up Node.js
-        if: steps.aws.outputs.ready == 'true'
-        uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
-        with:
-          cache: npm
-          working-directory: backend/infrastructure
-
-      - name: Set up Python
-        if: steps.aws.outputs.ready == 'true'
-        uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
 
       - name: Check CDK Bootstrap status
         if: steps.aws.outputs.ready == 'true'
