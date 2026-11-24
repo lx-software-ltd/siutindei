@@ -27,4 +27,3 @@ the plan turns out to be wrong.
 | [`search-incomplete-approved.md`](search-incomplete-approved.md) | Approved activities that lack a price or schedule |
 | [`siutindei-domain-consolidation.md`](siutindei-domain-consolidation.md) | Move admin, API, and Cognito onto siutindei.com |
 | [`2026-11-10-search-area-scope.md`](2026-11-10-search-area-scope.md) | Limit public search to selected Hong Kong areas |
-| [`2026-11-24-dependency-submission-name.md`](2026-11-24-dependency-submission-name.md) | The dependency workflow display name |
