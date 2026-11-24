@@ -1,10 +1,14 @@
 name: Promote Public Website Release
 
 on:
+# template:optional nightly-promote
+
+on:
   # 04:00 Hong Kong time. Rebuilds the live release with the latest catalogue
   # snapshot; skipped when no activity changed since the last production build.
   schedule:
     - cron: '0 20 * * *'
+# template:end
   repository_dispatch:
     types: [promote-public-www]
   workflow_dispatch:
@@ -15,10 +19,12 @@ on:
         default: 'latest_staging'
         type: choice
         options:
+# template:set
+        options:
           - latest_staging
           - release_id
           - refresh_production
-          - maintenance_on
+# template:end
       release_id:
         description: 'Required when promotion_mode=release_id'
         required: false
@@ -40,6 +46,7 @@ jobs:
     runs-on: ubuntu-26.04
     environment: production
     outputs:
+# template:set
       maintenance_mode: ${{ steps.resolve_release.outputs.maintenance_mode }}
       skip: ${{ steps.resolve_release.outputs.skip }}
       release_id: ${{ steps.resolve_release.outputs.release_id }}
@@ -53,14 +60,21 @@ jobs:
       site_name: ${{ steps.resolve_public_site_config.outputs.site_name }}
       site_tagline: ${{ steps.resolve_public_site_config.outputs.site_tagline }}
       contact_email: ${{ steps.resolve_public_site_config.outputs.contact_email }}
+# template:end
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+# template:set
         with:
           lfs: true
+# template:end
 
       - name: Resolve public site build config from infrastructure params
+# template:set
         id: resolve_public_site_config
+# template:end
+# template:set
+# template:end
         run: bash scripts/deploy/resolve-public-www-build-env.sh
 
       - name: Validate AWS configuration
@@ -74,8 +88,10 @@ jobs:
           AWS_REGION: ${{ vars.AWS_REGION }}
 
       - name: Configure AWS credentials
+# template:set
         # Reads the live release and the catalogue only. The build job assumes
         # after npm ci.
+# template:end
         uses: lx-software-ltd/actions/aws-oidc@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
@@ -83,6 +99,7 @@ jobs:
 
       - name: Choose promotion mode
         id: promotion_mode
+# template:set
         env:
           PROMOTION_MODE: ${{ github.event_name == 'schedule' && 'refresh_production' || inputs.promotion_mode }}
         run: |
@@ -93,13 +110,16 @@ jobs:
           else
             echo "read_staging=true" >> "$GITHUB_OUTPUT"
           fi
+# template:end
 
       - name: Read staging bucket
         id: staging
         if: ${{ steps.promotion_mode.outputs.read_staging == 'true' }}
         uses: lx-software-ltd/actions/cfn-stack-outputs@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
+# template:set
           stack: lxsoftware-siutindei-public-www
+# template:end
           outputs: PublicWwwStagingBucketName
           region: ${{ vars.AWS_REGION }}
 
@@ -110,6 +130,8 @@ jobs:
           INPUT_RELEASE_ID: ${{ inputs.release_id }}
           STACK_JSON: ${{ steps.staging.outputs.json }}
         run: bash scripts/deploy/resolve-release-id.sh
+
+# template:optional catalogue-check
       # A refresh rebuilds the code that is live, not the tip of the default branch.
       # The snapshot scripts come from that commit.
       - name: Check out the live production build
@@ -171,6 +193,7 @@ jobs:
           path: ${{ runner.temp }}/promote-inputs
           if-no-files-found: error
           retention-days: 1
+# template:end
 
   promote:
     permissions:
@@ -181,6 +204,7 @@ jobs:
     runs-on: ubuntu-26.04
     environment: production
     steps:
+# template:optional promote-refresh
       - name: Checkout repository
         if: ${{ needs.prepare.outputs.deploy == 'true' || needs.prepare.outputs.maintenance_mode == 'true' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -329,3 +353,4 @@ jobs:
           SKIPPED: ${{ needs.prepare.outputs.skip == 'true' || needs.prepare.outputs.deploy == 'false' }}
           PRODUCTION_SITE_ORIGIN: ${{ needs.prepare.outputs.production_site_origin }}
         run: bash scripts/deploy/publish-promotion-summary.sh
+# template:end

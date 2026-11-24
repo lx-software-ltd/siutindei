@@ -3,16 +3,20 @@ name: CDK Diff
 on:
   pull_request:
     paths:
+# template:set
       - "backend/**"
       - ".github/workflows/cdk-diff.yml"
+# template:end
   repository_dispatch:
     types: [cdk-diff]
   workflow_dispatch:
     inputs:
       stacks:
+# template:set
         description: >-
           Optional stack names or menu labels (all stacks, lambda apis,
           admin web, public website, waf (us-east-1))
+# template:end
         required: false
         default: ""
 
@@ -25,8 +29,10 @@ concurrency:
 
 jobs:
   diff:
+# template:optional production-diff
     if: ${{ github.ref == 'refs/heads/main' && (github.event_name != 'pull_request') }}
     environment: production
+# template:end
     permissions:
       contents: read
       id-token: write
@@ -36,26 +42,32 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+# template:set
         with:
           lfs: true
+# template:end
 
+# template:optional search-fixture
       - name: Pull Git LFS objects
         run: git lfs pull
 
       - name: Sync staging search fixture for Lambda bundle
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh backend
+# template:end
 
       - name: Set up Node.js
         uses: lx-software-ltd/actions/setup-node@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
-
+# template:set
       # run-cdk-app.sh bundles Lambdas with Python 3.12. ubuntu-26.04 is
       # 26.04 and no longer includes that interpreter.
+# template:end
       - name: Set up Python
         uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
 
+# template:optional waf-region
       - name: Determine deployment region
         id: region
         env:
@@ -68,23 +80,36 @@ jobs:
           else
             echo "region=$INPUT_AWS_REGION" >> "$GITHUB_OUTPUT"
           fi
+# template:end
+
+
 
       - name: Configure AWS credentials
         id: aws
         uses: lx-software-ltd/actions/aws-oidc@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+# template:set
           region: ${{ steps.region.outputs.region }}
+# template:end
+
+
+
 
       - name: Check CDK Bootstrap status
+        if: steps.aws.outputs.ready == 'true'
         uses: lx-software-ltd/actions/cdk-bootstrap-check@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
+# template:set
           region: ${{ steps.region.outputs.region }}
+# template:end
 
       - name: Prepare CDK app
+        if: steps.aws.outputs.ready == 'true'
         id: prep
         run: bash scripts/deploy/cdk-prepare.sh diff
+# template:set
         env:
           CDK_PARAM_GOOGLE_CLIENT_SECRET: ${{ secrets.CDK_PARAM_GOOGLE_CLIENT_SECRET }}
           CDK_PARAM_COGNITO_CUSTOM_DOMAIN_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_COGNITO_CUSTOM_DOMAIN_CERTIFICATE_ARN }}
@@ -109,17 +134,23 @@ jobs:
           CDK_SECRET_PARAM_FILE: ${{ env.CDK_SECRET_PARAM_FILE }}
           CDK_NON_SECRET_PARAM_FILE: ${{ env.CDK_NON_SECRET_PARAM_FILE }}
           CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
+# template:end
 
       - name: Run CDK diff
-        if: steps.prep.outputs.run == 'true'
+        if: steps.aws.outputs.ready == 'true' && steps.prep.outputs.run == 'true'
         uses: lx-software-ltd/actions/cdk-diff@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           working-directory: backend/infrastructure
           stacks: ${{ steps.prep.outputs.stacks }}
           plan-file: backend/infrastructure/cdk-plan.json
           args-file: ${{ runner.temp }}/cdk-args
+# template:set
+# template:end
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+# template:set
+# template:end
 
+# template:optional pull-request-diff
   pull-request:
     if: github.event_name == 'pull_request'
     permissions:
@@ -188,3 +219,4 @@ jobs:
           escape-newlines: "true"
           include-extras: "false"
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+# template:end
