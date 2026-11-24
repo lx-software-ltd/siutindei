@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-26.04
     environment: production
     outputs:
-      deploy: ${{ steps.resolve_release.outputs.deploy }}
+      deploy: ${{ steps.catalogue_changes.outputs.deploy || steps.resolve_release.outputs.deploy }}
       maintenance_mode: ${{ steps.resolve_release.outputs.maintenance_mode }}
       skip: ${{ steps.resolve_release.outputs.skip }}
       build_sha: ${{ steps.resolve_release.outputs.build_sha }}
@@ -73,15 +73,17 @@ jobs:
           AWS_REGION: ${{ vars.AWS_REGION }}
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
 
       - name: Read staging bucket
         id: staging
-        if: ${{ github.event.inputs.promotion_mode == '' || github.event.inputs.promotion_mode == 'latest_staging' }}
-        uses: lx-software-ltd/actions/cfn-stack-outputs@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        # template:set
+        if: ${{ github.event.inputs.promotion_mode != 'maintenance_on' }}
+        # template:end
+        uses: lx-software-ltd/actions/cfn-stack-outputs@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
 # template:set
           stack: lxsoftware-siutindei-public-www
@@ -191,7 +193,7 @@ jobs:
 
       - name: Set up Node.js
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
-        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
@@ -199,6 +201,18 @@ jobs:
       - name: Run pre-build checks
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
         run: bash scripts/deploy/public-www-checks.sh pre-build
+        # template:set
+        env:
+          SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
+          NEXT_PUBLIC_SITE_ORIGIN: ${{ needs.prepare.outputs.production_site_origin }}
+          NEXT_PUBLIC_SITE_NAME: ${{ vars.NEXT_PUBLIC_SITE_NAME || needs.prepare.outputs.site_name }}
+          NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED: "false"
+          NEXT_PUBLIC_SEARCH_API_KEY: ${{ secrets.NEXT_PUBLIC_SEARCH_API_KEY }}
+          NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN }}
+          NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
+          NEXT_PUBLIC_GTM_ALLOWED_HOSTS: ${{ vars.NEXT_PUBLIC_GTM_ALLOWED_HOSTS }}
+          NEXT_PUBLIC_SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
+        # template:end
 
       - name: Build public website for production
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
@@ -230,6 +244,8 @@ jobs:
       - name: Run post-build checks
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
         run: bash scripts/deploy/public-www-checks.sh post-build
+        # template:set
+        # template:end
 
       # template:optional indexnow
       - name: Write IndexNow key file
@@ -242,7 +258,7 @@ jobs:
 
       - name: Configure AWS credentials
         if: ${{ success() && (needs.prepare.outputs.maintenance_mode == 'true' || needs.prepare.outputs.deploy == 'true') }}
-        uses: lx-software-ltd/actions/aws-oidc@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/aws-oidc@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -257,16 +273,22 @@ jobs:
           PUBLIC_WWW_MAINTENANCE_MODE: ${{ needs.prepare.outputs.maintenance_mode }}
           PUBLIC_WWW_PROMOTE_RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
           PUBLIC_WWW_PROMOTION_BUILD_DIR: ${{ needs.prepare.outputs.maintenance_mode != 'true' && format('{0}/apps/public_www/out', github.workspace) || '' }}
+          NEXT_PUBLIC_EMAIL: ${{ vars.NEXT_PUBLIC_EMAIL || needs.prepare.outputs.contact_email }}
+          NEXT_PUBLIC_WHATSAPP_URL: ${{ vars.NEXT_PUBLIC_WHATSAPP_URL }}
+          NEXT_PUBLIC_INSTAGRAM_URL: ${{ vars.NEXT_PUBLIC_INSTAGRAM_URL }}
+          NEXT_PUBLIC_FACEBOOK_URL: ${{ vars.NEXT_PUBLIC_FACEBOOK_URL }}
+          NEXT_PUBLIC_LX_SOFTWARE_URL: ${{ vars.NEXT_PUBLIC_LX_SOFTWARE_URL }}
+          NEXT_PUBLIC_BUILD_YEAR: ${{ vars.NEXT_PUBLIC_BUILD_YEAR }}
         # template:end
 
       # template:optional catalogue
       - name: Read the production staging bucket
         id: production_staging
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
-        uses: lx-software-ltd/actions/cfn-stack-outputs@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/cfn-stack-outputs@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           # template:set
-          stack: public-www
+          stack: lxsoftware-siutindei-public-www
           # template:end
           outputs: PublicWwwStagingBucketName
           region: ${{ vars.AWS_REGION }}
@@ -314,5 +336,6 @@ jobs:
         env:
           PROMOTION_MODE: ${{ needs.prepare.outputs.promotion_mode }}
           RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
+          SKIPPED: ${{ needs.prepare.outputs.skip == 'true' || needs.prepare.outputs.deploy == 'false' }}
           PRODUCTION_SITE_ORIGIN: ${{ needs.prepare.outputs.production_site_origin }}
         # template:end

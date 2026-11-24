@@ -46,7 +46,7 @@ jobs:
         # template:end
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
 
       - name: Run Python tests
         run: bash scripts/ci/test-python.sh
@@ -65,7 +65,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/admin_web
@@ -100,7 +100,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
@@ -142,13 +142,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
 
       - name: Run infrastructure tests
         run: npm run test:infra
@@ -164,13 +164,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/admin_web
 
       - name: Install Playwright Chromium
-        uses: lx-software-ltd/actions/playwright-install@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/playwright-install@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           working-directory: apps/admin_web
           # template:set
@@ -180,6 +180,13 @@ jobs:
       - name: Run viewport smoke tests
         run: npm run test:e2e
         working-directory: apps/admin_web
+        # template:set
+        env:
+          CI: true
+          NEXT_PUBLIC_API_BASE_URL: "http://localhost:3000/api/mock"
+          NEXT_PUBLIC_COGNITO_DOMAIN: "mock-cognito.auth.us-east-1.amazoncognito.com"
+          NEXT_PUBLIC_COGNITO_CLIENT_ID: "mock-client-id-12345"
+        # template:end
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -220,13 +227,13 @@ jobs:
 
       # template:end
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/public_www
 
       - name: Install Playwright browsers
-        uses: lx-software-ltd/actions/playwright-install@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/playwright-install@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           working-directory: apps/public_www
 
@@ -253,7 +260,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-flutter@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
 
       - name: Run Flutter tests
         run: bash scripts/ci/test-flutter.sh
@@ -279,7 +286,7 @@ jobs:
           # template:end
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-flutter@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
 
       - name: Point Flutter at Java 21
         run: flutter config --jdk-dir "$JAVA_HOME"
@@ -294,8 +301,8 @@ jobs:
   test:
     name: test
     runs-on: ubuntu-26.04
-    # template:set
     needs:
+      # template:set
       - test-python
       - test-admin-web
       - test-public-www
@@ -308,6 +315,6 @@ jobs:
     if: always()
     steps:
       - name: Require every test job
-        uses: lx-software-ltd/actions/require-jobs@7389af585c4c2aad4221704b07ed2936106ff169 # main 2026-11-24
+        uses: lx-software-ltd/actions/require-jobs@a461dd613711bb036918699617487c42f324cc9e # main 2026-11-24
         with:
           needs-json: ${{ toJson(needs) }}
