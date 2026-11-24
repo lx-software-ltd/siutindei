@@ -50,7 +50,7 @@ approving-review count is exactly 0 and the required checks are exactly
 ## Branch Protection: `staging`
 
 The `staging` branch is the source of truth for the public website staging
-deploy (`.github/workflows/deploy-public-www.yml` triggers on
+deploy (`.github/workflows/deploy-public-www-staging.yml` triggers on
 `push: staging`). Direct pushes and force-pushes are blocked; changes land
 through pull requests.
 

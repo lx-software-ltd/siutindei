@@ -133,6 +133,6 @@ approval. **The owner merges that PR in GitHub.**
 
 ## Deploy
 
-On push to `staging`, `deploy-public-www.yml` deploys the public site to
+On push to `staging`, `deploy-public-www-staging.yml` deploys the public site to
 staging and runs its smoke checks. Backend, admin web, and mobile deploy
 from `main` or a manual dispatch.

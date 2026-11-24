@@ -7,12 +7,25 @@ on:
         description: 'Comma/newline-separated page paths or full URLs to audit. Empty uses /en/, /zh-HK/, /en/activities/, /en/activities/arts/, and one activity page from the committed catalogue fixture. A bare / is rewritten to /en/ because / is a locale redirect. /en/search/ is omitted because this build has no search API.'
         required: false
         default: ''
+  pull_request:
+    paths:
+      - "apps/public_www/**"
+      - ".github/workflows/lighthouse-public-www.yml"
+  schedule:
+    - cron: "15 6 * * 1"
 
 permissions:
   contents: read
 
+concurrency:
+  group: lighthouse-public-www-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lighthouse:
+    permissions:
+      contents: read
+      statuses: write
     name: Lighthouse audit
     runs-on: ubuntu-26.04
     timeout-minutes: 20

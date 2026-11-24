@@ -61,7 +61,7 @@ parallel environments (production + staging) inside a single CDK stack
 - App: `apps/public_www/` (Next.js App Router, `output: 'export'`).
 - Stack: `backend/infrastructure/lib/public-www-stack.ts`.
 - Deploy: `scripts/deploy/deploy-public-www.sh`.
-- Workflows: `.github/workflows/deploy-public-www.yml`,
+- Workflows: `.github/workflows/deploy-public-www-staging.yml`,
   `.github/workflows/promote-public-www.yml`,
   `.github/workflows/smoke-public-www-staging.yml`,
   `.github/workflows/lighthouse-public-www.yml`.

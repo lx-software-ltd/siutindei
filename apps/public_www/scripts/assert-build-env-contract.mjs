@@ -3,7 +3,7 @@
  * are missing or empty. Keep this list in sync with:
  *   apps/public_www/build-env.defaults.json
  *   scripts/deploy/resolve-public-www-build-env.sh
- *   .github/workflows/deploy-public-www.yml  (assert + build env blocks)
+ *   .github/workflows/deploy-public-www-staging.yml  (assert + build env blocks)
  *   .github/workflows/promote-public-www.yml (build env block)
  */
 const REQUIRED = ['NEXT_PUBLIC_SITE_ORIGIN', 'NEXT_PUBLIC_SITE_NAME'];

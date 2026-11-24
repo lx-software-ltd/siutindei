@@ -50,7 +50,6 @@ jobs:
         with:
           cache: npm
           working-directory: backend/infrastructure
-          install: "false"
 
       # run-cdk-app.sh bundles Lambdas with Python 3.12. ubuntu-26.04 is
       # 26.04 and no longer includes that interpreter.
@@ -77,53 +76,15 @@ jobs:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
 
-      - name: Install infrastructure dependencies
-        working-directory: backend/infrastructure
-        run: npm ci
-
       - name: Check CDK Bootstrap status
         uses: lx-software-ltd/actions/cdk-bootstrap-check@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
 
-      - name: Build CDK secret parameters file
-        run: |
-          python3 - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          mapping = {
-              "GoogleClientSecret": os.getenv("CDK_PARAM_GOOGLE_CLIENT_SECRET", ""),
-              "ApplePrivateKey": os.getenv("CDK_PARAM_APPLE_PRIVATE_KEY", ""),
-              "PublicApiKeyValue": os.getenv("CDK_PARAM_PUBLIC_API_KEY_VALUE", ""),
-              "PublicWwwAttestationToken": os.getenv(
-                  "CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN", ""
-              ),
-              "PublicWwwAttestationTokenPrevious": os.getenv(
-                  "CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN_PREVIOUS", ""
-              ),
-              "PublicWwwOriginVerifySecret": os.getenv(
-                  "CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY", ""
-              ),
-              "PublicWwwOriginVerifySecretPrevious": os.getenv(
-                  "CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY_PREVIOUS", ""
-              ),
-              "AdminBootstrapTempPassword": os.getenv(
-                  "CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD", ""
-              ),
-          }
-          params = {k: v for k, v in mapping.items() if v}
-          if not params:
-              raise SystemExit(0)
-
-          output_path = Path("/tmp/cdk-secret-params.json")
-          output_path.write_text(json.dumps(params), encoding="utf-8")
-          env_path = os.environ["GITHUB_ENV"]
-          with open(env_path, "a", encoding="utf-8") as handle:
-              handle.write(f"CDK_SECRET_PARAM_FILE={output_path}\n")
-          PY
+      - name: Prepare CDK app
+        id: prep
+        run: bash scripts/deploy/cdk-prepare.sh diff
         env:
           CDK_PARAM_GOOGLE_CLIENT_SECRET: ${{ secrets.CDK_PARAM_GOOGLE_CLIENT_SECRET }}
           CDK_PARAM_COGNITO_CUSTOM_DOMAIN_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_COGNITO_CUSTOM_DOMAIN_CERTIFICATE_ARN }}
@@ -139,219 +100,15 @@ jobs:
           CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY }}
           CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY_PREVIOUS }}
           CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD: ${{ secrets.CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD }}
-
-      - name: Build CDK non-secret parameters file
-        run: |
-          python3 - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          project_number = os.getenv("FIREBASE_MESSAGING_SENDER_ID", "").strip()
-          android_app_id = os.getenv("FIREBASE_ANDROID_APP_ID", "").strip()
-          ios_app_id = os.getenv("FIREBASE_IOS_APP_ID", "").strip()
-          apple_team_id = os.getenv("APPLE_TEAM_ID", "").strip()
-
-          params = {}
-
-          if apple_team_id:
-              params["AppleTeamId"] = apple_team_id
-
-          if project_number and android_app_id and ios_app_id:
-              audience = (
-                  f"projects/{project_number}/apps/{ios_app_id},"
-                  f"projects/{project_number}/apps/{android_app_id}"
-              )
-              params["DeviceAttestationAudience"] = audience
-
-          if not params:
-              raise SystemExit(0)
-          output_path = Path("/tmp/cdk-non-secret-params.json")
-          output_path.write_text(json.dumps(params), encoding="utf-8")
-          env_path = os.environ["GITHUB_ENV"]
-          with open(env_path, "a", encoding="utf-8") as handle:
-              handle.write(f"CDK_NON_SECRET_PARAM_FILE={output_path}\n")
-          PY
-        env:
           APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
           FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
           FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID }}
           FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID }}
-
-      - name: Prepare CDK diff
-        id: prep
-        working-directory: backend/infrastructure
-        run: |
-          npm run build --if-present
-
-          # Empty means the all-stacks alias, which leaves the WAF stack out.
-          # The parameter list below needs concrete names. cdk-diff receives
-          # those names and the same committed plan as deploy. Parameters stay
-          # in the args file, so the plan is not asked for its extras.
-          CDK_STACKS="$(python3 - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          plan = json.loads(Path("cdk-plan.json").read_text(encoding="utf-8"))
-          raw = os.environ.get("CDK_STACKS", "").strip() or "all stacks"
-          aliases = plan.get("aliases") or {}
-          chosen = aliases[raw] if raw in aliases else raw.split()
-          print(" ".join(chosen))
-          PY
-          )"
-
-          PARAM_ARGS=()
-          PARAM_FILES=()
-
-          resolve_param_file() {
-            local path="$1"
-            if [ -z "$path" ]; then
-              return 1
-            fi
-            if [ -f "$path" ]; then
-              echo "$path"
-              return 0
-            fi
-            if [ -n "$GITHUB_WORKSPACE" ] && [ -f "$GITHUB_WORKSPACE/$path" ]; then
-              echo "$GITHUB_WORKSPACE/$path"
-              return 0
-            fi
-            return 1
-          }
-
-          if [ -n "${CDK_PARAM_FILE:-}" ]; then
-            RESOLVED_PARAM_FILE=$(resolve_param_file "$CDK_PARAM_FILE" || true)
-            if [ -z "$RESOLVED_PARAM_FILE" ]; then
-              echo "CDK_PARAM_FILE '$CDK_PARAM_FILE' not found"
-              exit 1
-            fi
-            PARAM_FILES+=("$RESOLVED_PARAM_FILE")
-          fi
-          if [ -n "${CDK_SECRET_PARAM_FILE:-}" ] && [ -f "$CDK_SECRET_PARAM_FILE" ]; then
-            PARAM_FILES+=("$CDK_SECRET_PARAM_FILE")
-          fi
-          if [ -n "${CDK_NON_SECRET_PARAM_FILE:-}" ] && [ -f "$CDK_NON_SECRET_PARAM_FILE" ]; then
-            PARAM_FILES+=("$CDK_NON_SECRET_PARAM_FILE")
-          fi
-
-          if [ ${#PARAM_FILES[@]} -gt 0 ]; then
-            PARAM_FILES_CSV=$(IFS=, ; echo "${PARAM_FILES[*]}")
-            PARAM_ARGS_FILE="$(mktemp)"
-            PARAM_FILES="$PARAM_FILES_CSV" STACKS="$CDK_STACKS" python3 - <<'PY' > "$PARAM_ARGS_FILE"
-          import json
-          import os
-          import sys
-
-          paths = [p for p in os.environ.get("PARAM_FILES", "").split(",") if p]
-          params = {}
-          for path in paths:
-              with open(path, "r", encoding="utf-8") as handle:
-                  params.update(json.load(handle))
-
-          stack_set = set(os.environ.get("STACKS", "").split())
-          api_stack = "lxsoftware-siutindei"
-          admin_web_stack = "lxsoftware-siutindei-admin-web"
-          public_stack = "lxsoftware-siutindei-public-www"
-          admin_web_params = {"AdminWebDomainName", "AdminWebCertificateArn", "WafWebAclArn"}
-          public_params = {
-              "PublicWwwDomainName",
-              "PublicWwwCertificateArn",
-              "PublicWwwStagingDomainName",
-              "PublicWwwStagingCertificateArn",
-              "WafWebAclArn",
-              "SearchApiProxyOriginDomain",
-          }
-          # Authorizer (API stack) and CloudFront origin header (public stack).
-          origin_verify_param = "PublicWwwOriginVerifySecret"
-
-          def resolve_value(raw: str) -> str:
-              """Replace <FROM_GITHUB_SECRET: X> / <FROM_GITHUB_VAR: X> placeholders."""
-              raw = raw.strip()
-              if raw.startswith("<FROM_GITHUB_SECRET:") and raw.endswith(">"):
-                  env_name = raw[len("<FROM_GITHUB_SECRET:") : -1].strip()
-                  return os.environ.get(env_name, "")
-              if raw.startswith("<FROM_GITHUB_VAR:") and raw.endswith(">"):
-                  env_name = raw[len("<FROM_GITHUB_VAR:") : -1].strip()
-                  return os.environ.get(env_name, "")
-              return raw
-
-          for key, value in params.items():
-              value_str = ""
-              if value is not None:
-                  value_str = resolve_value(str(value))
-              value_str = value_str.replace("\r\n", "\n").replace("\r", "\n")
-              value_str = value_str.replace("\n", "\\n").strip()
-              if key != "WafWebAclArn" and not value_str:
-                  continue
-
-              targets = []
-              if key == origin_verify_param:
-                  targets.extend([api_stack, public_stack])
-              if key in admin_web_params:
-                  if value_str or key != "WafWebAclArn":
-                      targets.append(admin_web_stack)
-              if key in public_params:
-                  targets.append(public_stack)
-              if not targets:
-                  targets.append(api_stack)
-
-              for target in targets:
-                  if target not in stack_set:
-                      continue
-                  sys.stdout.buffer.write(b"--parameters\0")
-                  sys.stdout.buffer.write(
-                      f"{target}:{key}={value_str}".encode("utf-8") + b"\0"
-                  )
-          PY
-            mapfile -d '' -t PARAM_ARGS < "$PARAM_ARGS_FILE"
-          fi
-
-          # bin/app.ts reads CDK_BOOTSTRAP_QUALIFIER. This command rejects
-          # the bootstrap-only qualifier flag.
-          IFS=$', \n\t' read -r -a STACK_LIST <<< "$CDK_STACKS"
-          STACK_ARGS=()
-          for stack in "${STACK_LIST[@]}"; do
-            trimmed="${stack#"${stack%%[![:space:]]*}"}"
-            trimmed="${trimmed%"${trimmed##*[![:space:]]}"}"
-            if [ -n "$trimmed" ]; then
-              STACK_ARGS+=("$trimmed")
-            fi
-          done
-
-          if [ ${#PARAM_ARGS[@]} -gt 0 ]; then
-            printf '%s\0' "${PARAM_ARGS[@]}" > "$RUNNER_TEMP/cdk-diff-args"
-          else
-            : > "$RUNNER_TEMP/cdk-diff-args"
-          fi
-          {
-            echo "run=true"
-            echo "stacks=${STACK_ARGS[*]}"
-          } >> "$GITHUB_OUTPUT"
-        env:
           CDK_STACKS: ${{ inputs.stacks }}
           CDK_PARAM_FILE: ${{ vars.CDK_PARAM_FILE }}
           CDK_SECRET_PARAM_FILE: ${{ env.CDK_SECRET_PARAM_FILE }}
           CDK_NON_SECRET_PARAM_FILE: ${{ env.CDK_NON_SECRET_PARAM_FILE }}
           CDK_BOOTSTRAP_QUALIFIER: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
-          CDK_PARAM_GOOGLE_CLIENT_SECRET: ${{ secrets.CDK_PARAM_GOOGLE_CLIENT_SECRET }}
-          CDK_PARAM_COGNITO_CUSTOM_DOMAIN_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_COGNITO_CUSTOM_DOMAIN_CERTIFICATE_ARN }}
-          CDK_PARAM_ADMIN_WEB_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_ADMIN_WEB_CERTIFICATE_ARN }}
-          CDK_PARAM_PUBLIC_WWW_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_CERTIFICATE_ARN }}
-          CDK_PARAM_PUBLIC_WWW_STAGING_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_STAGING_CERTIFICATE_ARN }}
-          CDK_PARAM_API_SECONDARY_CUSTOM_DOMAIN_CERTIFICATE_ARN: ${{ secrets.CDK_PARAM_API_SECONDARY_CUSTOM_DOMAIN_CERTIFICATE_ARN }}
-          CDK_PARAM_WAF_WEB_ACL_ARN: ${{ secrets.CDK_PARAM_WAF_WEB_ACL_ARN }}
-          CDK_PARAM_APPLE_PRIVATE_KEY: ${{ secrets.CDK_PARAM_APPLE_PRIVATE_KEY }}
-          CDK_PARAM_PUBLIC_API_KEY_VALUE: ${{ secrets.CDK_PARAM_PUBLIC_API_KEY_VALUE }}
-          CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN }}
-          CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ATTESTATION_TOKEN_PREVIOUS }}
-          CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY }}
-          CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY_PREVIOUS: ${{ secrets.CDK_PARAM_PUBLIC_WWW_ORIGIN_VERIFY_PREVIOUS }}
-          CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD: ${{ secrets.CDK_PARAM_ADMIN_BOOTSTRAP_TEMP_PASSWORD }}
-          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
-          FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
-          FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID }}
-          FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID }}
 
       - name: Run CDK diff
         if: steps.prep.outputs.run == 'true'
@@ -360,7 +117,7 @@ jobs:
           working-directory: backend/infrastructure
           stacks: ${{ steps.prep.outputs.stacks }}
           plan-file: backend/infrastructure/cdk-plan.json
-          args-file: ${{ runner.temp }}/cdk-diff-args
+          args-file: ${{ runner.temp }}/cdk-args
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
 
   pull-request:
@@ -408,18 +165,10 @@ jobs:
         with:
           cache: npm
           working-directory: backend/infrastructure
-          install: "false"
 
       - name: Set up Python
         if: steps.aws.outputs.ready == 'true'
         uses: lx-software-ltd/actions/setup-python@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
-
-      - name: Install infrastructure dependencies
-        if: steps.aws.outputs.ready == 'true'
-        working-directory: backend/infrastructure
-        run: |
-          npm ci
-          npm run build --if-present
 
       - name: Check CDK Bootstrap status
         if: steps.aws.outputs.ready == 'true'

@@ -226,7 +226,7 @@ website does not use Cognito. Budget about one hour.
   `PublicWwwStagingCertificateArn=<74786db9>`. In-place CloudFront alias
   and certificate update on the staging distribution. Staging downtime
   during propagation does not matter.
-- `smoke-public-www-staging.yml` and `deploy-public-www.yml` already read
+- `smoke-public-www-staging.yml` and `deploy-public-www-staging.yml` already read
   the hostname from `PublicWwwStagingDomainName`, so they follow the
   parameter. The GitHub `staging` variable `NEXT_PUBLIC_GTM_ALLOWED_HOSTS`
   gains `www-staging.siutindei.com`; Lighthouse runs use the new URL.
@@ -573,7 +573,7 @@ In `lx-software-ltd/evolvesprouts` (track E):
   `ApiCustomDomainCertificateArn`, `PublicWwwApiBaseUrl` and
   `PublicWwwMediaRequestApiBaseUrl` on their own variable, staging
   edge-verify placeholders)
-- `.github/workflows/deploy-backend.yml`, `deploy-public-www.yml`,
+- `.github/workflows/deploy-backend.yml`, `deploy-public-www-staging.yml`,
   `promote-public-www.yml` (the split origin variable and the staging
   edge-verify secret)
 - `backend/infrastructure/lib/public-www-stack.ts` and a new

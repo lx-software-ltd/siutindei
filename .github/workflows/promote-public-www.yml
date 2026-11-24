@@ -109,75 +109,7 @@ jobs:
           PROMOTION_MODE: ${{ steps.promotion_mode.outputs.mode }}
           INPUT_RELEASE_ID: ${{ inputs.release_id }}
           STACK_JSON: ${{ steps.staging.outputs.json }}
-        run: |
-          RESOLVED_PROMOTION_MODE="${PROMOTION_MODE:-latest_staging}"
-
-          if [ "$RESOLVED_PROMOTION_MODE" = "maintenance_on" ]; then
-            echo "release_id=" >> "$GITHUB_OUTPUT"
-            echo "maintenance_mode=true" >> "$GITHUB_OUTPUT"
-            echo "promotion_mode=$RESOLVED_PROMOTION_MODE" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # Release artifacts and the production markers live in the staging bucket.
-          STAGING_BUCKET="$(python3 -c 'import json,os; print(json.loads(os.environ["STACK_JSON"])["PublicWwwStagingBucketName"])')"
-          if [ -z "$STAGING_BUCKET" ]; then
-            echo 'Staging bucket output not found on Public Website stack'
-            exit 1
-          fi
-          # Step output only. A job output would be dropped because the name
-          # contains the account id.
-          echo "staging_bucket=$STAGING_BUCKET" >> "$GITHUB_OUTPUT"
-
-          if [ "$RESOLVED_PROMOTION_MODE" = "release_id" ]; then
-            if [ -z "$INPUT_RELEASE_ID" ]; then
-              echo 'release_id is required when promotion_mode=release_id'
-              exit 1
-            fi
-            SELECTED_RELEASE_ID="$INPUT_RELEASE_ID"
-          elif [ "$RESOLVED_PROMOTION_MODE" = "refresh_production" ]; then
-            RELEASE_MARKER="$(mktemp)"
-            BUILD_MARKER="$(mktemp)"
-            if ! aws s3 cp --only-show-errors "s3://$STAGING_BUCKET/releases/production-release-id.txt" "$RELEASE_MARKER" \
-              || ! aws s3 cp --only-show-errors "s3://$STAGING_BUCKET/releases/production-build-sha.txt" "$BUILD_MARKER"; then
-              echo '::notice::No production build is recorded yet. Promote a release once to start daily refreshes.'
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              echo "maintenance_mode=false" >> "$GITHUB_OUTPUT"
-              echo "promotion_mode=$RESOLVED_PROMOTION_MODE" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            SELECTED_RELEASE_ID="$(tr -d '\r\n' < "$RELEASE_MARKER")"
-            BUILD_SHA="$(tr -d '\r\n' < "$BUILD_MARKER")"
-            rm -f "$RELEASE_MARKER" "$BUILD_MARKER"
-            if ! printf '%s' "$BUILD_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
-              echo "Production build marker is not a commit SHA: '$BUILD_SHA'"
-              exit 1
-            fi
-            echo "build_sha=$BUILD_SHA" >> "$GITHUB_OUTPUT"
-          elif [ "$RESOLVED_PROMOTION_MODE" = "latest_staging" ]; then
-            MARKER_FILE="$(mktemp)"
-            aws s3 cp \
-              "s3://$STAGING_BUCKET/releases/latest-release-id.txt" \
-              "$MARKER_FILE"
-            SELECTED_RELEASE_ID="$(tr -d '\r\n' < "$MARKER_FILE")"
-            rm -f "$MARKER_FILE"
-            if [ -z "$SELECTED_RELEASE_ID" ]; then
-              echo 'Latest staging release marker is empty'
-              exit 1
-            fi
-          else
-            echo "Unsupported promotion_mode: $RESOLVED_PROMOTION_MODE"
-            exit 1
-          fi
-
-          if [ -z "$SELECTED_RELEASE_ID" ]; then
-            echo 'Resolved release ID is empty'
-            exit 1
-          fi
-          echo "release_id=$SELECTED_RELEASE_ID" >> "$GITHUB_OUTPUT"
-          echo "maintenance_mode=false" >> "$GITHUB_OUTPUT"
-          echo "promotion_mode=$RESOLVED_PROMOTION_MODE" >> "$GITHUB_OUTPUT"
-
+        run: bash scripts/deploy/resolve-release-id.sh
       # A refresh rebuilds the code that is live, not the tip of the default branch.
       # The snapshot scripts come from that commit.
       - name: Check out the live production build
@@ -396,33 +328,4 @@ jobs:
           RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
           SKIPPED: ${{ needs.prepare.outputs.skip == 'true' || needs.prepare.outputs.deploy == 'false' }}
           PRODUCTION_SITE_ORIGIN: ${{ needs.prepare.outputs.production_site_origin }}
-        run: |
-          if [ "$SKIPPED" = "true" ]; then
-            {
-              echo '## Public Website refresh skipped'
-              echo ''
-              echo "- Promotion mode: \`${PROMOTION_MODE}\`"
-              echo '- Reason: no production build recorded yet, or no activity changed since the live build'
-            } >> "$GITHUB_STEP_SUMMARY"
-          elif [ "$PROMOTION_MODE" = "maintenance_on" ]; then
-            {
-              echo '## Public Website maintenance mode enabled'
-              echo ''
-              echo '- Operation mode: `maintenance_on`'
-              echo '- Target environment: `production`'
-              echo '- Stack: `lxsoftware-siutindei-public-www`'
-              echo "- Production URL: \`${PRODUCTION_SITE_ORIGIN}\`"
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            {
-              echo '## Public Website promotion'
-              echo ''
-              echo "- Promotion mode: \`${PROMOTION_MODE}\`"
-              echo "- Release ID: \`${RELEASE_ID}\`"
-              echo '- Source environment: `staging`'
-              echo '- Target environment: `production`'
-              echo '- Build: fresh static export with **production** GitHub Environment variables'
-              echo '- Stack: `lxsoftware-siutindei-public-www`'
-              echo "- Production URL: \`${PRODUCTION_SITE_ORIGIN}\`"
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+        run: bash scripts/deploy/publish-promotion-summary.sh

@@ -2,7 +2,7 @@ name: Deploy Public Website Staging
 
 on:
   repository_dispatch:
-    types: [deploy-public-www]
+    types: [deploy-public-www-staging]
   workflow_dispatch:
   push:
     branches:
@@ -11,7 +11,7 @@ on:
       - 'apps/public_www/**'
       - 'scripts/deploy/deploy-public-www.sh'
       - 'scripts/deploy/fetch-public-www-catalogue-snapshot.sh'
-      - '.github/workflows/deploy-public-www.yml'
+      - '.github/workflows/deploy-public-www-staging.yml'
 
 permissions:
   contents: read

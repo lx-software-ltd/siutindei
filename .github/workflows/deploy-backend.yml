@@ -69,7 +69,6 @@ jobs:
         with:
           cache: npm
           working-directory: backend/infrastructure
-          install: "false"
 
       # run-cdk-app.sh bundles Lambdas with Python 3.12. ubuntu-26.04 is
       # 26.04 and no longer includes that interpreter.
@@ -94,29 +93,19 @@ jobs:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
 
-      - name: Validate search area scope
-        env:
-          SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
-        run: python3 scripts/deploy/validate_search_area_scope.py
-
-      - name: Install CDK dependencies
-        working-directory: backend/infrastructure
-        run: npm ci
-
       - name: Check CDK bootstrap
         uses: lx-software-ltd/actions/cdk-bootstrap-check@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
 
-      - name: Prepare the CDK app
+      - name: Prepare CDK app
         id: prep
-        working-directory: backend/infrastructure
+        run: bash scripts/deploy/cdk-prepare.sh deploy
         env:
           AWS_REGION: ${{ steps.region.outputs.region }}
-        run: |
-          set -euo pipefail
-          npm run build --if-present
+          CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
+          SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
 
       - name: Deploy stacks
         uses: lx-software-ltd/actions/cdk-deploy@8b75c2c3e18a96ffae1ac4f99e3dceb4821a1faf # main 2026-11-24
