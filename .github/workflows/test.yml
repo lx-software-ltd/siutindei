@@ -123,6 +123,8 @@ jobs:
         run: npm run build
         working-directory: apps/public_www
         # template:set
+        env:
+          NEXT_PUBLIC_SITE_ORIGIN: http://localhost:3000
         # template:end
 
   # template:optional react-ui
