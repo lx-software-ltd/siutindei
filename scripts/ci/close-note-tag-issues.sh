@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+: "${REPO:?}"
+MATCHER="scripts/ci/note_tag_issue.py"
+COMMENT=$(cat <<'EOF'
+Auto-filed from an architectural `NOTE` / `SECURITY NOTE` comment, not an open defect.
+
+These comments document intentional decisions. See:
+- `docs/architecture/security.md` (JWT validation, public org-media bucket)
+- `docs/architecture/decisions.md` (AWS/HTTP proxy; Cognito PrivateLink)
+- `docs/architecture/lambdas.md` (JWT authorizers run outside the VPC)
+
+No code change is required. Product `TODO:` issues are not closed by this workflow.
+EOF
+)
+
+close_if_match() {
+  local number="$1"
+  local title="$2"
+  local body_file="$3"
+  if python3 "$MATCHER" --title "$title" --body-file "$body_file"; then
+    echo "Closing #${number}: ${title}"
+    gh issue close "$number" --repo "$REPO" --comment "$COMMENT"
+  else
+    echo "Leaving open #${number}: ${title}"
+  fi
+}
+
+if [ "$EVENT_NAME" = "issues" ]; then
+  TITLE=$(gh issue view "$OPENED_NUMBER" --repo "$REPO" --json title --jq .title)
+  BODY_FILE="$(mktemp)"
+  gh issue view "$OPENED_NUMBER" --repo "$REPO" --json body --jq .body > "$BODY_FILE"
+  close_if_match "$OPENED_NUMBER" "$TITLE" "$BODY_FILE"
+  exit 0
+fi
+
+gh issue list --repo "$REPO" --state open --limit 100 \
+  --json number,title,body \
+  --jq '.[] | @base64' | while read -r row; do
+  _jq() { echo "$row" | base64 --decode | jq -r "$1"; }
+  number="$(_jq .number)"
+  title="$(_jq .title)"
+  body_file="$(mktemp)"
+  _jq .body > "$body_file"
+  close_if_match "$number" "$title" "$body_file"
+done

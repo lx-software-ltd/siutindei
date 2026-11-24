@@ -75,7 +75,7 @@ so even a correctly configured base URL would be blocked.
 **Where.**
 - `.github/workflows/promote-public-www.yml` build `env:` block (around lines
   124–134) — missing the search vars.
-- `.github/workflows/deploy-public-www.yml` build `env:` block (around lines
+- `.github/workflows/deploy-public-www-staging.yml` build `env:` block (around lines
   76–88) — staging path only works because it uses the fixture.
 - `apps/public_www/src/lib/activities/search-client.ts:119-121` — the throw.
 - `apps/public_www/scripts/inject-csp-meta.mjs` — `connect-src` derives from
@@ -91,7 +91,7 @@ so even a correctly configured base URL would be blocked.
    sensitive — store them as **secrets**, not plain vars.
 2. Add the three vars to the build `env:` block in
    `promote-public-www.yml` (and confirm the staging
-   `deploy-public-www.yml` path is correct — staging may legitimately rely on
+   `deploy-public-www-staging.yml` path is correct — staging may legitimately rely on
    the fixture and not need them).
 3. Verify the CSP injector adds the API origin to `connect-src` once the base
    URL is present.
@@ -372,7 +372,7 @@ missing var and confirm it fails; with all set, confirm it passes.
 ### P2-4. `home_wizard_choices.json` is manually copied with no sync check
 
 **Status: RESOLVED.** `scripts/codegen/sync-home-wizard-choices.sh` exists
-and `deploy-public-www.yml` runs it with `--check` before every staging
+and `deploy-public-www-staging.yml` runs it with `--check` before every staging
 build.
 
 **Problem.** `shared/home_wizard/home_wizard_choices.json` is the canonical file

@@ -61,36 +61,32 @@ export function ActivityKeyFacts({
             key={fact.id}
             data-fact={fact.id}
             className={
-              compact
-                ? 'flex gap-3'
-                : 'flex gap-3 rounded-xl border border-brand-100 bg-brand-50/60 p-3'
+              compact ? undefined : 'rounded-xl border border-brand-100 bg-brand-50/60 p-3'
             }
           >
-            <DetailIcon name={fact.icon} className="mt-0.5 h-5 w-5" />
-            <div className="min-w-0">
-              <dt className="text-xs font-semibold uppercase tracking-wide text-ink-500">
-                {labelFor(copy, fact.id)}
-              </dt>
-              <dd className="text-sm font-semibold text-ink-900">
-                {fact.value ? (
-                  fact.value
-                ) : enquiryHref ? (
-                  <a
-                    href={enquiryHref}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="font-medium text-ink-500 underline decoration-dotted underline-offset-4"
-                  >
-                    {missing}
-                  </a>
-                ) : (
-                  <span className="font-medium text-ink-500">{missing}</span>
-                )}
-              </dd>
-              {fact.value && fact.detail ? (
-                <dd className="text-xs text-ink-500">{fact.detail}</dd>
-              ) : null}
-            </div>
+            <dt className="flex gap-3 text-xs font-semibold uppercase tracking-wide text-ink-500">
+              <DetailIcon name={fact.icon} className="mt-0.5 h-5 w-5" />
+              <span className="min-w-0">{labelFor(copy, fact.id)}</span>
+            </dt>
+            <dd className="ml-8 text-sm font-semibold text-ink-900">
+              {fact.value ? (
+                fact.value
+              ) : enquiryHref ? (
+                <a
+                  href={enquiryHref}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="font-medium text-ink-500 underline decoration-dotted underline-offset-4"
+                >
+                  {missing}
+                </a>
+              ) : (
+                <span className="font-medium text-ink-500">{missing}</span>
+              )}
+            </dd>
+            {fact.value && fact.detail ? (
+              <dd className="ml-8 text-xs text-ink-500">{fact.detail}</dd>
+            ) : null}
           </div>
         );
       })}
