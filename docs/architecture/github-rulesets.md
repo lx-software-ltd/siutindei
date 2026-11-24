@@ -37,13 +37,13 @@ The `main` branch requires protection as it triggers production deployments.
 GitHub matches required checks by job name. The weekly job calls
 `lx-software-ltd/actions/verify-rulesets` and fails unless the
 approving-review count is exactly 0 and the required checks are exactly
-the job names `lint` and `test`. The weekly job fails if the count is
-not 0 or the check list is not exactly those two names.
+`lint`, `test`, and `security-summary`.
 
 | Workflow | Job name |
 |----------|----------|
 | `.github/workflows/lint.yml` | `lint` |
 | `.github/workflows/test.yml` | `test` |
+| `.github/workflows/security.yml` | `security-summary` |
 
 ---
 
@@ -89,7 +89,8 @@ Release tags should be protected from modification or deletion.
 | Rule | Setting | Purpose |
 |------|---------|---------|
 | Protect tags matching `v*` | ✅ Enabled | Protects release versions |
-| Restrict who can create | Maintainers only | Controlled releases |
+| Block update and deletion | `release-tags` | A `v*` tag cannot be moved or deleted |
+| Block creation | `release-tags-create` | Creation is blocked. Organization admin can bypass |
 
 ---
 
@@ -112,7 +113,7 @@ Release tags should be protected from modification or deletion.
      - ✅ Dismiss stale pull request approvals when new commits are pushed
    - ✅ Require status checks to pass
      - ✅ Require branches to be up to date before merging
-     - Add checks: `lint`, `test`
+     - Add checks: `lint`, `test`, `security-summary`
    - ✅ Block force pushes
 5. Click **Create**
 
@@ -127,8 +128,8 @@ Release tags should be protected from modification or deletion.
 4. Enable rules:
    - ✅ Restrict deletions
    - ✅ Restrict updates
-   - ✅ Restrict creations (optional, maintainers only)
 5. Click **Create**
+6. Create a second tag ruleset, `release-tags-create`, on the same `v*` pattern, and enable **Restrict creations**. Organization admin is the bypass actor.
 
 ### Option 2: GitHub CLI
 
@@ -148,9 +149,11 @@ gh api repos/{owner}/{repo}/rulesets \
   --field 'rules[][type]=required_status_checks' \
   --field 'rules[3][parameters][strict_required_status_checks_policy]=true' \
   --field 'rules[3][parameters][required_status_checks][][context]=lint' \
-  --field 'rules[3][parameters][required_status_checks][][context]=test'
+  --field 'rules[3][parameters][required_status_checks][][context]=test' \
+  --field 'rules[3][parameters][required_status_checks][][context]=security-summary'
 
-# Tag protection for releases (already exists here as `release-tags`)
+# Tag protection for releases. Update and deletion are one ruleset.
+# Creation is a second ruleset so organization admin can bypass creation only.
 gh api repos/{owner}/{repo}/rulesets \
   --method POST \
   --field name='release-tags' \
@@ -159,6 +162,14 @@ gh api repos/{owner}/{repo}/rulesets \
   --field 'conditions[ref_name][include][]=refs/tags/v*' \
   --field 'rules[][type]=deletion' \
   --field 'rules[][type]=update'
+
+gh api repos/{owner}/{repo}/rulesets \
+  --method POST \
+  --field name='release-tags-create' \
+  --field target='tag' \
+  --field enforcement='active' \
+  --field 'conditions[ref_name][include][]=refs/tags/v*' \
+  --field 'rules[][type]=creation'
 ```
 
 ### Update the existing `main-protection` ruleset
@@ -187,7 +198,8 @@ gh api repos/lx-software-ltd/siutindei/rulesets/12176289 \
       "strict_required_status_checks_policy": true,
       "required_status_checks": [
         {"context": "lint"},
-        {"context": "test"}
+        {"context": "test"},
+        {"context": "security-summary"}
       ]
     }}
   ]
@@ -209,8 +221,11 @@ The verification checks:
   `disabled` or `evaluate` fails this check. Classic branch protection
   is not a substitute for that disabled ruleset.
 - The approving-review count is exactly 0, and the required status
-  checks are exactly `lint` and `test`. The weekly job fails if the
-  count is not 0 or the check list is not exactly those two names.
+  checks are exactly `lint`, `test`, and `security-summary`. The weekly
+  job fails if the count is not 0 or the check list is not exactly
+  those three names.
+- Active rulesets on `v*` tags block creation, update, and deletion
+  together.
 - Force push protection is enabled
 - Deletion protection is enabled
 
