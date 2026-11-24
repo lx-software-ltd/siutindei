@@ -138,7 +138,7 @@ jobs:
             --kind "${BOARD_KIND}"
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@edcf302f2f8712f49f18cb55a09abbab80e24388 # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-python@87ecbd6c7c4f272df61c671c8451c4032a6dc407 # main 2026-11-24
 
       - name: Test
         run: bash scripts/board/test-board-change.sh

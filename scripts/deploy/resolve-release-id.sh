@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 # Resolve the release id for a public website promotion.
 set -euo pipefail
+if [ "${1:-}" = "bucket-read" ]; then
+  mode="${PROMOTION_MODE:-}"
+  if [ "$mode" != "maintenance_on" ]; then
+    echo "read_staging_bucket=true" >> "${GITHUB_OUTPUT:?}"
+  else
+    echo "read_staging_bucket=false" >> "${GITHUB_OUTPUT:?}"
+  fi
+  exit 0
+fi
 if [ "${GITHUB_EVENT_NAME:-}" = "schedule" ]; then
   RESOLVED_PROMOTION_MODE="refresh_production"
 else
