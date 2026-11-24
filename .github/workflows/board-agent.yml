@@ -1,5 +1,5 @@
-name: board-agent
-run-name: board-agent ${{ inputs.task_id }}
+name: Board Agent
+run-name: Board Agent ${{ inputs.task_id }}
 
 on:
   workflow_dispatch:

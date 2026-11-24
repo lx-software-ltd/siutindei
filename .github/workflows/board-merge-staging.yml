@@ -1,5 +1,5 @@
-name: board-merge-staging
-run-name: board-merge-staging #${{ inputs.pr_number }}
+name: Board Merge Staging
+run-name: "Board Merge Staging #${{ inputs.pr_number }}"
 
 on:
   workflow_dispatch:
