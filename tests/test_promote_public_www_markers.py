@@ -38,8 +38,11 @@ def _step(job: str, name: str) -> str:
 
 
 def test_staging_bucket_is_not_a_job_output() -> None:
+    text = _text()
     outputs = _job("prepare").split("outputs:", 1)[1].split("\n    steps:", 1)[0]
     assert "staging_bucket:" not in outputs
+    assert "describe-stacks" not in text
+    assert "cfn-stack-outputs@" in text
 
 
 def test_record_step_reads_the_bucket_from_the_stack() -> None:
