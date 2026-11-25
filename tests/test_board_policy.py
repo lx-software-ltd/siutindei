@@ -79,22 +79,25 @@ def test_rename_from_protected_path_is_blocked() -> None:
 
 
 def test_board_agent_declares_revision_inputs() -> None:
-    workflow = (
-        Path(__file__).resolve().parents[1]
-        / ".github"
-        / "workflows"
-        / "board-agent.yml"
+    root = Path(__file__).resolve().parents[1]
+    workflow = root / ".github" / "workflows" / "board-agent.yml"
+    agent = root / "scripts" / "board" / "run-cursor-agent.sh"
+    commit = root / "scripts" / "board" / "commit-board-pr.sh"
+    workflow_text = workflow.read_text(encoding="utf-8")
+    text = "\n".join(
+        path.read_text(encoding="utf-8") for path in (workflow, agent, commit)
     )
-    text = workflow.read_text(encoding="utf-8")
     for key in ("pr_number:", "ci_failure:", "revision_round:"):
-        assert f"\n      {key}\n" in text
-        assert f"# {key}" not in text
-    assert "POSTGRES_DB: backend_test" in text
-    assert "lx-software-ltd/actions/setup-python@" in text
-    assert "persist-credentials: false" in text
+        assert f"\n      {key}\n" in workflow_text
+        assert f"# {key}" not in workflow_text
+    assert "bash scripts/board/run-cursor-agent.sh" in workflow_text
+    assert "bash scripts/board/commit-board-pr.sh" in workflow_text
+    assert "POSTGRES_DB: backend_test" in workflow_text
+    assert "lx-software-ltd/actions/setup-python@" in workflow_text
+    assert "persist-credentials: false" in workflow_text
+    assert "CURSOR_HOOK_MARKER" in workflow_text
     assert "--output-format stream-json" in text
     assert "docs/architecture/zones.md" in text
-    assert "CURSOR_HOOK_MARKER" in text
     assert "AUTHORIZATION: bearer" not in text
     assert "git_auth fetch origin staging" in text
     assert (
@@ -195,9 +198,7 @@ def test_unknown_kind_is_refused() -> None:
         }
     ]
     reason = board_policy.evaluate_files(files, kind="Bugfix")
-    assert reason == (
-        "unknown brief kind 'bugfix'; expected feature, fix, or content"
-    )
+    assert reason == ("unknown brief kind 'bugfix'; expected feature, fix, or content")
     assert board_policy.zone_for_files(files, kind="contnet") == "unknown"
     content_files = [
         {

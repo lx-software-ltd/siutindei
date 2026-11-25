@@ -302,7 +302,7 @@ Source: [`apps/public_www`](../../apps/public_www).
   Optional GTM / Meta Pixel via `NEXT_PUBLIC_GTM_ID` /
   `NEXT_PUBLIC_META_PIXEL_ID` and host allow-lists; CSP `script-src` /
   `connect-src` extended at build time when those env vars are set
-  (`scripts/inject-csp-meta.mjs`). `deploy-public-www.yml` and
+  (`scripts/inject-csp-meta.mjs`). `deploy-public-www-staging.yml` and
   `promote-public-www.yml` pass `NEXT_PUBLIC_GTM_ID` /
   `NEXT_PUBLIC_GTM_ALLOWED_HOSTS` from the GitHub Environment. Only the
   GTM container public ID (`GTM-…`) belongs in those vars — GA4 `G-` and
@@ -355,7 +355,7 @@ The build is deliberately **gated** by:
 push to staging (apps/public_www/**, deploy script, workflow)
         |
         v
-deploy-public-www.yml  ── npm ci → assert env → audit → build (with SHA as release id) ──> staging
+deploy-public-www-staging.yml  ── npm ci → assert env → audit → build (with SHA as release id) ──> staging
         |                                                                                     │
         |                                                                                     │
         |                                                            staging bucket
@@ -376,10 +376,10 @@ workflow_dispatch (Promote Public Website Release)
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | [`deploy-backend.yml`](../../.github/workflows/deploy-backend.yml) | `workflow_dispatch` (`public website` or `all stacks`), `push: backend/**` | CDK deploy of `lxsoftware-siutindei-public-www` (S3 + CloudFront for production and staging). |
-| [`deploy-public-www.yml`](../../.github/workflows/deploy-public-www.yml) | `push: staging`, `workflow_dispatch`, `repository_dispatch: deploy-public-www` | Build + sync to staging bucket, write release marker, then run the staging smoke checks against the deployed site. |
+| [`deploy-public-www-staging.yml`](../../.github/workflows/deploy-public-www-staging.yml) | `push: staging`, `workflow_dispatch`, `repository_dispatch: deploy-public-www-staging` | Build + sync to staging bucket, write release marker, then run the staging smoke checks against the deployed site. |
 | [`promote-public-www.yml`](../../.github/workflows/promote-public-www.yml) | `workflow_dispatch`, `repository_dispatch`, `schedule` (daily 04:00 HKT) | Promote a staging release to production, flip production into maintenance mode, or, on the schedule, refresh the live release with the latest catalogue snapshot. |
 | [`smoke-public-www-staging.yml`](../../.github/workflows/smoke-public-www-staging.yml) | `workflow_dispatch` | Crawl staging sitemap and assert every page responds 2xx/3xx. |
-| [`lighthouse-public-www.yml`](../../.github/workflows/lighthouse-public-www.yml) | `workflow_dispatch` | Run Lighthouse CI on a local build from the committed catalogue fixture (`apps/public_www/tests/fixtures/catalogue-snapshot.json`). Default pages are `/en/`, `/zh-HK/`, `/en/activities/`, `/en/activities/arts/`, and one fixture activity page. A bare `/` is rewritten to `/en/` because `/` is a locale redirect. `/en/search/` is not a default: this build has no search API, so that page's only large text is the client-rendered error. |
+| [`lighthouse-public-www.yml`](../../.github/workflows/lighthouse-public-www.yml) | `workflow_dispatch` | Run Lighthouse CI on a local build from the committed catalogue fixture (`apps/public_www/tests/fixtures/catalogue-snapshot.json`). Default pages are `/en/`, `/zh-HK/`, `/en/activities/`, `/en/activities/classes/`, and one fixture activity page. A bare `/` is rewritten to `/en/` because `/` is a locale redirect. `/en/search/` is not a default: this build has no search API, so that page's only large text is the client-rendered error. |
 
 ### Daily catalogue refresh
 

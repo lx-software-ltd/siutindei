@@ -5,40 +5,49 @@ on:
     types: [deploy-backend]
   workflow_dispatch:
     inputs:
+      # template:optional migration-recovery
       destroy_before_deploy:
-        description: "Run 'cdk destroy' before deploy"
+        description: "Run cdk destroy before deploy"
         required: false
         default: false
         type: boolean
+      # template:end
+      # template:optional database
       force_migration_run:
         description: "Force RunMigrations custom resource"
         required: false
         default: false
         type: boolean
-      run_seed_data:
-        description: "Run seed data after migrations (backend stack only)"
-        required: false
-        default: false
-        type: boolean
+      # template:end
       cdk_stacks:
         description: "CDK stacks to deploy"
         required: false
         default: "all stacks"
         type: choice
         options:
+          # template:set
           - "all stacks"
           - "lambda apis"
           - "admin web"
           - "public website"
           - "waf (us-east-1)"
+          # template:end
+      # template:optional database
+      run_seed_data:
+        description: "Run seed data after migrations (backend stack only)"
+        required: false
+        default: false
+        type: boolean
+      # template:end
   push:
     branches:
       - main
+    # template:set
     paths:
       - "backend/**"
-      - "packages/models_shared/**"
       - "scripts/**"
       - ".github/workflows/deploy-backend.yml"
+    # template:end
 
 permissions:
   contents: read
@@ -49,6 +58,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
       id-token: write
@@ -57,97 +67,82 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          lfs: true
+
+      # template:optional search-fixture
+      - name: Pull Git LFS objects
+        run: git lfs pull
 
       - name: Sync staging search fixture for Lambda bundle
         run: bash scripts/codegen/sync-activity-search-staging-fixture.sh backend
 
+      # template:end
+
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           cache: npm
           working-directory: backend/infrastructure
-          install: "false"
 
-      # run-cdk-app.sh bundles Lambdas with Python 3.12. ubuntu-26.04 is
-      # 26.04 and no longer includes that interpreter.
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-python@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
 
       - name: Determine deployment region
         id: region
         env:
           INPUT_CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
           INPUT_AWS_REGION: ${{ vars.AWS_REGION }}
-        run: |
-          if [ "$INPUT_CDK_STACKS" = "waf (us-east-1)" ]; then
-            echo "region=us-east-1" >> "$GITHUB_OUTPUT"
-          else
-            echo "region=$INPUT_AWS_REGION" >> "$GITHUB_OUTPUT"
-          fi
+        run: bash scripts/deploy/cdk-prepare.sh region
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        id: aws
+        uses: lx-software-ltd/actions/aws-oidc@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ steps.region.outputs.region }}
 
-      - name: Validate search area scope
-        env:
-          SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
-        run: python3 scripts/deploy/validate_search_area_scope.py
+      - name: Set up QEMU for arm64 Lambda bundling
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
 
-      - name: Install CDK dependencies
-        working-directory: backend/infrastructure
-        run: npm ci
 
       - name: Check CDK bootstrap
-        uses: lx-software-ltd/actions/cdk-bootstrap-check@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        uses: lx-software-ltd/actions/cdk-bootstrap-check@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           qualifier: ${{ vars.CDK_BOOTSTRAP_QUALIFIER }}
           region: ${{ steps.region.outputs.region }}
-
-      - name: Prepare the CDK app
+      - name: Prepare CDK app
         id: prep
-        working-directory: backend/infrastructure
+        run: bash scripts/deploy/cdk-prepare.sh deploy
+        # template:set
         env:
           AWS_REGION: ${{ steps.region.outputs.region }}
           CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
-        run: |
-          set -euo pipefail
-          npx cdk acknowledge 34892 || true
-          npm run build --if-present
-          if [ "${CDK_STACKS:-}" = "all stacks" ]; then
-            CDK_STACKS="lxsoftware-siutindei lxsoftware-siutindei-admin-web lxsoftware-siutindei-public-www"
-          elif [ "${CDK_STACKS:-}" = "lambda apis" ]; then
-            CDK_STACKS="lxsoftware-siutindei"
-          elif [ "${CDK_STACKS:-}" = "admin web" ]; then
-            CDK_STACKS="lxsoftware-siutindei-admin-web"
-          elif [ "${CDK_STACKS:-}" = "public website" ] || [ "${CDK_STACKS:-}" = "public www" ] || [ "${CDK_STACKS:-}" = "public website staging" ] || [ "${CDK_STACKS:-}" = "public www staging" ]; then
-            CDK_STACKS="lxsoftware-siutindei-public-www"
-          elif [ "${CDK_STACKS:-}" = "waf (us-east-1)" ]; then
-            CDK_STACKS="lxsoftware-siutindei-waf"
-          fi
-          echo "stacks=$CDK_STACKS" >> "$GITHUB_OUTPUT"
+          SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
+        # template:end
+
 
       - name: Deploy stacks
-        uses: lx-software-ltd/actions/cdk-deploy@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        uses: lx-software-ltd/actions/cdk-deploy@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           working-directory: backend/infrastructure
-          stacks: ${{ steps.prep.outputs.stacks }}
+          plan-file: backend/infrastructure/cdk-plan.json
+          # template:set
+          stacks: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
+          # template:end
           param-file: ${{ vars.CDK_PARAM_FILE }}
-          format: plain-json
           attempts: "3"
-          no-notices: "true"
+          # template:set
+          format: plain-json
           pass-empty: WafWebAclArn,CognitoCustomDomainName,CognitoCustomDomainCertificateArn,ApiCustomDomainName,ApiCustomDomainCertificateArn,SearchAreaScope
           escape-newlines: "true"
           rollback-match: UPDATE_ROLLBACK_FAILED
           skip-resource: RunMigrations
           destroy: ${{ github.event.inputs.destroy_before_deploy || 'false' }}
           run-seed: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_seed_data || 'false' }}
+          # template:end
           region: ${{ steps.region.outputs.region }}
-          plan-file: backend/infrastructure/cdk-plan.json
+        # template:set
         env:
           AWS_REGION: ${{ steps.region.outputs.region }}
           CDK_STACKS: ${{ github.event.inputs.cdk_stacks || vars.CDK_STACKS || 'all stacks' }}
@@ -180,3 +175,4 @@ jobs:
           MIGRATIONS_FORCE_RUN_ID: >-
             ${{ github.event.inputs.force_migration_run == 'true' &&
             github.run_id || '' }}
+        # template:end

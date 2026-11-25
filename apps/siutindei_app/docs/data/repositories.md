@@ -327,4 +327,3 @@ void main() {
 
 - [Repository Interfaces](../domain/repositories.md) - Contracts implemented here
 - [Mappers](mappers.md) - Data transformation utilities
-- [API Service](../services/api_service.md) - External API client

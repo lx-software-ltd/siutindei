@@ -221,7 +221,7 @@ Verify each with `curl -sI https://<domain>` (expect 200/301, valid cert).
 
 ## 8. Public website go-live
 
-1. Deploy to staging (`deploy-public-www.yml`); smoke checks run
+1. Deploy to staging (`deploy-public-www-staging.yml`); smoke checks run
    automatically after the deploy.
 2. Run the Lighthouse workflow with `page_paths` set to full staging URLs
    (for example `https://www-staging.siutindei.com/en/`); bare

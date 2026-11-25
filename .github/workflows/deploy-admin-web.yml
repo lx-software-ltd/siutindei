@@ -7,12 +7,12 @@ on:
   push:
     branches:
       - main
+    # template:set
     paths:
       - "apps/admin_web/**"
-      - "packages/react_ui/**"
-      - "packages/api_client_ts/**"
-      - "packages/models_shared/**"
       - "scripts/**"
+    # template:end
+
 
 permissions:
   contents: read
@@ -23,6 +23,7 @@ concurrency:
 
 jobs:
   build-and-deploy:
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')) }}
     permissions:
       contents: read
       id-token: write
@@ -33,11 +34,12 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-node@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           cache: npm
           working-directory: apps/admin_web
 
+      # template:optional next-admin
       - name: Restore Next.js build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -45,9 +47,20 @@ jobs:
           key: ${{ runner.os }}-nextjs-${{ hashFiles('apps/admin_web/package-lock.json') }}
           restore-keys: ${{ runner.os }}-nextjs-
 
+      # template:end
+
+      - name: Configure AWS credentials
+        id: aws
+        uses: lx-software-ltd/actions/aws-oidc@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
+        with:
+          account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          region: ${{ vars.AWS_REGION }}
+
+
       - name: Build admin web
         run: npm run build
         working-directory: apps/admin_web
+        # template:set
         env:
           NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL }}
           NEXT_PUBLIC_COGNITO_DOMAIN: ${{ vars.NEXT_PUBLIC_COGNITO_DOMAIN }}
@@ -55,23 +68,21 @@ jobs:
           NEXT_PUBLIC_COGNITO_USER_POOL_ID: ${{ vars.NEXT_PUBLIC_COGNITO_USER_POOL_ID }}
           NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
           NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID }}
-          # Catalog default. next.config inlines this as NEXT_PUBLIC_SEARCH_AREA_SCOPE.
           SEARCH_AREA_SCOPE: ${{ vars.SEARCH_AREA_SCOPE }}
           NEXT_TELEMETRY_DISABLED: "1"
-
-      - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
-        with:
-          account-id: ${{ secrets.AWS_ACCOUNT_ID }}
-          region: ${{ vars.AWS_REGION }}
+        # template:end
 
       - name: Deploy admin web
-        uses: lx-software-ltd/actions/s3-cloudfront-deploy@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        uses: lx-software-ltd/actions/s3-cloudfront-deploy@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
+          # template:set
           source: apps/admin_web/out
           stack: lxsoftware-siutindei-admin-web
+          # template:end
           region: ${{ vars.AWS_REGION }}
           bucket-output: AdminWebBucketName
           distribution-output: AdminWebDistributionId
+          # template:set
           profile: next-export
+          # template:end
           dry-run: "false"

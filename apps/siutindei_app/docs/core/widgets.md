@@ -309,4 +309,4 @@ testWidgets('BaseAvatar shows initials when no image', (tester) async {
 ## Related
 
 - [Design Tokens](../design/tokens.md) - Token system overview
-- [Component Tokens](../design/component-tokens.md) - Widget-specific tokens
+- [JSON Token Ingestion](../design/json-tokens.md) - How component tokens are loaded

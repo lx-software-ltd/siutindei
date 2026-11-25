@@ -21,7 +21,7 @@ describe('parsePagePaths', () => {
       '/en/',
       '/zh-HK/',
       '/en/activities/',
-      '/en/activities/arts/',
+      '/en/activities/classes/',
       `/en/activity/${FIXTURE_ACTIVITY_ID}/`,
     ]);
     expect(parsePagePaths('')).toEqual(DEFAULT_PAGE_PATHS);

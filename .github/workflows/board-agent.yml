@@ -1,5 +1,5 @@
-name: board-agent
-run-name: board-agent ${{ inputs.task_id }}
+name: Board Agent
+run-name: Board Agent ${{ inputs.task_id }}
 
 on:
   workflow_dispatch:
@@ -107,51 +107,13 @@ jobs:
           fi
 
       - name: Install pinned Cursor CLI
-        run: |
-          set -euo pipefail
-          os=linux
-          arch=x64
-          case "$(uname -m)" in
-            aarch64|arm64) arch=arm64 ;;
-            x86_64|amd64) arch=x64 ;;
-            *) echo "unsupported arch $(uname -m)" >&2; exit 1 ;;
-          esac
-          version="${CURSOR_CLI_VERSION}"
-          dest="${HOME}/.local/share/cursor-agent/versions/${version}"
-          mkdir -p "${dest}" "${HOME}/.local/bin"
-          curl -fsSL \
-            "https://downloads.cursor.com/lab/${version}/${os}/${arch}/agent-cli-package.tar.gz" \
-            | tar --strip-components=1 -xzf - -C "${dest}"
-          ln -sfn "${dest}/cursor-agent" "${HOME}/.local/bin/agent"
-          ln -sfn "${dest}/cursor-agent" "${HOME}/.local/bin/cursor-agent"
-          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
-          echo "${HOME}/.cursor/bin" >> "${GITHUB_PATH}"
-          "${HOME}/.local/bin/cursor-agent" --version
-
+        run: bash scripts/board/install-cursor-cli.sh
       - name: Cursor agent
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           BOARD_KIND: ${{ inputs.kind }}
           CURSOR_HOOK_MARKER: ${{ runner.temp }}/cursor-hook-session-start
-        run: |
-          set -euo pipefail
-          if [ -z "${CURSOR_API_KEY:-}" ]; then
-            echo "CURSOR_API_KEY is not set" >&2
-            exit 1
-          fi
-          {
-            echo "Follow AGENTS.md. Treat the brief as acceptance criteria."
-            echo "Do not modify red-zone paths listed in docs/architecture/zones.md."
-            echo "Content-kind briefs may only change content/**."
-            echo "Do not commit, push, or open pull requests. Only edit files."
-            echo "Kind: ${BOARD_KIND}"
-            echo
-            cat "${RUNNER_TEMP}/brief.txt"
-          } > "${RUNNER_TEMP}/prompt.txt"
-          cursor-agent -p "$(cat "${RUNNER_TEMP}/prompt.txt")" \
-            --model composer-2.5 --yolo --output-format stream-json \
-            | tee "${RUNNER_TEMP}/agent-transcript.jsonl"
-
+        run: bash scripts/board/run-cursor-agent.sh
       - name: Upload agent transcript
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -176,33 +138,10 @@ jobs:
             --kind "${BOARD_KIND}"
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-python@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
 
       - name: Test
-        run: |
-          set -euo pipefail
-          exec > >(tee "${RUNNER_TEMP}/board-test.log") 2>&1
-          if git diff --quiet origin/staging -- \
-            && [ -z "$(git ls-files --others --exclude-standard)" ]; then
-            echo "No changes from staging; skip repo tests"
-            exit 0
-          fi
-          if git diff --name-only origin/staging -- backend tests \
-            | grep -q . \
-            || git ls-files --others --exclude-standard -- backend tests | grep -q .; then
-            python -m pip install --upgrade pip
-            if [ -f backend/dev-requirements.txt ]; then
-              python -m pip install -r backend/dev-requirements.txt
-            else
-              python -m pip install -r backend/requirements.txt
-              python -m pip install 'pytest>=8.0'
-            fi
-            python -m alembic -c backend/db/alembic.ini upgrade head
-            python -m pytest tests backend --tb=short -q
-          else
-            echo "No backend/tests changes; Flutter and Node stay on PR CI (test.yml)."
-          fi
-
+        run: bash scripts/board/test-board-change.sh
       - name: Commit and draft PR
         env:
           GH_TOKEN: ${{ secrets.BOARD_PR_TOKEN || secrets.GITHUB_TOKEN }}
@@ -210,50 +149,4 @@ jobs:
           TASK_ID: ${{ inputs.task_id }}
           ISSUE: ${{ inputs.issue }}
           BOARD_KIND: ${{ inputs.kind }}
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email \
-            "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          title="board: #${ISSUE} $(head -n 1 "${RUNNER_TEMP}/brief.txt")"
-          git commit -m "${title}" || true
-          # git smart HTTP on github.com rejects "Authorization: bearer" for
-          # receive-pack (401, then git asks for a username and dies with
-          # "could not read Username"). Use the basic header actions/checkout
-          # itself writes: base64("x-access-token:<token>").
-          auth_header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "${GH_TOKEN}" | base64 -w0)"
-          git_auth() {
-            git -c "http.extraheader=${auth_header}" "$@"
-          }
-          git_auth fetch origin staging
-          ahead="$(git rev-list --count "origin/staging..HEAD")"
-          if [ "${ahead}" = "0" ]; then
-            echo "No unique commits vs staging; skip draft PR (dry-run / no-op)"
-            exit 0
-          fi
-          if [ -n "${PR_NUMBER:-}" ]; then
-            git_auth push -u origin HEAD
-            echo "Updated existing PR #${PR_NUMBER}"
-            exit 0
-          fi
-          git_auth push -u origin "HEAD:board/${TASK_ID}" --force-with-lease
-          zone="$(python3 scripts/ci/board_policy.py --zone origin/staging \
-            --kind "${BOARD_KIND}")"
-          body="$(
-            BOARD_ZONE="${zone}" \
-            BOARD_BRIEF_FILE="${RUNNER_TEMP}/brief.txt" \
-            BOARD_EVIDENCE_FILE="${RUNNER_TEMP}/board-test.log" \
-            BOARD_TASK_ID="${TASK_ID}" \
-            python3 scripts/ci/board_pr_body.py
-          )"
-          existing="$(gh pr list --head "board/${TASK_ID}" --base staging \
-            --json number --jq '.[0].number // empty')"
-          if [ -n "${existing}" ]; then
-            gh pr edit "${existing}" --title "${title}" --body "${body}"
-            echo "Updated existing PR #${existing}"
-          else
-            gh pr create --draft --base staging \
-              --title "${title}" \
-              --body "${body}"
-          fi
+        run: bash scripts/board/commit-board-pr.sh

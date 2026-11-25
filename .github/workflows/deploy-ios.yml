@@ -1,6 +1,8 @@
 name: Deploy iOS
 
 on:
+  repository_dispatch:
+    types: [deploy-ios]
   workflow_dispatch:
 
 permissions:
@@ -12,9 +14,12 @@ concurrency:
 
 jobs:
   build-and-deploy:
+    if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
+# template:optional amplify
       id-token: write
+# template:end
     runs-on: macos-26
     environment: production
     env:
@@ -24,10 +29,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        uses: lx-software-ltd/actions/setup-flutter@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           channel: "stable"
-          # pubspec.lock was resolved with this SDK. Floating stable rewrites it.
           flutter-version: "3.50.1"
           cache: "true"
 
@@ -39,7 +43,9 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+# template:set
         working-directory: apps/siutindei_app
+# template:end
 
       - name: Setup SSH for certificates repo
         uses: webfactory/ssh-agent@e83874834305fe9a4a2997156cb26c5de65a8555 # v0.10.0
@@ -48,7 +54,9 @@ jobs:
           ssh-private-key: ${{ env.MATCH_DEPLOY_KEY }}
 
       - name: Sync signing assets (match)
+# template:set
         working-directory: apps/siutindei_app/ios
+# template:end
         run: |
           if [ -z "$MATCH_GIT_URL" ] || [ -z "$MATCH_PASSWORD" ] || [ -z "$FASTLANE_USER" ] || [ -z "$FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD" ]; then
             echo "Skipping fastlane match (missing secrets)"
@@ -65,45 +73,49 @@ jobs:
           FASTLANE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
 
       - name: Generate ExportOptions.plist
-        uses: lx-software-ltd/actions/ios-export-options@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        uses: lx-software-ltd/actions/ios-export-options@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
+# template:set
           working-directory: apps/siutindei_app
+# template:end
           team-id: ${{ vars.APPLE_TEAM_ID }}
           bundle-id: ${{ vars.IOS_BUNDLE_ID }}
           provisioning-profile: ${{ vars.IOS_PROVISIONING_PROFILE }}
 
+# template:optional amplify
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        uses: lx-software-ltd/actions/aws-oidc@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
 
       - name: Build Amplify configuration from the API stack
-        run: |
-          python3 scripts/deploy/build_amplify_config.py \
-            --params "${CDK_PARAM_FILE:-backend/infrastructure/params/production.json}" \
-            --region "$AWS_REGION" \
-            --output apps/siutindei_app/build/amplify-defines.json
+        run: python3 scripts/deploy/build_amplify_config.py --params "${CDK_PARAM_FILE:-backend/infrastructure/params/production.json}" --region "$AWS_REGION" --output "$APP_DIRECTORY/build/amplify-defines.json"
         env:
           CDK_PARAM_FILE: ${{ vars.CDK_PARAM_FILE }}
           AWS_REGION: ${{ vars.AWS_REGION }}
+          # template:set
+          APP_DIRECTORY: apps/siutindei_app
+          # template:end
+# template:end
 
       - name: Build release IPA
-        run: |
-          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist \
-            --dart-define-from-file=build/amplify-defines.json \
-            --dart-define=AMPLIFY_API_KEY=${{ secrets.AMPLIFY_API_KEY }} \
-            --dart-define=FIREBASE_API_KEY=${{ vars.FIREBASE_API_KEY }} \
-            --dart-define=FIREBASE_PROJECT_ID=${{ vars.FIREBASE_PROJECT_ID }} \
-            --dart-define=FIREBASE_MESSAGING_SENDER_ID=${{ vars.FIREBASE_MESSAGING_SENDER_ID }} \
-            --dart-define=FIREBASE_IOS_APP_ID=${{ vars.FIREBASE_IOS_APP_ID }} \
-            --dart-define=FIREBASE_IOS_BUNDLE_ID=${{ vars.IOS_BUNDLE_ID }} \
-            --dart-define=FIREBASE_STORAGE_BUCKET=${{ vars.FIREBASE_STORAGE_BUCKET }} \
-            --dart-define=FIREBASE_APP_CHECK_DEBUG=${{ vars.FIREBASE_APP_CHECK_DEBUG }}
-        working-directory: apps/siutindei_app
+        run: bash scripts/deploy/build-mobile-release.sh ipa
+        env:
+          AMPLIFY_API_KEY: ${{ secrets.AMPLIFY_API_KEY }}
+          FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+          FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID }}
+          FIREBASE_IOS_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_APP_CHECK_DEBUG: ${{ vars.FIREBASE_APP_CHECK_DEBUG }}
+          # template:set
+          APP_DIRECTORY: apps/siutindei_app
+          # template:end
 
       - name: Load App Store Connect API key
-        uses: lx-software-ltd/actions/appstore-api-key@a1816561097c19870cc3a4af1407b6ac2caddfe6 # main 2026-11-23
+        uses: lx-software-ltd/actions/appstore-api-key@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
         with:
           api-key-json: ${{ secrets.APPSTORE_API_KEY_JSON }}
           issuer-id: ${{ secrets.APPSTORE_ISSUER_ID }}
@@ -114,7 +126,9 @@ jobs:
         if: env.APPSTORE_ISSUER_ID != '' && env.APPSTORE_API_KEY_ID != '' && env.APPSTORE_API_PRIVATE_KEY != ''
         uses: apple-actions/upload-testflight-build@665328adbecbc3ad929d3da710696d928b8a7ba9 # v5.9.0
         with:
+# template:set
           app-path: apps/siutindei_app/build/ios/ipa/*.ipa
+# template:end
           issuer-id: ${{ env.APPSTORE_ISSUER_ID }}
           api-key-id: ${{ env.APPSTORE_API_KEY_ID }}
           api-private-key: ${{ env.APPSTORE_API_PRIVATE_KEY }}

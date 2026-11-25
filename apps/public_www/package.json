@@ -23,7 +23,8 @@
     "csp:inject": "node ./scripts/inject-csp-meta.mjs",
     "csp:validate": "node ./scripts/validate-csp-meta.mjs",
     "seo:validate": "node ./scripts/validate-seo-output.mjs",
-    "lighthouse:ci": "lhci autorun --config=.lighthouserc.json"
+    "lighthouse:ci": "lhci autorun --config=.lighthouserc.json",
+    "test:ci": "npm test"
   },
   "dependencies": {
     "next": "^16.4.6",

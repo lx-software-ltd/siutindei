@@ -220,11 +220,21 @@ async function main() {
   const baseUrl = resolveBaseUrl();
   const timeoutMs = resolveTimeoutMs();
   const maxPages = resolveMaxPages();
+  const scope = (process.env.SMOKE_SCOPE || 'all').trim();
+  if (!['all', 'pages', 'api'].includes(scope)) {
+    throw new Error(`Unsupported scope: ${scope}`);
+  }
+  const checkPages = scope !== 'api';
+  const checkApi = scope !== 'pages';
 
   console.log(`Base URL: ${baseUrl.toString()}`);
   console.log(`Timeout: ${timeoutMs}ms`);
+  console.log(`Scope: ${scope}`);
 
   let pages = [];
+  if (!checkPages) {
+    pages = [];
+  } else {
   try {
     pages = await collectSitemapPageUrls({ baseUrl, timeoutMs });
     console.log(`Discovered ${pages.length} URL(s) from sitemap.`);
@@ -238,6 +248,7 @@ async function main() {
   if (maxPages !== null && pages.length > maxPages) {
     pages = pages.slice(0, maxPages);
     console.log(`Capped to ${maxPages} URL(s).`);
+  }
   }
 
   let passed = 0;
@@ -267,7 +278,9 @@ async function main() {
     }
   }
 
-  if (shouldProbeLiveSearch(process.env.NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED)) {
+  if (!checkApi) {
+    console.log('API checks skipped.');
+  } else if (shouldProbeLiveSearch(process.env.NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED)) {
     checks += 1;
     try {
       const probe = buildLiveSearchProbe(baseUrl, process.env);

@@ -11,7 +11,8 @@
     "cdk": "cdk",
     "synth": "cdk synth",
     "deploy": "cdk deploy",
-    "test:infra": "node scripts/assert-patched-minimatch.js && JSII_DEPRECATED=fail ts-node scripts/assert-existing-db.ts"
+    "test:infra": "node scripts/assert-patched-minimatch.js && JSII_DEPRECATED=fail ts-node scripts/assert-existing-db.ts && node --test test/*.test.mjs ../../scripts/cloudflare/workers/*.test.mjs",
+    "synth:ci": "CDK_DISABLE_CONTEXT_LOOKUPS=1 cdk synth --quiet --output cdk.out"
   },
   "keywords": [],
   "author": "",
