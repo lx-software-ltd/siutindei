@@ -50,7 +50,7 @@ jobs:
 # template:set
         env:
           NEXT_TELEMETRY_DISABLED: "1"
-          SMOKE_BASE_URL: ${{ steps.resolve_staging_site_origin.outputs.staging_site_origin }}
+          SMOKE_BASE_URL: ${{ vars.STAGING_SITE_ORIGIN || steps.resolve_public_site_config.outputs.staging_site_origin }}
           STAGING_BYPASS_SECRET: ${{ secrets.STAGING_BYPASS_SECRET }}
           NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED: ${{ vars.STAGING_SEARCH_DATA_ENABLED || 'true' }}
           NEXT_PUBLIC_SEARCH_API_KEY: ${{ vars.STAGING_SEARCH_DATA_ENABLED == 'false' && secrets.NEXT_PUBLIC_SEARCH_API_KEY || '' }}
