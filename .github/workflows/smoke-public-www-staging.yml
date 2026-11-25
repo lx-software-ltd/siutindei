@@ -40,17 +40,17 @@ jobs:
           REQUIRE_ASSET: "false"
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@556b783f2eb716ed85e47b215d9e74ecf2cd14ce # main 2026-11-25
         with:
           cache: npm
           working-directory: apps/public_www
 
       - name: Run staging smoke checks
         working-directory: apps/public_www
-# template:set
         env:
+          SMOKE_BASE_URL: ${{ steps.resolve_public_site_config.outputs.staging_site_origin }}
+# template:set
           NEXT_TELEMETRY_DISABLED: "1"
-          SMOKE_BASE_URL: ${{ vars.STAGING_SITE_ORIGIN || steps.resolve_public_site_config.outputs.staging_site_origin }}
           STAGING_BYPASS_SECRET: ${{ secrets.STAGING_BYPASS_SECRET }}
           NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED: ${{ vars.STAGING_SEARCH_DATA_ENABLED || 'true' }}
           NEXT_PUBLIC_SEARCH_API_KEY: ${{ vars.STAGING_SEARCH_DATA_ENABLED == 'false' && secrets.NEXT_PUBLIC_SEARCH_API_KEY || '' }}

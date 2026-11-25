@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check Flutter lockfile
-        uses: lx-software-ltd/actions/flutter-lockfiles@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
+        uses: lx-software-ltd/actions/flutter-lockfiles@556b783f2eb716ed85e47b215d9e74ecf2cd14ce # main 2026-11-25
         with:
           # template:set
           working-directory: apps/siutindei_app
@@ -39,10 +39,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
+        uses: lx-software-ltd/actions/setup-node@556b783f2eb716ed85e47b215d9e74ecf2cd14ce # main 2026-11-25
 
       - name: Validate package-lock.json
-        uses: lx-software-ltd/actions/node-lockfiles@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
+        uses: lx-software-ltd/actions/node-lockfiles@556b783f2eb716ed85e47b215d9e74ecf2cd14ce # main 2026-11-25
         with:
           # template:set
           directories: |
@@ -59,7 +59,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check requirement pins
-        uses: lx-software-ltd/actions/python-requirements-pins@962b4408003d89c3bf791ce9299bd13eb75a418e # main 2026-11-24
+        uses: lx-software-ltd/actions/python-requirements-pins@556b783f2eb716ed85e47b215d9e74ecf2cd14ce # main 2026-11-25
         with:
           # template:set
           files: backend/requirements.txt
