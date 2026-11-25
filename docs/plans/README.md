@@ -26,4 +26,5 @@ the plan turns out to be wrong.
 | [`public-www-seo-and-llm-search.md`](public-www-seo-and-llm-search.md) | SEO and LLM-search visibility |
 | [`search-incomplete-approved.md`](search-incomplete-approved.md) | Approved activities that lack a price or schedule |
 | [`siutindei-domain-consolidation.md`](siutindei-domain-consolidation.md) | Move admin, API, and Cognito onto siutindei.com |
+| [`staging-smoke-origin.md`](staging-smoke-origin.md) | Point staging smoke at the resolve-step origin |
 | [`2026-11-10-search-area-scope.md`](2026-11-10-search-area-scope.md) | Limit public search to selected Hong Kong areas |
