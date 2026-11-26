@@ -2370,69 +2370,49 @@ export class ApiStack extends cdk.Stack {
     // CDK prefixes each key with `gatewayresponse.header.` and copies the
     // value unchanged (GatewayResponse.buildResponseParameters). A
     // `method.response.header.` key never reaches the client. Values keep
-    // the one pair of single quotes the CDK README requires. API Gateway
-    // evaluates `$context.requestId` inside that pair; CDK does not add
-    // another, so this is the mapping and not a quoted literal.
+    // the one pair of single quotes the CDK README requires. Gateway
+    // response header values are static text or an incoming request
+    // parameter. `$context` is not substituted there, so a quoted
+    // `$context.requestId` would be sent as those characters. The body
+    // `request_id` field is the substitution that API Gateway evaluates.
+    // The origin matches the WAF: the admin site when it is allowed,
+    // otherwise the first configured origin.
+    const gatewayErrorOrigin = includesExactOrigin(
+      corsAllowedOrigins,
+      ADMIN_WEB_ORIGIN
+    )
+      ? ADMIN_WEB_ORIGIN
+      : corsAllowedOrigins[0];
     const gatewayResponseHeaders: Record<string, string> = {
-      "Access-Control-Allow-Origin": `'${corsAllowedOrigins[0]}'`,
+      "Access-Control-Allow-Origin": `'${gatewayErrorOrigin}'`,
       "Access-Control-Allow-Headers":
         "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'",
       "Access-Control-Allow-Methods": "'GET,POST,PUT,PATCH,DELETE,OPTIONS'",
-      "x-request-id": "'$context.requestId'",
     };
-    // DEFAULT_4XX is the catch-all. `$context.error.responseType` is still
-    // the specific type, so the title is that status's reason phrase.
-    // A response whose type is only DEFAULT_4XX stays Bad Request.
-    // MISSING_AUTHENTICATION_TOKEN is its own response, forced to 404.
+    // One literal title per existing response. Gateway responses only
+    // support simple variable substitution, so a Velocity #set/#if chain
+    // would be sent to the client as text and the body would not be JSON.
     const gatewayProblemFields = [
       '  "detail": $context.error.messageString,',
       '  "code": "gateway_error",',
       '  "request_id": "$context.requestId",',
       '  "message": $context.error.messageString',
     ];
-    const gateway4xxTemplate = [
-      '#set($title = "Bad Request")',
-      '#if($context.error.responseType == "UNAUTHORIZED")',
-      '#set($title = "Unauthorized")',
-      '#elseif($context.error.responseType == "ACCESS_DENIED")',
-      '#set($title = "Forbidden")',
-      '#elseif($context.error.responseType == "INVALID_API_KEY")',
-      '#set($title = "Forbidden")',
-      '#elseif($context.error.responseType == "WAF_FILTERED")',
-      '#set($title = "Forbidden")',
-      '#elseif($context.error.responseType == "EXPIRED_TOKEN")',
-      '#set($title = "Forbidden")',
-      '#elseif($context.error.responseType == "MISSING_AUTHENTICATION_TOKEN")',
-      '#set($title = "Not Found")',
-      '#elseif($context.error.responseType == "RESOURCE_NOT_FOUND")',
-      '#set($title = "Not Found")',
-      '#elseif($context.error.responseType == "THROTTLED")',
-      '#set($title = "Too Many Requests")',
-      '#elseif($context.error.responseType == "QUOTA_EXCEEDED")',
-      '#set($title = "Too Many Requests")',
-      '#elseif($context.error.responseType == "DEFAULT_4XX")',
-      '#set($title = "Bad Request")',
-      "#end",
-      "{",
-      '  "title": "$title",',
-      ...gatewayProblemFields,
-      "}",
-    ].join("\n");
-    const gateway5xxTemplate = [
-      "{",
-      '  "title": "Internal Server Error",',
-      ...gatewayProblemFields,
-      "}",
-    ].join("\n");
+    const gatewayErrorTemplate = (title: string): string =>
+      ["{", `  "title": "${title}",`, ...gatewayProblemFields, "}"].join("\n");
     api.addGatewayResponse("GatewayResponseDefault4XX", {
       type: apigateway.ResponseType.DEFAULT_4XX,
       responseHeaders: gatewayResponseHeaders,
-      templates: { "application/json": gateway4xxTemplate },
+      templates: {
+        "application/json": gatewayErrorTemplate("Bad Request"),
+      },
     });
     api.addGatewayResponse("GatewayResponseDefault5XX", {
       type: apigateway.ResponseType.DEFAULT_5XX,
       responseHeaders: gatewayResponseHeaders,
-      templates: { "application/json": gateway5xxTemplate },
+      templates: {
+        "application/json": gatewayErrorTemplate("Internal Server Error"),
+      },
     });
     // /health was the last IAM method. A missing signature now means the
     // path is not a route, so the response is 404.
@@ -2440,7 +2420,9 @@ export class ApiStack extends cdk.Stack {
       type: apigateway.ResponseType.MISSING_AUTHENTICATION_TOKEN,
       statusCode: "404",
       responseHeaders: gatewayResponseHeaders,
-      templates: { "application/json": gateway4xxTemplate },
+      templates: {
+        "application/json": gatewayErrorTemplate("Not Found"),
+      },
     });
 
     const mobileApiKey = new apigateway.ApiKey(this, "MobileSearchApiKey", {
@@ -3009,6 +2991,18 @@ export class ApiStack extends cdk.Stack {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
       authorizer: partnerApiKeyAuthorizer,
     });
+    // The invoke permission is a child of the function, not the authorizer.
+    // The deployment already depends on the authorizer, so without this
+    // DependsOn a new permission can land after the deployment and partner
+    // calls fail until the permission exists. addDependency does not add
+    // a resource.
+    const partnerAuthorizerPermission =
+      partnerApiKeyAuthorizerFunction.node.tryFindChild(
+        `${cdk.Names.uniqueId(partnerApiKeyAuthorizer)}:Permissions`
+      );
+    if (partnerAuthorizerPermission !== undefined && api.latestDeployment) {
+      api.latestDeployment.node.addDependency(partnerAuthorizerPermission);
+    }
 
     // -------------------------------------------------------------------------
     // User routes at /v1/user (accessible by any logged-in Cognito user)

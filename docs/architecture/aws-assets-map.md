@@ -378,8 +378,15 @@ read error status codes instead of silently blocking them.
 
 | Response Type | Headers Added |
 |--------------|---------------|
-| `DEFAULT_4XX` | `Access-Control-Allow-Origin`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Methods`, `x-request-id` |
-| `DEFAULT_5XX` | `Access-Control-Allow-Origin`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Methods`, `x-request-id` |
+| `DEFAULT_4XX` | `Access-Control-Allow-Origin`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Methods` |
+| `DEFAULT_5XX` | `Access-Control-Allow-Origin`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Methods` |
+| `MISSING_AUTHENTICATION_TOKEN` | `Access-Control-Allow-Origin`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Methods` |
+
+Titles are literal: `DEFAULT_4XX` is Bad Request, `DEFAULT_5XX` is Internal
+Server Error, and `MISSING_AUTHENTICATION_TOKEN` is Not Found. `request_id`
+is substituted in the body. Gateway response headers are static, so they
+do not carry `$context.requestId`. Allow-Origin is the admin origin when
+that origin is in the allow list.
 
 ### API Gateway Authorizers
 
