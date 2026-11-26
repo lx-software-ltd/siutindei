@@ -2090,26 +2090,20 @@ export class ApiStack extends cdk.Stack {
     database.grantAppUserSecretRead(partnerApiKeyAuthorizerFunction);
     database.grantConnect(partnerApiKeyAuthorizerFunction, "siutindei_app");
 
-    // Caching is off while the legacy x-partner-key header is accepted
-    // beside Authorization: Bearer. API Gateway returns 401 before the
-    // Lambda when a listed identity source is missing, so the cache key
-    // includes neither header. Revocation applies on the next request.
-    // The Authorization cache returns when the legacy header is removed.
-    // The construct id is new so CloudFormation creates a fresh authorizer.
-    // An in-place update can leave a live x-partner-key identity source,
-    // and every Bearer-only request would then get 401 before the Lambda.
+    // 5 minutes bounds how long a revoked key remains usable. The cache
+    // key is only Authorization. The legacy x-partner-key header is not
+    // accepted. The construct id stays PartnerApiKeyAuthorizerReplaced
+    // so this updates the authorizer created for the legacy header
+    // instead of replacing it again.
     const partnerApiKeyAuthorizer = new apigateway.RequestAuthorizer(
       this,
       "PartnerApiKeyAuthorizerReplaced",
       {
         handler: partnerApiKeyAuthorizerFunction,
-        identitySources: [],
-        resultsCacheTtl: cdk.Duration.seconds(0),
+        identitySources: [apigateway.IdentitySource.header("Authorization")],
+        resultsCacheTtl: cdk.Duration.seconds(300),
       }
     );
-    (
-      partnerApiKeyAuthorizer.node.defaultChild as apigateway.CfnAuthorizer
-    ).addPropertyDeletionOverride("IdentitySource");
 
     // Health check function
     const healthFunction = createPythonFunction("HealthCheckFunction", {

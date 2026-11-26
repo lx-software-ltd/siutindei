@@ -624,7 +624,7 @@ Tests first: `tests/test_search_validation.py`,
 `tests/test_search_public_details.py`, `tests/test_search_incomplete.py`,
 `tests/test_catalogue_snapshot.py`, `tests/test_staging_search_store.py`.
 
-New query parameters on `/v1/activities/search`:
+New query parameters on `/v1/public/activities/search`:
 
 - `kind`: comma-separated kinds. Absent means all kinds.
 - `age_min` and `age_max`: integers. The filter is range overlap with

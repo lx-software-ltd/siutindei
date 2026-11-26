@@ -298,12 +298,12 @@ function assertPartnerRateRules(resources: Record<string, ApiResource>): void {
   );
   const webAclText = JSON.stringify(webAcl ?? {});
   if (
-    !webAclText.includes('"x-partner-key"') ||
-    !webAclText.includes("PartnerLegacyKeyRateLimit")
+    webAclText.includes('"x-partner-key"') ||
+    webAclText.includes("PartnerLegacyKeyRateLimit") ||
+    !webAclText.includes("PartnerKeyRateLimit")
   ) {
-    throw new Error("Partner WAF must rate limit x-partner-key as well as authorization");
+    throw new Error("Partner WAF must rate limit authorization and not x-partner-key");
   }
-  const legacyMetric = "lxsoftware-siutindei-api-partner-legacy-rate-limit";
   const alarm = Object.values(resources).find(
     (resource) =>
       resource.Type === "AWS::CloudWatch::Alarm" &&
@@ -311,11 +311,11 @@ function assertPartnerRateRules(resources: Record<string, ApiResource>): void {
   );
   const alarmText = JSON.stringify(alarm ?? {});
   if (
-    !alarmText.includes(legacyMetric) ||
+    alarmText.includes("api-partner-legacy-rate-limit") ||
     !alarmText.includes("lxsoftware-siutindei-api-partner-rate-limit")
   ) {
     throw new Error(
-      "Rate-limit alarm must include the bearer and x-partner-key block metrics",
+      "Rate-limit alarm must include the bearer metric and not the legacy header",
     );
   }
 }
@@ -497,17 +497,18 @@ function assertOpsAlarmRules(stack: cdk.Stack): void {
   );
   const partnerAuthorizerLogicalId = partnerAuthorizerEntry?.[0];
   const partnerAuthorizer = partnerAuthorizerEntry?.[1];
-  const partnerIdentity = partnerAuthorizer?.Properties?.IdentitySource;
+  const partnerIdentity = JSON.stringify(
+    partnerAuthorizer?.Properties?.IdentitySource ?? "",
+  );
   if (
     !partnerAuthorizerLogicalId?.startsWith("PartnerApiKeyAuthorizerReplaced") ||
-    partnerAuthorizer?.Properties?.AuthorizerResultTtlInSeconds !== 0 ||
-    (partnerIdentity !== undefined && partnerIdentity !== "") ||
-    JSON.stringify(partnerIdentity ?? "").includes("Authorization") ||
-    JSON.stringify(partnerIdentity ?? "").includes("x-partner-key")
+    partnerAuthorizer?.Properties?.AuthorizerResultTtlInSeconds !== 300 ||
+    !partnerIdentity.includes("Authorization") ||
+    partnerIdentity.includes("x-partner-key")
   ) {
     throw new Error(
       "Partner API-key authorizer must be the replacement construct " +
-        `${partnerAuthorizerLogicalId ?? "(missing)"} with cache off and neither header`,
+        `${partnerAuthorizerLogicalId ?? "(missing)"} and cache Authorization for 5 minutes`,
     );
   }
   assertPartnerAndPublicAuthorizers(

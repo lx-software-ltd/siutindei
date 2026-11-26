@@ -20,10 +20,7 @@ import {
 const SMOKE_CHECK_LIMIT = 1;
 /** Discovery carousels after the first page render 12 at a time. */
 const DISCOVERY_CAROUSEL_LIMIT = 12;
-const SEARCH_PATHS = [
-  '/v1/activities/search',
-  '/api/v1/public/activities/search',
-] as const;
+const SEARCH_PATHS = ['/api/v1/public/activities/search'] as const;
 
 interface EdgeRule {
   readonly description: string;

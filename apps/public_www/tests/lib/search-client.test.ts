@@ -117,7 +117,7 @@ describe('fetchActivitySearch live API integration', () => {
     original[key] = process.env[key];
   }
 
-  it('calls GET /v1/activities/search with auth headers when configured', async () => {
+  it('calls GET /api/v1/public/activities/search with auth headers when configured', async () => {
     process.env.NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED = 'false';
     process.env.NEXT_PUBLIC_SITE_ORIGIN = 'https://siutindei.com';
     delete process.env.NEXT_PUBLIC_SEARCH_API_BASE_URL;
