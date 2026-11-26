@@ -51,6 +51,7 @@ Restore the substring host check, the GTM prefix check, and the
 None.
 
 The security-extended suite omits the alert-suppression query, so the
-`lgtm` mark on the token write was not uploaded. The shared CodeQL
-action now adds that query for Python and JavaScript. This repository
-pins that action. Token storage is still unchanged.
+`lgtm` mark on the token write was not uploaded. Code scanning also
+leaves a SARIF suppression open. The shared CodeQL action adds the
+query and removes those results before upload. This repository pins
+that action. Token storage is still unchanged.
