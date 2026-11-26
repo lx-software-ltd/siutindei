@@ -125,7 +125,19 @@ export function resolveLogoMediaUrl(
 }
 
 export function isManagedMediaUrl(url: string) {
-  return url.startsWith('http') && url.includes('amazonaws.com/');
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  const host = parsed.hostname.toLowerCase();
+  const awsHost = host === 'amazonaws.com' || host.endsWith('.amazonaws.com');
+  return (
+    (parsed.protocol === 'https:' || parsed.protocol === 'http:') &&
+    awsHost &&
+    parsed.pathname.length > 1
+  );
 }
 
 export async function uploadMediaFile(

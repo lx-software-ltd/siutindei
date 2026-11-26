@@ -3379,7 +3379,7 @@ export class ApiStack extends cdk.Stack {
     const apiRateLimit = new ApiRateLimitConstruct(this, "ApiRateLimit", {
       resourcePrefix,
       api,
-      corsOrigin: corsAllowedOrigins.includes(ADMIN_WEB_ORIGIN)
+      corsOrigin: includesExactOrigin(corsAllowedOrigins, ADMIN_WEB_ORIGIN)
         ? ADMIN_WEB_ORIGIN
         : corsAllowedOrigins[0],
       limit: 300,
@@ -3457,6 +3457,15 @@ function sesAddressDomain(address: string): string {
 }
 
 // CORS origins must be concrete at synth time for preflight generation.
+function includesExactOrigin(origins: readonly string[], origin: string): boolean {
+  for (const candidate of origins) {
+    if (candidate === origin) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function resolveCorsAllowedOrigins(scope: Construct): string[] {
   const defaultOrigins = [
     "capacitor://localhost",
