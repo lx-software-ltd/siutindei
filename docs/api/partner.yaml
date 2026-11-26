@@ -8,7 +8,7 @@ info:
 
     ## Authentication
 
-    Every request must include an `x-partner-key` header with a key issued
+    Every request must include an `Authorization: Bearer` header with a key issued
     by an administrator (`POST /v1/admin/api-keys`, see `admin.yaml`).
     Keys are validated by a dedicated API Gateway Lambda authorizer against
     SHA-256 hashes stored in the `api_keys` table. Revoked or expired keys
@@ -93,8 +93,8 @@ paths:
       summary: Search activities
       description: |
         Search for activities matching the specified filters. Same filter
-        semantics as the public `GET /v1/activities/search` endpoint
-        (see `search.yaml`), but authenticated with a partner API key
+        semantics as the public `GET /v1/public/activities/search` endpoint
+        (see `public.yaml`), but authenticated with a partner API key
         instead of the mobile API key + device attestation.
         Results are paginated and ordered by schedule time. Org-scoped
         keys only receive activities of their organization.
@@ -233,7 +233,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "./search.yaml#/components/schemas/ActivitySearchResponse"
+                $ref: "./public.yaml#/components/schemas/ActivitySearchResponse"
         "400":
           description: Invalid query parameters
           content:
@@ -1581,9 +1581,8 @@ paths:
 components:
   securitySchemes:
     PartnerKeyAuth:
-      type: apiKey
-      in: header
-      name: x-partner-key
+      type: http
+      scheme: bearer
       description: |
         Partner API key issued by an administrator. Format:
         `stk_<43 urlsafe characters>`. Only a SHA-256 hash is stored

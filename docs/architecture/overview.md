@@ -58,7 +58,7 @@ Public Website (Next.js static export)        Flutter Mobile / Next.js Admin
   manager CRUD, and user self-service operations.
 - For the full list of API routes, request/response schemas, and
   authentication requirements, see the OpenAPI specs:
-  - [`docs/api/search.yaml`](../api/search.yaml) — public activity search
+  - [`docs/api/public.yaml`](../api/public.yaml) — public activity search
   - [`docs/api/admin.yaml`](../api/admin.yaml) — admin, manager, user, and health endpoints
 - Lambda functions in `backend/lambda/` call into shared code in
   `backend/src/app`.
@@ -199,7 +199,8 @@ pull requests for dependency updates:
 ## Caching
 
 - Public search responses are cached at the CloudFront edge (5-minute TTL)
-  via the public-website distribution's `/v1/activities/search` behavior.
+  via the public-website distribution's behavior for
+  `GET /v1/public/activities/search`.
   The search Lambda sends `Cache-Control: public, max-age=60,
   s-maxage=300` on successful public searches. The API
   Gateway stage cache cluster is intentionally disabled (Checkov CKV_AWS_120 is

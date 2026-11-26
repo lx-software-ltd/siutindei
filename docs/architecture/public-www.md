@@ -113,7 +113,7 @@ Source: [`apps/public_www`](../../apps/public_www).
   `colSpan`, optional `props`).
   The home route renders `DiscoveryHomePage` (Airbnb-style discovery: the
   immersive "Small World" hero, a 3-step search navigator in the hero, and
-  horizontal listing carousels fed by `/v1/activities/search`).
+  horizontal listing carousels fed by `/v1/public/activities/search`).
 - **Brand & immersive homepage:** the "Small World" brand system lives in
   the `@theme` tokens in `src/app/globals.css` (golden-yellow base with
   earth-teal / leaf-green support colors and chocolate ink, sampled from
@@ -164,7 +164,8 @@ Source: [`apps/public_www`](../../apps/public_www).
   entries for
   `maps.googleapis.com` / `maps.gstatic.com`. The search bar **area** label links
   to the map view for the selected region. Search uses browser-side `fetch` to
-  `NEXT_PUBLIC_SITE_ORIGIN` (`/v1/activities/search` on that host) unless
+  `NEXT_PUBLIC_SITE_ORIGIN` (the site proxy rewrites to
+  `/v1/public/activities/search`) unless
   `NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED=true`, in which case listings are
   loaded at runtime from
   `{NEXT_PUBLIC_SITE_ORIGIN}/fixtures/activity_search_staging.json` (static
@@ -425,8 +426,9 @@ and is invoked by both workflows. It supports three primary modes:
    `apps/public_www/out` to the bucket, writes a release marker, and
    invalidates CloudFront with a site-scope path list (locale prefixes
    `/en*` and `/zh-HK*`, exported pages, `/_next/static/*`,
-   `/fixtures/*`, `/v1/activities/search*`, `/robots.txt`, `/sitemap.xml`,
-   and the root and 404 pages). Promotion and maintenance still
+   `/fixtures/*`, `/v1/activities/search*`, `/api/v1/public*`,
+   `/robots.txt`, `/sitemap.xml`, and the root and 404 pages). Promotion
+   and maintenance still
    invalidate `/*`.
 2. **Promotion**: when `PUBLIC_WWW_PROMOTE_RELEASE_ID` is set:
    - if `PUBLIC_WWW_PROMOTION_BUILD_DIR` is also set, the local build (with
@@ -520,7 +522,7 @@ distributions (production + staging) carry an extra cache behavior:
 
 | Item | Value |
 |---|---|
-| Path pattern | `/v1/activities/search` (exact path; admin/other API paths are **not** exposed) |
+| Path pattern | `/v1/activities/search` and `/api/v1/public/activities/search` (exact paths; both rewrite to `/v1/public/activities/search`; admin paths are **not** exposed) |
 | Origin | `HttpOrigin` → API Gateway custom domain from the `SearchApiProxyOriginDomain` parameter (`api.siutindei.com`), HTTPS-only, TLS 1.2+. CloudFront adds `X-Origin-Verify` from `PublicWwwOriginVerifySecret`. That header is not forwarded from the viewer |
 | Allowed methods | `GET`, `HEAD`, `OPTIONS` |
 | Allow-list function | `${env}SearchProxyAllowlistFunction` CloudFront Function (viewer-request) returns `405` for any other method |
@@ -564,7 +566,8 @@ same-origin (`connect-src 'self'`). A local
 `NEXT_PUBLIC_SEARCH_API_BASE_URL` overrides that origin and is not set in
 deployed builds. Staging fixture mode does not post.
 `src/lib/activities/search-client.ts` resolves
-`new URL('/v1/activities/search', siteOrigin)`, which hits the CloudFront
+`new URL('/v1/activities/search', siteOrigin)`, which CloudFront rewrites to
+`/v1/public/activities/search`. That hits the CloudFront
 behavior on that host. Production's origin is `https://siutindei.com` and
 staging's is `https://www-staging.siutindei.com`. Calling
 `api.siutindei.com` directly would miss the `X-Origin-Verify` header
@@ -576,11 +579,12 @@ response without re-invoking the origin, so the per-request `x-api-key` /
 not enforced for cached entries. This matches the intent of a *public* search
 endpoint and the prior API Gateway method-cache behavior of returning cached
 results. Abuse protection for that cached path is Cloudflare's rate
-limit and the custom rules on `/v1/activities/search`. The CloudFront
+limit and the custom rules on the search proxy, which rewrites to
+`/v1/public/activities/search`. The CloudFront
 WAF WebACL is detached from the public website distributions while the
 origin lock is on. A caller who copies the public attestation token and calls
 `api.siutindei.com` directly is denied: `X-Origin-Verify` is
-added only by CloudFront. Only the exact `/v1/activities/search` path is
+added only by CloudFront. Only the search proxy paths are
 proxied, so admin endpoints (`/v1/admin/*`) are never reachable through the
 website domain.
 Distribution-level custom error responses (403/404 → `/404.html`) still apply
@@ -613,8 +617,8 @@ Request path:
 
 ```
 browser → Cloudflare (siutindei.com, proxied)
-            rate limit /v1/activities/search: 15 req / 10 s / IP, block 10 s
-            custom rules on /v1/activities/search only (block):
+            rate limit on the search proxy (rewrites to /v1/public/activities/search): 15 req / 10 s / IP, block 10 s
+            custom rules on that proxy only (block):
               limit ∉ {1, 12, 24, 30}; Sec-Fetch-Site present and ≠ same-origin;
               empty or HTTP-library/headless User-Agent
             cache rules: bypass everything except /_next/static/*

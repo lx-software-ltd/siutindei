@@ -8,6 +8,40 @@ from __future__ import annotations
 
 from typing import Any
 
+_PROBLEMS = {
+    400: ("invalid_request", "Bad Request"),
+    401: ("unauthenticated", "Unauthorized"),
+    403: ("forbidden", "Forbidden"),
+    404: ("not_found", "Not Found"),
+    409: ("conflict", "Conflict"),
+    429: ("rate_limited", "Too Many Requests"),
+    500: ("internal_error", "Internal Server Error"),
+    503: ("unavailable", "Service Unavailable"),
+}
+
+
+def problem_body(
+    status_code: int,
+    message: str,
+    detail: str | None = None,
+    request_id: str = "",
+    field: str | None = None,
+) -> dict[str, Any]:
+    """Error body for /v1. ``error`` stays beside the problem members."""
+    code, title = _PROBLEMS.get(status_code, ("error", "Error"))
+    body: dict[str, Any] = {
+        "type": "about:blank",
+        "title": title,
+        "status": status_code,
+        "detail": detail or message,
+        "code": code,
+        "request_id": request_id,
+        "error": message,
+    }
+    if field:
+        body["errors"] = [{"field": field, "message": message}]
+    return body
+
 
 class AppError(Exception):
     """Base exception for application errors.
@@ -32,12 +66,15 @@ class AppError(Exception):
         self.status_code = status_code
         self.detail = detail
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self, request_id: str = "") -> dict[str, Any]:
         """Convert exception to API response body."""
-        result: dict[str, Any] = {"error": self.message}
-        if self.detail:
-            result["detail"] = self.detail
-        return result
+        return problem_body(
+            self.status_code,
+            self.message,
+            self.detail,
+            request_id=request_id,
+            field=getattr(self, "field", None),
+        )
 
 
 class ValidationError(AppError):

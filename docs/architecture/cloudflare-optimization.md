@@ -286,7 +286,7 @@ resource "cloudflare_ruleset" "cache_api" {
         }
       }
     }
-    expression  = "(http.request.uri.path eq \"/v1/activities/search\")"
+    expression  = "(http.request.uri.path eq \"/v1/public/activities/search\")"
     description = "Cache search results"
     enabled     = true
   }
@@ -650,7 +650,7 @@ resource "cloudflare_ruleset" "rate_limit" {
       requests_per_period = 100
       mitigation_timeout  = 60
     }
-    expression  = "(http.request.uri.path eq \"/v1/activities/search\")"
+    expression  = "(http.request.uri.path eq \"/v1/public/activities/search\")"
     description = "Rate limit search endpoint"
     enabled     = true
   }
@@ -788,7 +788,7 @@ resource "cloudflare_ruleset" "security_headers" {
         # Only for non-search endpoints
       }
     }
-    expression  = "(http.host eq \"api.siutindei.com\") and not (http.request.uri.path eq \"/v1/activities/search\")"
+    expression  = "(http.host eq \"api.siutindei.com\") and not (http.request.uri.path eq \"/v1/public/activities/search\")"
     description = "Add security headers to API"
     enabled     = true
   }
@@ -1023,7 +1023,7 @@ curl -sI https://api.siutindei.com/v1/health
 **Verification:**
 ```bash
 # Check cache status
-curl -sI "https://siutindei.com/v1/activities/search?limit=10"
+curl -sI "https://siutindei.com/api/v1/public/activities/search?limit=10"
 # Live search caching is the public-website CloudFront distribution.
 # A cf-cache-status header would mean api.siutindei.com was proxied.
 ```

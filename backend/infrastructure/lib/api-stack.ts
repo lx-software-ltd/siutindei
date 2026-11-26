@@ -639,29 +639,6 @@ export class ApiStack extends cdk.Stack {
           "For edge-optimized endpoints, must be in us-east-1.",
       }
     );
-    const apiSecondaryCustomDomainName = new cdk.CfnParameter(
-      this,
-      "ApiSecondaryCustomDomainName",
-      {
-        type: "String",
-        default: "",
-        description:
-          "Optional second custom domain mapped to the same stage while " +
-          "clients move between hostnames (e.g., api.siutindei.com). " +
-          "Leave empty when only ApiCustomDomainName is in use.",
-      }
-    );
-    const apiSecondaryCustomDomainCertificateArn = new cdk.CfnParameter(
-      this,
-      "ApiSecondaryCustomDomainCertificateArn",
-      {
-        type: "String",
-        default: "",
-        description:
-          "Regional ACM certificate ARN for ApiSecondaryCustomDomainName " +
-          "(same region as the API).",
-      }
-    );
     const apiDisableExecuteApiEndpoint = new cdk.CfnParameter(
       this,
       "ApiDisableExecuteApiEndpoint",
@@ -670,7 +647,7 @@ export class ApiStack extends cdk.Stack {
         default: "false",
         allowedValues: ["false", "true"],
         description:
-          "When true and the secondary API custom domain is configured, " +
+          "When true and the API custom domain is configured, " +
           "the default execute-api hostname returns 403.",
       }
     );
@@ -1357,7 +1334,7 @@ export class ApiStack extends cdk.Stack {
               ],
               allowedOrigins: corsAllowedOrigins,
               allowedHeaders: ["*"],
-              exposedHeaders: ["ETag"],
+              exposedHeaders: ["ETag", "x-request-id"],
               maxAge: 3000,
             },
           ],
@@ -1446,7 +1423,7 @@ export class ApiStack extends cdk.Stack {
             ],
             allowedOrigins: corsAllowedOrigins,
             allowedHeaders: ["*"],
-            exposedHeaders: ["ETag"],
+            exposedHeaders: ["ETag", "x-request-id"],
             maxAge: 3000,
           },
         ],
@@ -2113,17 +2090,26 @@ export class ApiStack extends cdk.Stack {
     database.grantAppUserSecretRead(partnerApiKeyAuthorizerFunction);
     database.grantConnect(partnerApiKeyAuthorizerFunction, "siutindei_app");
 
-    // 15 minutes bounds how long a revoked key remains usable, and how
-    // often a long partner sync pays for a cold authorizer.
+    // Caching is off while the legacy x-partner-key header is accepted
+    // beside Authorization: Bearer. API Gateway returns 401 before the
+    // Lambda when a listed identity source is missing, so the cache key
+    // includes neither header. Revocation applies on the next request.
+    // The Authorization cache returns when the legacy header is removed.
+    // The construct id is new so CloudFormation creates a fresh authorizer.
+    // An in-place update can leave a live x-partner-key identity source,
+    // and every Bearer-only request would then get 401 before the Lambda.
     const partnerApiKeyAuthorizer = new apigateway.RequestAuthorizer(
       this,
-      "PartnerApiKeyAuthorizer",
+      "PartnerApiKeyAuthorizerReplaced",
       {
         handler: partnerApiKeyAuthorizerFunction,
-        identitySources: [apigateway.IdentitySource.header("x-partner-key")],
-        resultsCacheTtl: cdk.Duration.minutes(15),
+        identitySources: [],
+        resultsCacheTtl: cdk.Duration.seconds(0),
       }
     );
+    (
+      partnerApiKeyAuthorizer.node.defaultChild as apigateway.CfnAuthorizer
+    ).addPropertyDeletionOverride("IdentitySource");
 
     // Health check function
     const healthFunction = createPythonFunction("HealthCheckFunction", {
@@ -2347,8 +2333,15 @@ export class ApiStack extends cdk.Stack {
         loggingLevel: apigateway.MethodLoggingLevel.INFO,
         dataTraceEnabled: false,
         tracingEnabled: true,
+        methodOptions: {
+          "/health/GET": {
+            throttlingRateLimit: 10,
+            throttlingBurstLimit: 20,
+          },
+        },
         // Response caching for the public search endpoint has been moved to the
-        // CloudFront edge (see PublicWwwStack `/v1/activities/search` behavior).
+        // CloudFront edge (see PublicWwwStack, which rewrites to
+        // `/v1/public/activities/search`).
         // The API Gateway stage cache cluster is a fixed hourly charge
         // (0.5 GB ≈ $0.028/hr ≈ $20/mo) regardless of traffic, which dominated
         // the API Gateway bill while serving only this one low-traffic method.
@@ -2364,7 +2357,8 @@ export class ApiStack extends cdk.Stack {
     // intentionally suppressed for the deployment stage. Stage caching is
     // disabled (see the `cacheClusterEnabled: false` rationale above): response
     // caching for the public search endpoint is handled at the CloudFront edge
-    // via the public-website distribution's `/v1/activities/search` behavior.
+    // via the public-website distribution's behavior for
+    // `/v1/public/activities/search`.
     // The suppression lives in `.checkov.yaml` (skip-check) rather than inline
     // CDK metadata, because skip-check excludes the finding from SARIF output
     // entirely instead of merely marking it skipped (inline metadata
@@ -2379,20 +2373,62 @@ export class ApiStack extends cdk.Stack {
     // CORS headers, causing the browser to block the response.  The frontend
     // then sees a CORS / network error instead of a useful status code.
     // -------------------------------------------------------------------------
+    // CDK prefixes each key with `gatewayresponse.header.` and copies the
+    // value unchanged (GatewayResponse.buildResponseParameters). A
+    // `method.response.header.` key never reaches the client. Values keep
+    // the one pair of single quotes the CDK README requires. Gateway
+    // response header values are static text or an incoming request
+    // parameter. `$context` is not substituted there, so a quoted
+    // `$context.requestId` would be sent as those characters. The body
+    // `request_id` field is the substitution that API Gateway evaluates.
+    // The origin matches the WAF: the admin site when it is allowed,
+    // otherwise the first configured origin.
+    const gatewayErrorOrigin = includesExactOrigin(
+      corsAllowedOrigins,
+      ADMIN_WEB_ORIGIN
+    )
+      ? ADMIN_WEB_ORIGIN
+      : corsAllowedOrigins[0];
     const gatewayResponseHeaders: Record<string, string> = {
-      "method.response.header.Access-Control-Allow-Origin": `'${corsAllowedOrigins[0]}'`,
-      "method.response.header.Access-Control-Allow-Headers":
+      "Access-Control-Allow-Origin": `'${gatewayErrorOrigin}'`,
+      "Access-Control-Allow-Headers":
         "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'",
-      "method.response.header.Access-Control-Allow-Methods":
-        "'GET,POST,PUT,DELETE,OPTIONS'",
+      "Access-Control-Allow-Methods": "'GET,POST,PUT,PATCH,DELETE,OPTIONS'",
     };
+    // One literal title per existing response. Gateway responses only
+    // support simple variable substitution, so a Velocity #set/#if chain
+    // would be sent to the client as text and the body would not be JSON.
+    const gatewayProblemFields = [
+      '  "detail": $context.error.messageString,',
+      '  "code": "gateway_error",',
+      '  "request_id": "$context.requestId",',
+      '  "message": $context.error.messageString',
+    ];
+    const gatewayErrorTemplate = (title: string): string =>
+      ["{", `  "title": "${title}",`, ...gatewayProblemFields, "}"].join("\n");
     api.addGatewayResponse("GatewayResponseDefault4XX", {
       type: apigateway.ResponseType.DEFAULT_4XX,
       responseHeaders: gatewayResponseHeaders,
+      templates: {
+        "application/json": gatewayErrorTemplate("Bad Request"),
+      },
     });
     api.addGatewayResponse("GatewayResponseDefault5XX", {
       type: apigateway.ResponseType.DEFAULT_5XX,
       responseHeaders: gatewayResponseHeaders,
+      templates: {
+        "application/json": gatewayErrorTemplate("Internal Server Error"),
+      },
+    });
+    // /health was the last IAM method. A missing signature now means the
+    // path is not a route, so the response is 404.
+    api.addGatewayResponse("GatewayResponseMissingAuthenticationToken", {
+      type: apigateway.ResponseType.MISSING_AUTHENTICATION_TOKEN,
+      statusCode: "404",
+      responseHeaders: gatewayResponseHeaders,
+      templates: {
+        "application/json": gatewayErrorTemplate("Not Found"),
+      },
     });
 
     const mobileApiKey = new apigateway.ApiKey(this, "MobileSearchApiKey", {
@@ -2582,15 +2618,34 @@ export class ApiStack extends cdk.Stack {
     // API Routes
     // ---------------------------------------------------------------------
 
-    // Health check endpoint (IAM auth)
+    // Open health check. A direct invocation still runs the database check.
     const health = api.root.addResource("health");
-    health.addMethod("GET", new apigateway.LambdaIntegration(healthFunction), {
-      authorizationType: apigateway.AuthorizationType.IAM,
-    });
+    const healthMethod = health.addMethod(
+      "GET",
+      new apigateway.LambdaIntegration(healthFunction),
+      {
+        authorizationType: apigateway.AuthorizationType.NONE,
+      }
+    );
+    // CKV_AWS_59 flags an open method. This one is the public liveness
+    // probe and the HTTP path does not touch the database.
+    (healthMethod.node.defaultChild as apigateway.CfnMethod).addMetadata(
+      "checkov",
+      {
+        skip: [
+          {
+            id: "CKV_AWS_59",
+            comment:
+              "This is the public liveness check and it does not touch the database.",
+          },
+        ],
+      }
+    );
 
     // v1 API
     const v1 = api.root.addResource("v1");
-    const activities = v1.addResource("activities");
+    const publicApi = v1.addResource("public");
+    const activities = publicApi.addResource("activities");
     const search = activities.addResource("search");
 
     const cacheKeyParameters = [
@@ -2623,7 +2678,7 @@ export class ApiStack extends cdk.Stack {
       requestParameters,
     });
 
-    const listingEvents = v1.addResource("listing-events");
+    const listingEvents = publicApi.addResource("listing-events");
     listingEvents.addMethod(
       "POST",
       new apigateway.LambdaIntegration(listingEventsIngestFunction),
@@ -2900,7 +2955,7 @@ export class ApiStack extends cdk.Stack {
     }
 
     // -------------------------------------------------------------------------
-    // Partner routes at /v1/partner (authenticated with x-partner-key)
+    // Partner routes at /v1/partner (Authorization: Bearer)
     // Read: /v1/partner/activities/search (read or crud scoped keys).
     // CRUD: /v1/partner/{resource}[/{id}] (crud scoped keys only for
     // writes; enforced in the Lambda because the cached authorizer policy
@@ -2942,6 +2997,18 @@ export class ApiStack extends cdk.Stack {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
       authorizer: partnerApiKeyAuthorizer,
     });
+    // The invoke permission is a child of the function, not the authorizer.
+    // The deployment already depends on the authorizer, so without this
+    // DependsOn a new permission can land after the deployment and partner
+    // calls fail until the permission exists. addDependency does not add
+    // a resource.
+    const partnerAuthorizerPermission =
+      partnerApiKeyAuthorizerFunction.node.tryFindChild(
+        `${cdk.Names.uniqueId(partnerApiKeyAuthorizer)}:Permissions`
+      );
+    if (partnerAuthorizerPermission !== undefined && api.latestDeployment) {
+      api.latestDeployment.node.addDependency(partnerAuthorizerPermission);
+    }
 
     // -------------------------------------------------------------------------
     // User routes at /v1/user (accessible by any logged-in Cognito user)
@@ -3140,89 +3207,46 @@ export class ApiStack extends cdk.Stack {
       ),
     });
 
-    // Import certificate for custom domain
-    const apiCertificate = acm.Certificate.fromCertificateArn(
-      this,
-      "ApiCertificate",
-      apiCustomDomainCertificateArn.valueAsString
-    );
-
-    // Create custom domain for API Gateway (Regional endpoint)
-    // Regional is preferred for APIs not requiring global edge caching
-    const apiDomain = new apigateway.DomainName(this, "ApiCustomDomain", {
-      domainName: apiCustomDomainName.valueAsString,
-      certificate: apiCertificate,
-      endpointType: apigateway.EndpointType.REGIONAL,
-      securityPolicy: apigateway.SecurityPolicy.TLS_1_2,
-    });
-    const apiDomainCfn = apiDomain.node.defaultChild as apigateway.CfnDomainName;
-    apiDomainCfn.cfnOptions.condition = useApiCustomDomain;
-
-    // Map the custom domain to the API stage
-    const apiMapping = new apigateway.BasePathMapping(this, "ApiBasePathMapping", {
-      domainName: apiDomain,
-      restApi: api,
-      stage: api.deploymentStage,
-    });
-    const apiMappingCfn = apiMapping.node.defaultChild as apigateway.CfnBasePathMapping;
-    apiMappingCfn.cfnOptions.condition = useApiCustomDomain;
-
-    const useApiSecondaryCustomDomain = new cdk.CfnCondition(
-      this,
-      "UseApiSecondaryCustomDomain",
-      {
-        expression: cdk.Fn.conditionAnd(
-          cdk.Fn.conditionNot(
-            cdk.Fn.conditionEquals(apiSecondaryCustomDomainName.valueAsString, "")
-          ),
-          cdk.Fn.conditionNot(
-            cdk.Fn.conditionEquals(
-              apiSecondaryCustomDomainCertificateArn.valueAsString,
-              ""
-            )
-          )
-        ),
-      }
-    );
-    const apiSecondaryDomain = new apigateway.DomainName(
+    // Construct ids are historical. The live domain was created under
+    // these ids, and renaming them would replace it.
+    const apiDomain = new apigateway.DomainName(
       this,
       "ApiSecondaryCustomDomain",
       {
-        domainName: apiSecondaryCustomDomainName.valueAsString,
+        domainName: apiCustomDomainName.valueAsString,
         certificate: acm.Certificate.fromCertificateArn(
           this,
           "ApiSecondaryCertificate",
-          apiSecondaryCustomDomainCertificateArn.valueAsString
+          apiCustomDomainCertificateArn.valueAsString
         ),
         endpointType: apigateway.EndpointType.REGIONAL,
         securityPolicy: apigateway.SecurityPolicy.TLS_1_2,
       }
     );
     (
-      apiSecondaryDomain.node.defaultChild as apigateway.CfnDomainName
-    ).cfnOptions.condition = useApiSecondaryCustomDomain;
-    const apiSecondaryMapping = new apigateway.BasePathMapping(
+      apiDomain.node.defaultChild as apigateway.CfnDomainName
+    ).cfnOptions.condition = useApiCustomDomain;
+    const apiMapping = new apigateway.BasePathMapping(
       this,
       "ApiSecondaryBasePathMapping",
       {
-        domainName: apiSecondaryDomain,
+        domainName: apiDomain,
         restApi: api,
         stage: api.deploymentStage,
       }
     );
     (
-      apiSecondaryMapping.node.defaultChild as apigateway.CfnBasePathMapping
-    ).cfnOptions.condition = useApiSecondaryCustomDomain;
+      apiMapping.node.defaultChild as apigateway.CfnBasePathMapping
+    ).cfnOptions.condition = useApiCustomDomain;
 
     // The RestApi flag only takes effect on the next stage update, so a
-    // stage variable changes with it. Gated on the secondary domain because
-    // that is the production host (ApiCustomDomainName is empty).
+    // stage variable changes with it. Gated on the custom domain.
     const disableExecuteApiEndpoint = new cdk.CfnCondition(
       this,
       "DisableExecuteApiEndpoint",
       {
         expression: cdk.Fn.conditionAnd(
-          useApiSecondaryCustomDomain,
+          useApiCustomDomain,
           cdk.Fn.conditionEquals(
             apiDisableExecuteApiEndpoint.valueAsString,
             "true"
@@ -3350,28 +3374,6 @@ export class ApiStack extends cdk.Stack {
     );
     apiCustomDomainUrlOutput.condition = useApiCustomDomain;
 
-    const apiSecondaryCustomDomainTarget = new cdk.CfnOutput(
-      this,
-      "ApiSecondaryCustomDomainTarget",
-      {
-        value: apiSecondaryDomain.domainNameAliasDomainName,
-        description:
-          "CNAME target for the secondary API custom domain (Cloudflare, " +
-          "proxy disabled).",
-      }
-    );
-    apiSecondaryCustomDomainTarget.condition = useApiSecondaryCustomDomain;
-
-    const apiSecondaryCustomDomainUrlOutput = new cdk.CfnOutput(
-      this,
-      "ApiSecondaryCustomDomainUrl",
-      {
-        value: `https://${apiSecondaryCustomDomainName.valueAsString}`,
-        description: "The secondary custom domain URL for the API.",
-      }
-    );
-    apiSecondaryCustomDomainUrlOutput.condition = useApiSecondaryCustomDomain;
-
     // ---------------------------------------------------------------------
     // Per-session rate limit on signed-in routes (all served by the admin
     // Lambda). One looping browser tab must not exhaust its concurrency.
@@ -3379,7 +3381,7 @@ export class ApiStack extends cdk.Stack {
     const apiRateLimit = new ApiRateLimitConstruct(this, "ApiRateLimit", {
       resourcePrefix,
       api,
-      corsOrigin: corsAllowedOrigins.includes(ADMIN_WEB_ORIGIN)
+      corsOrigin: includesExactOrigin(corsAllowedOrigins, ADMIN_WEB_ORIGIN)
         ? ADMIN_WEB_ORIGIN
         : corsAllowedOrigins[0],
       limit: 300,
@@ -3457,6 +3459,15 @@ function sesAddressDomain(address: string): string {
 }
 
 // CORS origins must be concrete at synth time for preflight generation.
+function includesExactOrigin(origins: readonly string[], origin: string): boolean {
+  for (const candidate of origins) {
+    if (candidate === origin) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function resolveCorsAllowedOrigins(scope: Construct): string[] {
   const defaultOrigins = [
     "capacitor://localhost",

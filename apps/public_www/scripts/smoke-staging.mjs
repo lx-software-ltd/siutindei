@@ -1,7 +1,7 @@
 // Pages smoke test for the public website. Crawls /sitemap.xml and
 // makes sure every URL it lists responds with 2xx/3xx. Falls back to a fixed
 // list when the sitemap is unavailable. When staging search is live, also
-// requests /v1/activities/search?limit=1 with the website credentials.
+// requests /api/v1/public/activities/search?limit=1 with the website credentials.
 //
 // Required env:
 //   SMOKE_BASE_URL         absolute origin to test (https in production-like
@@ -13,7 +13,7 @@
 //   STAGING_BYPASS_SECRET  sent as x-staging-bypass so the staging IP
 //                          allow-list Worker lets the runner through
 //   NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED
-//                          false/0/no probes GET /v1/activities/search.
+//                          false/0/no probes GET /api/v1/public/activities/search.
 //                          Anything else, including unset, skips that probe.
 //   NEXT_PUBLIC_SEARCH_API_KEY
 //   NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN
@@ -101,7 +101,7 @@ export function buildLiveSearchProbe(baseUrl, env) {
       'Live search probe requires NEXT_PUBLIC_SEARCH_API_KEY and NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN.',
     );
   }
-  const url = new URL('/v1/activities/search', baseUrl);
+  const url = new URL('/api/v1/public/activities/search', baseUrl);
   url.searchParams.set('limit', '1');
   return {
     url: url.toString(),
@@ -308,7 +308,7 @@ async function main() {
       }
     } catch (error) {
       failures.push({
-        url: new URL('/v1/activities/search', baseUrl).toString(),
+        url: new URL('/api/v1/public/activities/search', baseUrl).toString(),
         status: null,
         detail: error.message,
       });

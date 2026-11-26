@@ -23,7 +23,7 @@ export const INDEXED_ROUTE_PATHS: readonly AppRoutePath[] = [
 ];
 
 /** Not pages: the proxied search API and Cloudflare's challenge platform. */
-export const ROBOTS_DISALLOWED_PATHS = ['/v1/', '/cdn-cgi/'] as const;
+export const ROBOTS_DISALLOWED_PATHS = ['/api/', '/v1/', '/cdn-cgi/'] as const;
 
 /**
  * AI search and user-action fetchers. They may read pages so answers can

@@ -10,6 +10,7 @@ the plan turns out to be wrong.
 | File | What it covers |
 | --- | --- |
 | [`agent-harness.md`](agent-harness.md) | Agent harness |
+| [`api-standard.md`](api-standard.md) | One API shape: `/v1/<audience>/`, bearer tokens, snake_case on the wire |
 | [`catalog-versioning.md`](catalog-versioning.md) | Catalog versioning |
 | [`cloudflare-edge-protection.md`](cloudflare-edge-protection.md) | Cloudflare edge protection for the public website |
 | [`enrichment-now-empty-and-template-flag.md`](enrichment-now-empty-and-template-flag.md) | Enrichment "Now" and the template description flag |
@@ -28,3 +29,4 @@ the plan turns out to be wrong.
 | [`siutindei-domain-consolidation.md`](siutindei-domain-consolidation.md) | Move admin, API, and Cognito onto siutindei.com |
 | [`staging-smoke-origin.md`](staging-smoke-origin.md) | Point staging smoke at the resolve-step origin |
 | [`2026-11-10-search-area-scope.md`](2026-11-10-search-area-scope.md) | Limit public search to selected Hong Kong areas |
+| [`2026-11-25-code-scanning-alerts.md`](2026-11-25-code-scanning-alerts.md) | Clear the open Semgrep and CodeQL alerts |

@@ -35,14 +35,14 @@ their primary responsibilities.
 ### Listing events ingest
 - Function: ListingEventsIngestFunction
 - Handler: backend/lambda/listing_events_ingest/handler.py
-- Trigger: API Gateway `POST /v1/listing-events`
+- Trigger: API Gateway `POST /v1/public/listing-events`
 - Auth: API key + device attestation authorizer (same as public search)
 - Purpose: accept first-party listing funnel events (search, view, CTA,
   lead) from public www. Does not store PII. GA4 remains the board `web`
   tool source.
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`), INSERT on
   `listing_events`
-- Endpoint contract: [`docs/api/search.yaml`](../api/search.yaml)
+- Endpoint contract: [`docs/api/public.yaml`](../api/public.yaml)
 
 ### Listing events rollup
 - Function: ListingEventsRollupFunction
@@ -71,7 +71,7 @@ their primary responsibilities.
 ### Activity search
 - Function: SiutindeiSearchFunction
 - Handler: backend/lambda/search/handler.py
-- Trigger: API Gateway `GET /v1/activities/search` and
+- Trigger: API Gateway `GET /v1/public/activities/search` and
   `GET /v1/partner/activities/search`
 - Auth: API key + device attestation authorizer (mobile route);
   partner API-key authorizer (partner route, org-scoped keys are
@@ -128,7 +128,8 @@ their primary responsibilities.
   `PATCH /v1/admin/organizations/{id}`,
   `GET` and `POST /v1/admin/organizations/{id}/enrichment`),
   admin/manager group for `/v1/manager/*`, any authenticated user for
-  `/v1/user/*`; partner API keys (`x-partner-key`) for `/v1/partner/*`
+  `/v1/user/*`; partner API keys (`Authorization: Bearer`, and `x-partner-key`
+  for one deploy) for `/v1/partner/*`
 - Purpose: admin CRUD (including activity categories, category
   suggestions, and partner API key
   management), manager CRUD (filtered by ownership), partner CRUD
@@ -409,10 +410,12 @@ their primary responsibilities.
 - Function: PartnerApiKeyAuthorizerFunction
 - Handler: backend/lambda/authorizers/api_key/handler.py
 - Trigger: API Gateway request authorizer for `/v1/partner/*` routes
-- Purpose: validate the `x-partner-key` header against SHA-256 hashed
-  keys in the `api_keys` table; passes key id, scope (`read`/`crud`),
+- Purpose: validate the `Authorization: Bearer` token against SHA-256 hashed
+  keys in the `api_keys` table. The legacy `x-partner-key` header is
+  accepted for one deploy when the bearer token is absent. The authorizer
+  logs `auth_scheme=legacy|bearer` and passes key id, scope (`read`/`crud`),
   and organization scope to handlers via authorizer context. Scope and
-  organization enforcement happens in the handlers because the cached
+  organization enforcement happens in the handlers because an
   Allow policy covers all partner routes.
 - DB access: RDS Proxy with IAM auth (`siutindei_app`; column-scoped
   UPDATE grant for `last_used_at`)
@@ -421,8 +424,8 @@ their primary responsibilities.
   Proxy TLS handshake); 256 MB made one cold call about 7 seconds.
 - Dependencies: `requirements-core.txt`, same as search. The handler
   must not import PyJWT, phonenumbers, pycountry, pypdf, or alembic.
-- Cache: authorizer results cached 15 minutes, bounding how long a
-  revoked key keeps working
+- Cache: off while the legacy header is accepted, so the identity source
+  includes neither header and revocation applies on the next request
 - Concurrency: no reserved concurrency (account unreserved pool is at
   the AWS minimum of 100; authorizer caching keeps invocations low)
 

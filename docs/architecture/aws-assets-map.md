@@ -320,7 +320,7 @@ For each function above, the following resources are created:
 - X-Ray Tracing: Enabled
 - Caching: Disabled (no stage cache cluster). Public search responses are
   cached at the CloudFront edge instead — see the public-website distribution
-  `/v1/activities/search` behavior in
+  `/v1/public/activities/search` behavior in
   [`public-www.md`](./public-www.md#search-api-edge-caching).
 
 **CORS Configuration:**
@@ -330,14 +330,14 @@ For each function above, the following resources are created:
 ### API Gateway Resources and Methods
 
 For the complete list of endpoints with request/response schemas, see
-the OpenAPI specs: [`docs/api/search.yaml`](../api/search.yaml)
+the OpenAPI specs: [`docs/api/public.yaml`](../api/public.yaml)
 and [`docs/api/admin.yaml`](../api/admin.yaml).
 
 | Resource Path | Method | Authorization | Integration | Notes |
 |--------------|--------|---------------|-------------|-------|
-| `/health` | GET | IAM | `HealthCheckFunction` | Health check |
-| `/v1/activities/search` | GET | Device Attestation + API Key | `SiutindeiSearchFunction` | Cached at the website CloudFront edge for up to 5 minutes (`s-maxage=300`) |
-| `/v1/listing-events` | POST | Device Attestation + API Key | `ListingEventsIngestFunction` | First-party funnel ingest; never cached |
+| `/health` | GET | NONE | `HealthCheckFunction` | Health check |
+| `/v1/public/activities/search` | GET | Device Attestation + API Key | `SiutindeiSearchFunction` | Cached at the website CloudFront edge for up to 5 minutes (`s-maxage=300`). The old `/v1/activities/search` behavior rewrites to this path. |
+| `/v1/public/listing-events` | POST | Device Attestation + API Key | `ListingEventsIngestFunction` | First-party funnel ingest; never cached |
 | `/v1/admin/{resource}` | GET, POST | Admin Group | `SiutindeiAdminFunction` | CRUD (organizations, locations, activity-categories, activities, pricing, schedules, feedback-labels, organization-feedback) |
 | `/v1/admin/{resource}/{id}` | ANY | Admin Group | `SiutindeiAdminFunction` | CRUD by ID |
 | `/v1/admin/organizations/{id}/media` | POST, DELETE | Admin Group | `SiutindeiAdminFunction` | Media upload/delete |
@@ -380,6 +380,13 @@ read error status codes instead of silently blocking them.
 |--------------|---------------|
 | `DEFAULT_4XX` | `Access-Control-Allow-Origin`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Methods` |
 | `DEFAULT_5XX` | `Access-Control-Allow-Origin`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Methods` |
+| `MISSING_AUTHENTICATION_TOKEN` | `Access-Control-Allow-Origin`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Methods` |
+
+Titles are literal: `DEFAULT_4XX` is Bad Request, `DEFAULT_5XX` is Internal
+Server Error, and `MISSING_AUTHENTICATION_TOKEN` is Not Found. `request_id`
+is substituted in the body. Gateway response headers are static, so they
+do not carry `$context.requestId`. Allow-Origin is the admin origin when
+that origin is in the allow list.
 
 ### API Gateway Authorizers
 
@@ -389,7 +396,7 @@ read error status codes instead of silently blocking them.
 | Request Authorizer | `AdminGroupAuthorizer` | Lambda | `AdminGroupAuthorizerFunction` | JWT + admin group, or importer on catalog import, import history, owner-UI organization lookup and PATCH, and organization enrichment GET/POST, 5-min cache |
 | Request Authorizer | `ManagerGroupAuthorizer` | Lambda | `ManagerGroupAuthorizerFunction` | JWT + admin/manager group check, 5-min cache |
 | Request Authorizer | `UserAuthorizer` | Lambda | `UserAuthorizerFunction` | JWT validation (any user), 5-min cache |
-| Request Authorizer | `PartnerApiKeyAuthorizer` | Lambda | `PartnerApiKeyAuthorizerFunction` | Validates `x-partner-key` against hashed DB keys, 15-min cache |
+| Request Authorizer | `PartnerApiKeyAuthorizerReplaced` | Lambda | `PartnerApiKeyAuthorizerFunction` | Validates `Authorization: Bearer`, and `x-partner-key` for one deploy. Cache is off so the identity source includes neither header. The construct id is new so CloudFormation replaces the live authorizer instead of updating it in place |
 
 ### API Gateway API Key and Usage Plan
 
@@ -405,7 +412,7 @@ in the main stack.
 
 | Resource Type | Logical ID | Physical Name/ID | Notes |
 |--------------|------------|------------------|-------|
-| WAFv2 WebACL | `ApiRateLimitApiWebAcl*` | `lxsoftware-siutindei-api-waf` | REGIONAL. Known-bad-inputs rule group blocks Log4j2 lookups (CVE-2021-44228) on every request. Session rule blocks over 300 requests / 60 s on `/v1/admin/*`, `/v1/manager/*`, `/v1/user/*` with a 429. Partner rule applies the same limit on `/v1/partner/*`, keyed by `x-partner-key` |
+| WAFv2 WebACL | `ApiRateLimitApiWebAcl*` | `lxsoftware-siutindei-api-waf` | REGIONAL. Known-bad-inputs rule group blocks Log4j2 lookups (CVE-2021-44228) on every request. Session rule blocks over 300 requests / 60 s on `/v1/admin/*`, `/v1/manager/*`, `/v1/user/*` with a 429. Two partner rules apply the same limit on `/v1/partner/*`, one keyed by `authorization` and one by `x-partner-key`. The session rule does not include that path. The blocked-request alarm sums all three metrics. |
 | WAFv2 WebACL Association | `ApiRateLimitApiWebAclAssociation*` | — | Attaches the web ACL to the `prod` stage |
 | KMS Key + Alias | `ApiRateLimitApiWafLogKey*` | `lxsoftware-siutindei-kms-api-waf-log` | WAF log encryption (rotation enabled) |
 | Log Group | `ApiRateLimitApiWafLogGroup*` | `aws-waf-logs-lxsoftware-siutindei-api` | Retained on delete; `authorization` and `cookie` redacted |
@@ -697,10 +704,11 @@ own buckets and log groups.
 ## Estimated Resource Count
 
 CloudFormation allows 500 resources per stack, and a nested stack counts
-as one. The main stack synthesizes to 495 resources, including the admin
-`live` alias and its published version and the conditional secondary API
-custom domain and base path mapping (`ApiSecondaryCustomDomainName`,
-present while clients move hostnames). The API Gateway alone
+as one. The main stack synthesizes to 496 resources, including the admin
+`live` alias and its published version and the conditional API custom
+domain and base path mapping. The domain construct ids are historical
+(`ApiSecondaryCustomDomain`, `ApiSecondaryCertificate`,
+`ApiSecondaryBasePathMapping`) and must not change. The API Gateway alone
 accounts for 241 of them: 154 methods and 70 path resources. The 19 ops
 alarm rules live in the `OpsAlarmsStack` nested stack. The catalogue
 snapshot bucket, function, and schedule live in the

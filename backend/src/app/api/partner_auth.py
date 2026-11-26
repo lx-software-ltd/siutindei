@@ -1,6 +1,6 @@
 """Authorization helpers for partner API-key routes.
 
-The partner API-key Lambda authorizer validates the ``x-partner-key``
+The partner API-key Lambda authorizer validates ``Authorization: Bearer``
 header against the ``api_keys`` table and passes the key identity to
 handlers through the authorizer context:
 

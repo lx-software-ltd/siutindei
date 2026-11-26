@@ -58,13 +58,12 @@ certificate SANs if a hostname is not yet covered before deploying.
 
 | Parameter | Purpose |
 |-----------|---------|
-| `ApiCustomDomainName` / `ApiCustomDomainCertificateArn` | Original API host slot. Empty in production since `siutindei-api.lx-software.com` was retired; `deploy-backend.yml` passes the empty values so the domain is deleted. |
-| `ApiSecondaryCustomDomainName` / `ApiSecondaryCustomDomainCertificateArn` | Production API host `api.siutindei.com`. The certificate is `<FROM_GITHUB_SECRET: CDK_PARAM_API_SECONDARY_CUSTOM_DOMAIN_CERTIFICATE_ARN>` in **ap-southeast-1**. Both must be set; either empty creates nothing. |
-| `ApiDisableExecuteApiEndpoint` | `true` refuses the raw `execute-api` hostname. It only applies while the secondary domain is configured. |
+| `ApiCustomDomainName` / `ApiCustomDomainCertificateArn` | Production API host `api.siutindei.com`. The certificate value is the placeholder `<FROM_GITHUB_SECRET: CDK_PARAM_API_SECONDARY_CUSTOM_DOMAIN_CERTIFICATE_ARN>` in **ap-southeast-1**. Both must be set; either empty creates nothing. The domain construct ids are historical and must not change. |
+| `ApiDisableExecuteApiEndpoint` | `true` refuses the raw execute-api hostname. It only applies while the custom domain is configured. |
 
-When the secondary domain exists, `ApiSecondaryCustomDomainUrl` is the
-endpoint `build_amplify_config.py` hands to the mobile app. The sequence is
-in `docs/plans/siutindei-domain-consolidation.md`.
+When the custom domain exists, `ApiCustomDomainUrl` is the endpoint
+`build_amplify_config.py` hands to the mobile app. The sequence is in
+`docs/plans/siutindei-domain-consolidation.md`.
 
 ## Catalog review (`ApiStack`)
 
