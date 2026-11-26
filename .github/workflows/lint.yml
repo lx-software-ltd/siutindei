@@ -25,10 +25,10 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-python@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
 
       - name: Run harness checks
-        uses: lx-software-ltd/actions/agent-harness@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/agent-harness@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
 
   repo-checks:
     name: Repository checks
@@ -40,10 +40,10 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-python@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-node@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
         with:
           install: "false"
 
@@ -65,14 +65,14 @@ jobs:
         # template:end
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-python@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
         with:
           # template:set
           requirements: "backend/requirements.txt"
           # template:end
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-node@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
         with:
           install: "false"
 
@@ -97,7 +97,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-node@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
         with:
           cache: npm
           working-directory: apps/admin_web
@@ -114,7 +114,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-node@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
         with:
           cache: npm
           working-directory: apps/public_www
@@ -132,7 +132,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-flutter@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
 
       - name: Run Dart/Flutter lint
         run: |
@@ -153,13 +153,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-node@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-python@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
 
       # template:optional search-fixture
       - name: Pull Git LFS objects
@@ -198,7 +198,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-node@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
 
       - name: Type-check Node apps
         run: |
@@ -220,7 +220,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check workflows
-        uses: lx-software-ltd/actions/workflow-conformance@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/workflow-conformance@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
 
   lint:
     name: lint
@@ -241,6 +241,6 @@ jobs:
     if: always()
     steps:
       - name: Require every lint job
-        uses: lx-software-ltd/actions/require-jobs@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/require-jobs@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
         with:
           needs-json: ${{ toJson(needs) }}

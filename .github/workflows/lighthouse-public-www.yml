@@ -51,7 +51,7 @@ jobs:
       # template:end
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-node@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
         with:
           cache: npm
           working-directory: apps/public_www
@@ -79,7 +79,7 @@ jobs:
         run: npm run build
 
       - name: Run Lighthouse CI
-        uses: lx-software-ltd/actions/lighthouse-ci@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/lighthouse-ci@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
         with:
           working-directory: apps/public_www
           page-paths: ${{ inputs.page_paths }}

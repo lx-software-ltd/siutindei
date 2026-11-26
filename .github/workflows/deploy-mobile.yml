@@ -52,7 +52,7 @@ jobs:
           java-version: "21"
 
       - name: Set up Flutter
-        uses: lx-software-ltd/actions/setup-flutter@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-flutter@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
         with:
           channel: "stable"
           flutter-version: "3.50.1"
@@ -62,7 +62,7 @@ jobs:
         run: flutter config --jdk-dir "$JAVA_HOME"
 
       - name: Configure Android signing
-        uses: lx-software-ltd/actions/android-signing@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/android-signing@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
         with:
 # template:set
           working-directory: apps/siutindei_app
@@ -80,7 +80,7 @@ jobs:
 
 # template:optional amplify
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/aws-oidc@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -111,7 +111,7 @@ jobs:
 
       - name: Check Play Store upload prerequisites
         id: playstore
-        uses: lx-software-ltd/actions/play-prerequisites@15af7bbdcd2157dcfa09ee9a7694bfdfcd9b5582 # main 2026-11-26
+        uses: lx-software-ltd/actions/play-prerequisites@f96458dab727711bb339b8cc09d2f7b85068cac1 # main 2026-11-26
         with:
           service-account: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT }}
           track: ${{ vars.ANDROID_RELEASE_TRACK }}
