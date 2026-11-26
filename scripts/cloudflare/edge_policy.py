@@ -4,9 +4,10 @@
 The desired state lives in ``public_www_edge_policy.json`` next to this
 file. ``plan`` is read-only: it fetches the live zone and prints every
 setting, ruleset, bot-management field, and DNS proxy flag that differs.
-``check`` is read-only and does not call Cloudflare. It reads a policy
-document from stdin, or the local policy file when stdin is empty, and
-fails when the ``/api/v1/public`` rate rule is absent. ``apply`` writes
+``check`` is read-only and does not call Cloudflare. It reads the policy
+file, or stdin only when the argument is ``--policy -``, and fails unless
+the rate rule expression equals the public search expression exactly.
+``apply`` writes
 the differences, section by section, and refuses to run
 without ``--yes``. Every write is idempotent: zone settings are patched,
 each ruleset phase entrypoint is replaced as a whole, bot management is
@@ -47,6 +48,10 @@ from typing import Any
 API_BASE = "https://api.cloudflare.com/client/v4"
 DEFAULT_POLICY = Path(__file__).with_name("public_www_edge_policy.json")
 PUBLIC_API_RATE_PATH = "/api/v1/public"
+PUBLIC_API_RATE_EXPRESSION = (
+    '((http.request.uri.path eq "/v1/activities/search" or '
+    'http.request.uri.path eq "/api/v1/public/activities/search"))'
+)
 SECTIONS = ("settings", "rulesets", "bot", "dns")
 # Ruleset phases are applied in this order so the request-header secret and
 # cache behaviour exist before any blocking rule starts matching.
@@ -461,7 +466,7 @@ def apply_plan(api: CloudflareApi, changes: list[Change]) -> list[str]:
 
 
 def public_api_rate_rule_present(document: Mapping[str, Any]) -> bool:
-    """Return True when a rate rule expression covers ``/api/v1/public``."""
+    """Return True when a rate rule expression equals the public search rule."""
     rulesets = document.get("rulesets")
     if not isinstance(rulesets, Mapping):
         return False
@@ -474,8 +479,7 @@ def public_api_rate_rule_present(document: Mapping[str, Any]) -> bool:
     for rule in rules:
         if not isinstance(rule, Mapping):
             continue
-        expression = rule.get("expression")
-        if isinstance(expression, str) and PUBLIC_API_RATE_PATH in expression:
+        if rule.get("expression") == PUBLIC_API_RATE_EXPRESSION:
             return True
     return False
 
@@ -489,11 +493,11 @@ def check_policy_text(text: str) -> int:
         return 1
     if not isinstance(document, dict) or not public_api_rate_rule_present(document):
         print(
-            f"check failed: {PUBLIC_API_RATE_PATH} rate rule is absent",
+            "check failed: public search rate rule expression does not match exactly",
             file=sys.stderr,
         )
         return 1
-    print(f"check ok: {PUBLIC_API_RATE_PATH} rate rule is present")
+    print("check ok: public search rate rule expression matches")
     return 0
 
 
@@ -522,12 +526,9 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     if args.command == "check":
-        raw = ""
-        if not sys.stdin.isatty():
-            raw = sys.stdin.read()
-        if raw.strip():
-            return check_policy_text(raw)
-        return check_policy_text(args.policy.read_text())
+        if args.policy == Path("-"):
+            return check_policy_text(sys.stdin.read())
+        return check_policy_text(args.policy.read_text(encoding="utf-8"))
     token = os.environ.get("CLOUDFLARE_API_TOKEN", "").strip()
     if not token:
         print("CLOUDFLARE_API_TOKEN is not set.", file=sys.stderr)

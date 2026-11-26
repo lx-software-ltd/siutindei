@@ -426,8 +426,9 @@ and is invoked by both workflows. It supports three primary modes:
    `apps/public_www/out` to the bucket, writes a release marker, and
    invalidates CloudFront with a site-scope path list (locale prefixes
    `/en*` and `/zh-HK*`, exported pages, `/_next/static/*`,
-   `/fixtures/*`, `/v1/activities/search*`, `/robots.txt`, `/sitemap.xml`,
-   and the root and 404 pages). Promotion and maintenance still
+   `/fixtures/*`, `/v1/activities/search*`, `/api/v1/public*`,
+   `/robots.txt`, `/sitemap.xml`, and the root and 404 pages). Promotion
+   and maintenance still
    invalidate `/*`.
 2. **Promotion**: when `PUBLIC_WWW_PROMOTE_RELEASE_ID` is set:
    - if `PUBLIC_WWW_PROMOTION_BUILD_DIR` is also set, the local build (with
