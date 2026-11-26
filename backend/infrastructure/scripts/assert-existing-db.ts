@@ -548,27 +548,34 @@ function assertOpsAlarmRules(stack: cdk.Stack): void {
     const keys = Object.keys(parameters ?? {});
     const allowMethodsKey = gatewayHeaderKey("Access-Control-Allow-Methods");
     const allowMethods = parameters?.[allowMethodsKey];
+    const allowOrigin = parameters?.[gatewayHeaderKey("Access-Control-Allow-Origin")];
     if (
       keys.some((key) => key.includes("method.response.header.")) ||
       !keys.includes(allowMethodsKey) ||
       !keys.includes(gatewayHeaderKey("Access-Control-Allow-Origin")) ||
       !keys.includes(gatewayHeaderKey("Access-Control-Allow-Headers")) ||
-      !keys.includes(gatewayHeaderKey("x-request-id")) ||
-      !allowMethods?.includes("PATCH")
+      keys.includes(gatewayHeaderKey("x-request-id")) ||
+      !allowMethods?.includes("PATCH") ||
+      allowOrigin !== "'https://admin.siutindei.com'"
     ) {
       throw new Error(
-        `Gateway response parameter keys must be the CDK gatewayresponse.header names; found ${keys.join(", ")}`,
+        `Gateway response parameter keys must be the CDK gatewayresponse.header names; found ${keys.join(", ")} origin ${allowOrigin}`,
       );
     }
-    const requestId = parameters?.[gatewayHeaderKey("x-request-id")];
-    if (requestId !== "'$context.requestId'") {
-      throw new Error(
-        `x-request-id must be the context mapping with one pair of quotes; found ${requestId}`,
-      );
+    for (const value of Object.values(parameters ?? {})) {
+      if (typeof value === "string" && value.includes("$context.requestId")) {
+        throw new Error(
+          `Gateway response header values cannot be the static text $context.requestId; found ${value}`,
+        );
+      }
     }
     const template = JSON.stringify(response.Properties?.ResponseTemplates ?? "");
-    if (template.includes('"title": "$context.error.responseType"')) {
-      throw new Error("Gateway error title must be the HTTP reason phrase");
+    if (
+      template.includes('"title": "$context.error.responseType"') ||
+      template.includes("#set") ||
+      template.includes("#if")
+    ) {
+      throw new Error("Gateway error title must be one literal reason phrase");
     }
   }
   const templateFor = (responseType: string): string => {
@@ -582,19 +589,51 @@ function assertOpsAlarmRules(stack: cdk.Stack): void {
   };
   const clientErrorTemplate = templateFor("DEFAULT_4XX");
   const serverErrorTemplate = templateFor("DEFAULT_5XX");
-  for (const phrase of [
-    "Unauthorized",
-    "Forbidden",
-    "Bad Request",
-    "Not Found",
-    "Too Many Requests",
-  ]) {
-    if (!clientErrorTemplate.includes(phrase)) {
-      throw new Error(`DEFAULT_4XX template must map to ${phrase}`);
-    }
+  const missingTokenTemplate = templateFor("MISSING_AUTHENTICATION_TOKEN");
+  if (!clientErrorTemplate.includes('"title": "Bad Request"')) {
+    throw new Error("DEFAULT_4XX title must be Bad Request");
   }
-  if (!serverErrorTemplate.includes("Internal Server Error")) {
+  if (!serverErrorTemplate.includes('"title": "Internal Server Error"')) {
     throw new Error("DEFAULT_5XX title must be Internal Server Error");
+  }
+  if (
+    !missingTokenTemplate.includes('"title": "Not Found"') ||
+    !missingTokenTemplate.includes('"$context.requestId"')
+  ) {
+    throw new Error(
+      "MISSING_AUTHENTICATION_TOKEN title must be Not Found and the body must still substitute request_id",
+    );
+  }
+  if (!clientErrorTemplate.includes('"$context.requestId"')) {
+    throw new Error("DEFAULT_4XX body must still substitute request_id");
+  }
+  const partnerPermission = Object.entries(parentResources).find(
+    ([, resource]) =>
+      resource.Type === "AWS::Lambda::Permission" &&
+      JSON.stringify(resource.Properties ?? {}).includes(
+        partnerAuthorizerLogicalId ?? "missing-authorizer",
+      ),
+  );
+  const deployments = Object.values(parentResources).filter(
+    (resource) => resource.Type === "AWS::ApiGateway::Deployment",
+  );
+  const partnerPermissionId = partnerPermission?.[0];
+  const deploymentDependsOnPermission = deployments.some((resource) => {
+    const dependsOn = (
+      resource as ApiResource & { DependsOn?: string | string[] }
+    ).DependsOn;
+    const ids = Array.isArray(dependsOn)
+      ? dependsOn
+      : dependsOn
+        ? [dependsOn]
+        : [];
+    return partnerPermissionId !== undefined && ids.includes(partnerPermissionId);
+  });
+  if (!partnerPermissionId || !deploymentDependsOnPermission) {
+    throw new Error(
+      "API deployment must depend on the partner authorizer invoke permission " +
+        `${partnerPermissionId ?? "(missing)"}`,
+    );
   }
   const partnerFunction = Object.values(parentResources).find(
     (resource) =>
