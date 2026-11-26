@@ -49,3 +49,8 @@ Restore the substring host check, the GTM prefix check, and the
 ## Open questions
 
 None.
+
+The security-extended suite omits the alert-suppression query, so the
+`lgtm` mark on the token write was not uploaded. The shared CodeQL
+action now adds that query for Python and JavaScript. This repository
+pins that action. Token storage is still unchanged.
