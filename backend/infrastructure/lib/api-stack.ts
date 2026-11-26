@@ -1334,7 +1334,7 @@ export class ApiStack extends cdk.Stack {
               ],
               allowedOrigins: corsAllowedOrigins,
               allowedHeaders: ["*"],
-              exposedHeaders: ["ETag"],
+              exposedHeaders: ["ETag", "x-request-id"],
               maxAge: 3000,
             },
           ],
@@ -1423,7 +1423,7 @@ export class ApiStack extends cdk.Stack {
             ],
             allowedOrigins: corsAllowedOrigins,
             allowedHeaders: ["*"],
-            exposedHeaders: ["ETag"],
+            exposedHeaders: ["ETag", "x-request-id"],
             maxAge: 3000,
           },
         ],
@@ -2090,17 +2090,26 @@ export class ApiStack extends cdk.Stack {
     database.grantAppUserSecretRead(partnerApiKeyAuthorizerFunction);
     database.grantConnect(partnerApiKeyAuthorizerFunction, "siutindei_app");
 
-    // 15 minutes bounds how long a revoked key remains usable, and how
-    // often a long partner sync pays for a cold authorizer.
+    // Caching is off while the legacy x-partner-key header is accepted
+    // beside Authorization: Bearer. API Gateway returns 401 before the
+    // Lambda when a listed identity source is missing, so the cache key
+    // includes neither header. Revocation applies on the next request.
+    // The Authorization cache returns when the legacy header is removed.
+    // The construct id is new so CloudFormation creates a fresh authorizer.
+    // An in-place update can leave a live x-partner-key identity source,
+    // and every Bearer-only request would then get 401 before the Lambda.
     const partnerApiKeyAuthorizer = new apigateway.RequestAuthorizer(
       this,
-      "PartnerApiKeyAuthorizer",
+      "PartnerApiKeyAuthorizerReplaced",
       {
         handler: partnerApiKeyAuthorizerFunction,
-        identitySources: [apigateway.IdentitySource.header("x-partner-key")],
-        resultsCacheTtl: cdk.Duration.minutes(15),
+        identitySources: [],
+        resultsCacheTtl: cdk.Duration.seconds(0),
       }
     );
+    (
+      partnerApiKeyAuthorizer.node.defaultChild as apigateway.CfnAuthorizer
+    ).addPropertyDeletionOverride("IdentitySource");
 
     // Health check function
     const healthFunction = createPythonFunction("HealthCheckFunction", {
@@ -2324,8 +2333,15 @@ export class ApiStack extends cdk.Stack {
         loggingLevel: apigateway.MethodLoggingLevel.INFO,
         dataTraceEnabled: false,
         tracingEnabled: true,
+        methodOptions: {
+          "/health/GET": {
+            throttlingRateLimit: 10,
+            throttlingBurstLimit: 20,
+          },
+        },
         // Response caching for the public search endpoint has been moved to the
-        // CloudFront edge (see PublicWwwStack `/v1/activities/search` behavior).
+        // CloudFront edge (see PublicWwwStack, which rewrites to
+        // `/v1/public/activities/search`).
         // The API Gateway stage cache cluster is a fixed hourly charge
         // (0.5 GB ≈ $0.028/hr ≈ $20/mo) regardless of traffic, which dominated
         // the API Gateway bill while serving only this one low-traffic method.
@@ -2341,7 +2357,8 @@ export class ApiStack extends cdk.Stack {
     // intentionally suppressed for the deployment stage. Stage caching is
     // disabled (see the `cacheClusterEnabled: false` rationale above): response
     // caching for the public search endpoint is handled at the CloudFront edge
-    // via the public-website distribution's `/v1/activities/search` behavior.
+    // via the public-website distribution's behavior for
+    // `/v1/public/activities/search`.
     // The suppression lives in `.checkov.yaml` (skip-check) rather than inline
     // CDK metadata, because skip-check excludes the finding from SARIF output
     // entirely instead of merely marking it skipped (inline metadata
@@ -2356,20 +2373,62 @@ export class ApiStack extends cdk.Stack {
     // CORS headers, causing the browser to block the response.  The frontend
     // then sees a CORS / network error instead of a useful status code.
     // -------------------------------------------------------------------------
+    // CDK prefixes each key with `gatewayresponse.header.` and copies the
+    // value unchanged (GatewayResponse.buildResponseParameters). A
+    // `method.response.header.` key never reaches the client. Values keep
+    // the one pair of single quotes the CDK README requires. Gateway
+    // response header values are static text or an incoming request
+    // parameter. `$context` is not substituted there, so a quoted
+    // `$context.requestId` would be sent as those characters. The body
+    // `request_id` field is the substitution that API Gateway evaluates.
+    // The origin matches the WAF: the admin site when it is allowed,
+    // otherwise the first configured origin.
+    const gatewayErrorOrigin = includesExactOrigin(
+      corsAllowedOrigins,
+      ADMIN_WEB_ORIGIN
+    )
+      ? ADMIN_WEB_ORIGIN
+      : corsAllowedOrigins[0];
     const gatewayResponseHeaders: Record<string, string> = {
-      "method.response.header.Access-Control-Allow-Origin": `'${corsAllowedOrigins[0]}'`,
-      "method.response.header.Access-Control-Allow-Headers":
+      "Access-Control-Allow-Origin": `'${gatewayErrorOrigin}'`,
+      "Access-Control-Allow-Headers":
         "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'",
-      "method.response.header.Access-Control-Allow-Methods":
-        "'GET,POST,PUT,DELETE,OPTIONS'",
+      "Access-Control-Allow-Methods": "'GET,POST,PUT,PATCH,DELETE,OPTIONS'",
     };
+    // One literal title per existing response. Gateway responses only
+    // support simple variable substitution, so a Velocity #set/#if chain
+    // would be sent to the client as text and the body would not be JSON.
+    const gatewayProblemFields = [
+      '  "detail": $context.error.messageString,',
+      '  "code": "gateway_error",',
+      '  "request_id": "$context.requestId",',
+      '  "message": $context.error.messageString',
+    ];
+    const gatewayErrorTemplate = (title: string): string =>
+      ["{", `  "title": "${title}",`, ...gatewayProblemFields, "}"].join("\n");
     api.addGatewayResponse("GatewayResponseDefault4XX", {
       type: apigateway.ResponseType.DEFAULT_4XX,
       responseHeaders: gatewayResponseHeaders,
+      templates: {
+        "application/json": gatewayErrorTemplate("Bad Request"),
+      },
     });
     api.addGatewayResponse("GatewayResponseDefault5XX", {
       type: apigateway.ResponseType.DEFAULT_5XX,
       responseHeaders: gatewayResponseHeaders,
+      templates: {
+        "application/json": gatewayErrorTemplate("Internal Server Error"),
+      },
+    });
+    // /health was the last IAM method. A missing signature now means the
+    // path is not a route, so the response is 404.
+    api.addGatewayResponse("GatewayResponseMissingAuthenticationToken", {
+      type: apigateway.ResponseType.MISSING_AUTHENTICATION_TOKEN,
+      statusCode: "404",
+      responseHeaders: gatewayResponseHeaders,
+      templates: {
+        "application/json": gatewayErrorTemplate("Not Found"),
+      },
     });
 
     const mobileApiKey = new apigateway.ApiKey(this, "MobileSearchApiKey", {
@@ -2559,15 +2618,34 @@ export class ApiStack extends cdk.Stack {
     // API Routes
     // ---------------------------------------------------------------------
 
-    // Health check endpoint (IAM auth)
+    // Open health check. A direct invocation still runs the database check.
     const health = api.root.addResource("health");
-    health.addMethod("GET", new apigateway.LambdaIntegration(healthFunction), {
-      authorizationType: apigateway.AuthorizationType.IAM,
-    });
+    const healthMethod = health.addMethod(
+      "GET",
+      new apigateway.LambdaIntegration(healthFunction),
+      {
+        authorizationType: apigateway.AuthorizationType.NONE,
+      }
+    );
+    // CKV_AWS_59 flags an open method. This one is the public liveness
+    // probe and the HTTP path does not touch the database.
+    (healthMethod.node.defaultChild as apigateway.CfnMethod).addMetadata(
+      "checkov",
+      {
+        skip: [
+          {
+            id: "CKV_AWS_59",
+            comment:
+              "This is the public liveness check and it does not touch the database.",
+          },
+        ],
+      }
+    );
 
     // v1 API
     const v1 = api.root.addResource("v1");
-    const activities = v1.addResource("activities");
+    const publicApi = v1.addResource("public");
+    const activities = publicApi.addResource("activities");
     const search = activities.addResource("search");
 
     const cacheKeyParameters = [
@@ -2600,7 +2678,7 @@ export class ApiStack extends cdk.Stack {
       requestParameters,
     });
 
-    const listingEvents = v1.addResource("listing-events");
+    const listingEvents = publicApi.addResource("listing-events");
     listingEvents.addMethod(
       "POST",
       new apigateway.LambdaIntegration(listingEventsIngestFunction),
@@ -2877,7 +2955,7 @@ export class ApiStack extends cdk.Stack {
     }
 
     // -------------------------------------------------------------------------
-    // Partner routes at /v1/partner (authenticated with x-partner-key)
+    // Partner routes at /v1/partner (Authorization: Bearer)
     // Read: /v1/partner/activities/search (read or crud scoped keys).
     // CRUD: /v1/partner/{resource}[/{id}] (crud scoped keys only for
     // writes; enforced in the Lambda because the cached authorizer policy
@@ -2919,6 +2997,18 @@ export class ApiStack extends cdk.Stack {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
       authorizer: partnerApiKeyAuthorizer,
     });
+    // The invoke permission is a child of the function, not the authorizer.
+    // The deployment already depends on the authorizer, so without this
+    // DependsOn a new permission can land after the deployment and partner
+    // calls fail until the permission exists. addDependency does not add
+    // a resource.
+    const partnerAuthorizerPermission =
+      partnerApiKeyAuthorizerFunction.node.tryFindChild(
+        `${cdk.Names.uniqueId(partnerApiKeyAuthorizer)}:Permissions`
+      );
+    if (partnerAuthorizerPermission !== undefined && api.latestDeployment) {
+      api.latestDeployment.node.addDependency(partnerAuthorizerPermission);
+    }
 
     // -------------------------------------------------------------------------
     // User routes at /v1/user (accessible by any logged-in Cognito user)

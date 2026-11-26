@@ -66,7 +66,7 @@ says which paths need a plan or an approval first.
   the backend assessment.
 - [`docs/architecture/executive-board-autonomy-siutindei-appendix-a.md`](docs/architecture/executive-board-autonomy-siutindei-appendix-a.md):
   the Executive Board hand-off.
-- [`docs/api/search.yaml`](docs/api/search.yaml),
+- [`docs/api/public.yaml`](docs/api/public.yaml),
   [`docs/api/admin.yaml`](docs/api/admin.yaml), and
   [`docs/api/partner.yaml`](docs/api/partner.yaml): the API specs.
 - [`docs/deployment/admin-web.md`](docs/deployment/admin-web.md),

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 import sys
 from contextlib import contextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
@@ -13,13 +14,17 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "backend" / "src"))
 
 import app.auth.api_key_authorizer as authorizer_module  # noqa: E402
 from app.auth.api_key_authorizer import authorize_api_key  # noqa: E402
-from app.services.api_keys import generate_api_key  # noqa: E402
+from app.services.api_keys import generate_api_key, hash_api_key  # noqa: E402
 
 METHOD_ARN = "arn:aws:execute-api:eu-west-1:123:api/prod/GET/v1/partner"
 
 
 def _event(headers: dict | None = None) -> dict:
     return {"headers": headers or {}, "methodArn": METHOD_ARN}
+
+
+def _bearer(token: str, name: str = "Authorization") -> dict[str, str]:
+    return {name: f"Bearer {token}"}
 
 
 class FakeSession:
@@ -34,8 +39,10 @@ class FakeRepo:
     def __init__(self, api_key) -> None:
         self._api_key = api_key
         self.touched = False
+        self.seen_hash: str | None = None
 
     def find_active_by_hash(self, key_hash: str):
+        self.seen_hash = key_hash
         return self._api_key
 
     def touch_last_used(self, api_key) -> None:
@@ -51,9 +58,7 @@ def _install_fakes(monkeypatch, api_key) -> FakeRepo:
 
     monkeypatch.setattr(authorizer_module, "Session", fake_session)
     monkeypatch.setattr(authorizer_module, "get_engine", lambda: None)
-    monkeypatch.setattr(
-        authorizer_module, "ApiKeyRepository", lambda session: repo
-    )
+    monkeypatch.setattr(authorizer_module, "ApiKeyRepository", lambda session: repo)
     return repo
 
 
@@ -62,7 +67,7 @@ def _statement_effect(response: dict) -> str:
 
 
 def test_missing_header_denied() -> None:
-    """Requests without the x-partner-key header are denied."""
+    """Requests without a bearer token or the legacy header are denied."""
     response = authorize_api_key(_event())
     assert _statement_effect(response) == "Deny"
     assert response["context"]["reason"] == "missing_key"
@@ -70,7 +75,7 @@ def test_missing_header_denied() -> None:
 
 def test_malformed_key_denied_without_db() -> None:
     """Malformed keys are denied before any database lookup."""
-    response = authorize_api_key(_event({"x-partner-key": "wrong-format"}))
+    response = authorize_api_key(_event(_bearer("wrong-format")))
     assert _statement_effect(response) == "Deny"
     assert response["context"]["reason"] == "invalid_key"
 
@@ -79,7 +84,7 @@ def test_unknown_key_denied(monkeypatch) -> None:
     """Keys that don't match an active row are denied."""
     _install_fakes(monkeypatch, api_key=None)
     plaintext = generate_api_key().plaintext
-    response = authorize_api_key(_event({"x-partner-key": plaintext}))
+    response = authorize_api_key(_event(_bearer(plaintext)))
     assert _statement_effect(response) == "Deny"
     assert response["context"]["reason"] == "invalid_key"
 
@@ -98,7 +103,7 @@ def test_valid_key_allowed_with_context(monkeypatch) -> None:
 
     plaintext = generate_api_key().plaintext
     response = authorize_api_key(
-        _event({"X-Partner-Key": plaintext})  # header lookup is case-insensitive
+        _event(_bearer(plaintext, "authorization"))  # header lookup is case-insensitive
     )
     assert _statement_effect(response) == "Allow"
     context = response["context"]
@@ -119,7 +124,7 @@ def test_full_access_key_has_empty_org(monkeypatch) -> None:
     )
     _install_fakes(monkeypatch, api_key)
     plaintext = generate_api_key().plaintext
-    response = authorize_api_key(_event({"x-partner-key": plaintext}))
+    response = authorize_api_key(_event(_bearer(plaintext)))
     assert _statement_effect(response) == "Allow"
     assert response["context"]["orgId"] == ""
 
@@ -130,10 +135,72 @@ def test_recent_last_used_not_touched(monkeypatch) -> None:
         id=uuid4(),
         scope="read",
         org_id=None,
-        last_used_at=datetime.now(timezone.utc) - timedelta(seconds=5),
+        last_used_at=datetime.now(UTC) - timedelta(seconds=5),
     )
     repo = _install_fakes(monkeypatch, api_key)
     plaintext = generate_api_key().plaintext
-    response = authorize_api_key(_event({"x-partner-key": plaintext}))
+    response = authorize_api_key(_event(_bearer(plaintext)))
     assert _statement_effect(response) == "Allow"
     assert repo.touched is False
+
+
+def test_legacy_header_allowed_and_logged(monkeypatch, caplog) -> None:
+    """The old x-partner-key header authorizes for one deploy."""
+    api_key = SimpleNamespace(
+        id=uuid4(),
+        scope="read",
+        org_id=None,
+        last_used_at=None,
+    )
+    repo = _install_fakes(monkeypatch, api_key)
+    plaintext = generate_api_key().plaintext
+    caplog.set_level(logging.INFO, logger="app.auth.api_key_authorizer")
+    response = authorize_api_key(_event({"X-Partner-Key": plaintext}))
+    assert _statement_effect(response) == "Allow"
+    assert repo.seen_hash == hash_api_key(plaintext)
+    assert "auth_scheme=legacy" in caplog.text
+
+
+def test_bearer_logs_auth_scheme(monkeypatch, caplog) -> None:
+    """Bearer authorization is logged as auth_scheme=bearer."""
+    api_key = SimpleNamespace(
+        id=uuid4(),
+        scope="read",
+        org_id=None,
+        last_used_at=None,
+    )
+    _install_fakes(monkeypatch, api_key)
+    plaintext = generate_api_key().plaintext
+    caplog.set_level(logging.INFO, logger="app.auth.api_key_authorizer")
+    response = authorize_api_key(_event(_bearer(plaintext)))
+    assert _statement_effect(response) == "Allow"
+    assert "auth_scheme=bearer" in caplog.text
+
+
+def test_bearer_wins_when_legacy_header_is_also_sent(monkeypatch, caplog) -> None:
+    """A bearer token is the credential even if the legacy header is set."""
+    api_key = SimpleNamespace(
+        id=uuid4(),
+        scope="read",
+        org_id=None,
+        last_used_at=None,
+    )
+    repo = _install_fakes(monkeypatch, api_key)
+    bearer = generate_api_key().plaintext
+    legacy = generate_api_key().plaintext
+    caplog.set_level(logging.INFO, logger="app.auth.api_key_authorizer")
+    response = authorize_api_key(
+        _event({"Authorization": f"Bearer {bearer}", "x-partner-key": legacy})
+    )
+    assert _statement_effect(response) == "Allow"
+    assert repo.seen_hash == hash_api_key(bearer)
+    assert "auth_scheme=bearer" in caplog.text
+
+
+def test_malformed_legacy_header_denied(caplog) -> None:
+    """A legacy header that is not an API key is denied before the database."""
+    caplog.set_level(logging.WARNING, logger="app.auth.api_key_authorizer")
+    response = authorize_api_key(_event({"x-partner-key": "not a key"}))
+    assert _statement_effect(response) == "Deny"
+    assert response["context"]["reason"] == "invalid_key"
+    assert "auth_scheme=legacy" in caplog.text

@@ -4671,19 +4671,10 @@ paths:
     get:
       summary: Health check
       description: |
-        Service health check endpoint. Returns overall health status,
-        including database connectivity and configuration checks.
-        Requires IAM authentication.
-      security:
-        - IAMAuth: []
-      parameters:
-        - name: details
-          in: query
-          required: false
-          description: Set to 'true' to include detailed check information
-          schema:
-            type: string
-            enum: ["true", "false"]
+        Open health check. An HTTP request returns `{"status": "ok"}`
+        and does not open a database connection. A direct invocation
+        still runs the database check.
+      security: []
       responses:
         "200":
           description: Service is healthy

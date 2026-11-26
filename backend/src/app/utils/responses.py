@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from app.exceptions import ValidationError
+from app.exceptions import ValidationError, problem_body
 
 
 def validate_content_type(
@@ -169,6 +169,12 @@ def json_response(
     if headers:
         response_headers.update(headers)
 
+    if event:
+        context = event.get("requestContext") or {}
+        found = context.get("requestId") if isinstance(context, Mapping) else None
+        if isinstance(found, str) and found:
+            response_headers["x-request-id"] = found
+
     payload = _serialize_body(body)
 
     return {
@@ -229,8 +235,12 @@ def error_response(
     Returns:
         API Gateway response dictionary.
     """
-    body: dict[str, Any] = {"error": message}
-    if detail:
-        body["detail"] = detail
+    request_id = ""
+    if event:
+        context = event.get("requestContext") or {}
+        found = context.get("requestId") if isinstance(context, Mapping) else None
+        if isinstance(found, str):
+            request_id = found
+    body = problem_body(status_code, message, detail, request_id)
 
     return json_response(status_code, body, event=event)

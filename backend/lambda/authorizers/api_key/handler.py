@@ -1,8 +1,10 @@
 """API Gateway request authorizer for partner API keys.
 
-This Lambda validates the ``x-partner-key`` header against hashed keys
+This Lambda validates ``Authorization: Bearer <token>`` against hashed keys
 stored in the ``api_keys`` table (read via RDS Proxy with IAM auth) and
 passes the key identity (id, scope, organization) to the backend handlers.
+For one deploy it also accepts the legacy ``x-partner-key`` header when
+the bearer token is absent, and logs ``auth_scheme=legacy|bearer``.
 
 Unlike the JWT authorizers, this function runs INSIDE the VPC because it
 needs database access instead of public JWKS endpoints.
