@@ -320,7 +320,7 @@ For each function above, the following resources are created:
 - X-Ray Tracing: Enabled
 - Caching: Disabled (no stage cache cluster). Public search responses are
   cached at the CloudFront edge instead — see the public-website distribution
-  `/v1/activities/search` behavior in
+  `/api/v1/public/activities/search` behavior in
   [`public-www.md`](./public-www.md#search-api-edge-caching).
 
 **CORS Configuration:**
@@ -336,7 +336,7 @@ and [`docs/api/admin.yaml`](../api/admin.yaml).
 | Resource Path | Method | Authorization | Integration | Notes |
 |--------------|--------|---------------|-------------|-------|
 | `/health` | GET | NONE | `HealthCheckFunction` | Health check |
-| `/v1/public/activities/search` | GET | Device Attestation + API Key | `SiutindeiSearchFunction` | Cached at the website CloudFront edge for up to 5 minutes (`s-maxage=300`). The old `/v1/activities/search` behavior rewrites to this path. |
+| `/v1/public/activities/search` | GET | Device Attestation + API Key | `SiutindeiSearchFunction` | Cached at the website CloudFront edge for up to 5 minutes (`s-maxage=300`). The website path is `/api/v1/public/activities/search`. |
 | `/v1/public/listing-events` | POST | Device Attestation + API Key | `ListingEventsIngestFunction` | First-party funnel ingest; never cached |
 | `/v1/admin/{resource}` | GET, POST | Admin Group | `SiutindeiAdminFunction` | CRUD (organizations, locations, activity-categories, activities, pricing, schedules, feedback-labels, organization-feedback) |
 | `/v1/admin/{resource}/{id}` | ANY | Admin Group | `SiutindeiAdminFunction` | CRUD by ID |

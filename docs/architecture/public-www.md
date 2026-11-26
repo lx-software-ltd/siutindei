@@ -520,7 +520,7 @@ distributions (production + staging) carry an extra cache behavior:
 
 | Item | Value |
 |---|---|
-| Path pattern | `/v1/activities/search` (exact path; admin/other API paths are **not** exposed) |
+| Path pattern | `/api/v1/public/activities/search` (exact path; admin/other API paths are **not** exposed). The function strips `/api` before the origin. |
 | Origin | `HttpOrigin` → API Gateway custom domain from the `SearchApiProxyOriginDomain` parameter (`api.siutindei.com`), HTTPS-only, TLS 1.2+. CloudFront adds `X-Origin-Verify` from `PublicWwwOriginVerifySecret`. That header is not forwarded from the viewer |
 | Allowed methods | `GET`, `HEAD`, `OPTIONS` |
 | Allow-list function | `${env}SearchProxyAllowlistFunction` CloudFront Function (viewer-request) returns `405` for any other method |
@@ -544,14 +544,14 @@ starts with the edge-verify check from
 ## Listing-event ingest (first-party funnel)
 
 Public www also posts consented `search` / `view_item` / `generate_lead`
-events to **`POST /v1/listing-events`** so Aurora can feed
+events to **`POST /api/v1/public/listing-events`** so Aurora can feed
 `listing_events_daily` / `v_funnel_daily`. The Executive Board already
 reads GA4 via its `web` tools; this path is location-grained product
 telemetry, not a GA4 pull.
 
 | Item | Value |
 |---|---|
-| Path pattern | `/v1/listing-events` (exact path) |
+| Path pattern | `/api/v1/public/listing-events` (exact path). The function strips `/api` before the origin. |
 | Origin | Same API Gateway custom domain as search, including the `X-Origin-Verify` custom origin header when `PublicWwwOriginVerifySecret` is set |
 | Allowed methods | CloudFront `ALLOW_ALL`, allow-list function permits `POST` / `OPTIONS` only |
 | Cache | `CACHING_DISABLED` |
@@ -564,7 +564,7 @@ same-origin (`connect-src 'self'`). A local
 `NEXT_PUBLIC_SEARCH_API_BASE_URL` overrides that origin and is not set in
 deployed builds. Staging fixture mode does not post.
 `src/lib/activities/search-client.ts` resolves
-`new URL('/v1/activities/search', siteOrigin)`, which hits the CloudFront
+`new URL('/api/v1/public/activities/search', siteOrigin)`, which hits the CloudFront
 behavior on that host. Production's origin is `https://siutindei.com` and
 staging's is `https://www-staging.siutindei.com`. Calling
 `api.siutindei.com` directly would miss the `X-Origin-Verify` header
@@ -576,11 +576,11 @@ response without re-invoking the origin, so the per-request `x-api-key` /
 not enforced for cached entries. This matches the intent of a *public* search
 endpoint and the prior API Gateway method-cache behavior of returning cached
 results. Abuse protection for that cached path is Cloudflare's rate
-limit and the custom rules on `/v1/activities/search`. The CloudFront
+limit and the custom rules on `/api/v1/public/activities/search`. The CloudFront
 WAF WebACL is detached from the public website distributions while the
 origin lock is on. A caller who copies the public attestation token and calls
 `api.siutindei.com` directly is denied: `X-Origin-Verify` is
-added only by CloudFront. Only the exact `/v1/activities/search` path is
+added only by CloudFront. Only the exact `/api/v1/public/activities/search` path is
 proxied, so admin endpoints (`/v1/admin/*`) are never reachable through the
 website domain.
 Distribution-level custom error responses (403/404 → `/404.html`) still apply

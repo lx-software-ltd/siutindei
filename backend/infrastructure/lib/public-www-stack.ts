@@ -41,12 +41,12 @@ import { Construct } from "constructs";
 //     unchanged until an operator opts in per environment.
 //
 // Search API edge caching:
-//   * A `/v1/activities/search` CloudFront behavior fronts the public search
+//   * A `/api/v1/public/activities/search` CloudFront behavior fronts the public search
 //     endpoint, pointing at the API Gateway custom domain origin. This replaces
 //     the (fixed-cost) API Gateway stage cache cluster with usage-based
 //     CloudFront edge caching. An allow-list CloudFront Function rejects any
 //     method other than GET/HEAD/OPTIONS on that path.
-//   * A `/v1/listing-events` CloudFront behavior fronts first-party funnel
+//   * A `/api/v1/public/listing-events` CloudFront behavior fronts first-party funnel
 //     ingest (POST, uncached). A shared allow-list function rejects any
 //     method other than POST/OPTIONS. CloudFront Function creation is
 //     serialized via an `addDependency` chain so a single deploy does not
@@ -58,8 +58,8 @@ import { Construct } from "constructs";
 // are the same for every caller), so a single cache entry is shared across
 // viewers. X-Origin-Verify is intentionally absent: CloudFront sets it as a
 // custom origin header so viewers cannot supply it.
-const SEARCH_API_PROXY_PATH = "/v1/activities/search";
-const LISTING_EVENTS_PROXY_PATH = "/v1/listing-events";
+const SEARCH_API_PROXY_PATH = "/api/v1/public/activities/search";
+const LISTING_EVENTS_PROXY_PATH = "/api/v1/public/listing-events";
 const SEARCH_API_FORWARDED_HEADERS = [
   "x-api-key",
   "x-device-attestation",
@@ -234,7 +234,7 @@ export class PublicWwwStack extends cdk.Stack {
         description:
           "API Gateway custom domain that serves the public search endpoint " +
           "(e.g. api.siutindei.com). CloudFront caches " +
-          "GET /v1/activities/search responses at the edge.",
+          "GET /api/v1/public/activities/search responses at the edge.",
         allowedPattern: "^[a-z0-9.-]+$",
         constraintDescription: "Must be a bare DNS hostname (no scheme/path).",
       },
@@ -642,9 +642,7 @@ function handler(event) {
       headers: { 'allow': { value: 'GET, HEAD, OPTIONS' } },
     };
   }
-  if (request.uri === '/v1/activities/search') {
-    request.uri = '/v1/public/activities/search';
-  } else if (request.uri.indexOf('/api/') === 0) {
+  if (request.uri.indexOf('/api/') === 0) {
     request.uri = request.uri.substring(4);
   }
   return request;
@@ -682,9 +680,7 @@ function handler(event) {
       headers: { 'allow': { value: 'POST, OPTIONS' } },
     };
   }
-  if (request.uri === '/v1/listing-events') {
-    request.uri = '/v1/public/listing-events';
-  } else if (request.uri.indexOf('/api/') === 0) {
+  if (request.uri.indexOf('/api/') === 0) {
     request.uri = request.uri.substring(4);
   }
   return request;
@@ -769,34 +765,6 @@ function handler(event) {
           },
           // First-party funnel ingest: proxied, never cached.
           [LISTING_EVENTS_PROXY_PATH]: {
-            origin: searchApiOrigin,
-            viewerProtocolPolicy:
-              cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-            allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-            cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-            originRequestPolicy: config.listingEventsOriginRequestPolicy,
-            functionAssociations: [
-              {
-                function: listingEventsProxyFunction,
-                eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-              },
-            ],
-          },
-          "/api/v1/public/activities/search": {
-            origin: searchApiOrigin,
-            viewerProtocolPolicy:
-              cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-            allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
-            cachePolicy: config.searchApiCachePolicy,
-            originRequestPolicy: config.searchApiOriginRequestPolicy,
-            functionAssociations: [
-              {
-                function: searchProxyFunction,
-                eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-              },
-            ],
-          },
-          "/api/v1/public/listing-events": {
             origin: searchApiOrigin,
             viewerProtocolPolicy:
               cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,

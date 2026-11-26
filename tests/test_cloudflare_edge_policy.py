@@ -138,13 +138,10 @@ def test_search_rules_never_touch_html_navigations():
     for phase in ("http_ratelimit", "http_request_firewall_custom"):
         for rule in policy.rulesets[phase]["rules"]:
             assert (
-                'http.request.uri.path eq "/v1/activities/search"'
-                in (rule["expression"])
-            )
-            assert (
                 'http.request.uri.path eq "/api/v1/public/activities/search"'
                 in rule["expression"]
             )
+            assert "/v1/activities/search" not in rule["expression"]
 
 
 def test_is_subset_ignores_extra_keys_in_current_state():

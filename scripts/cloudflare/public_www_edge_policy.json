@@ -30,7 +30,7 @@
       "rules": [
         {
           "description": "search-per-ip",
-          "expression": "((http.request.uri.path eq \"/v1/activities/search\" or http.request.uri.path eq \"/api/v1/public/activities/search\"))",
+          "expression": "(http.request.uri.path eq \"/api/v1/public/activities/search\")",
           "action": "block",
           "ratelimit": {
             "characteristics": ["cf.colo.id", "ip.src"],
@@ -47,19 +47,19 @@
       "rules": [
         {
           "description": "search-limit-allowlist",
-          "expression": "((http.request.uri.path eq \"/v1/activities/search\" or http.request.uri.path eq \"/api/v1/public/activities/search\") and not (any(http.request.uri.args[\"limit\"][*] eq \"1\") or any(http.request.uri.args[\"limit\"][*] eq \"12\") or any(http.request.uri.args[\"limit\"][*] eq \"24\") or any(http.request.uri.args[\"limit\"][*] eq \"30\")))",
+          "expression": "(http.request.uri.path eq \"/api/v1/public/activities/search\" and not (any(http.request.uri.args[\"limit\"][*] eq \"1\") or any(http.request.uri.args[\"limit\"][*] eq \"12\") or any(http.request.uri.args[\"limit\"][*] eq \"24\") or any(http.request.uri.args[\"limit\"][*] eq \"30\")))",
           "action": "block",
           "enabled": true
         },
         {
           "description": "search-sec-fetch-site",
-          "expression": "((http.request.uri.path eq \"/v1/activities/search\" or http.request.uri.path eq \"/api/v1/public/activities/search\") and len(http.request.headers[\"sec-fetch-site\"]) > 0 and not any(http.request.headers[\"sec-fetch-site\"][*] eq \"same-origin\"))",
+          "expression": "(http.request.uri.path eq \"/api/v1/public/activities/search\" and len(http.request.headers[\"sec-fetch-site\"]) > 0 and not any(http.request.headers[\"sec-fetch-site\"][*] eq \"same-origin\"))",
           "action": "block",
           "enabled": true
         },
         {
           "description": "search-tooling-user-agents",
-          "expression": "((http.request.uri.path eq \"/v1/activities/search\" or http.request.uri.path eq \"/api/v1/public/activities/search\") and (http.user_agent eq \"\" or lower(http.user_agent) contains \"python\" or lower(http.user_agent) contains \"curl/\" or lower(http.user_agent) contains \"wget/\" or lower(http.user_agent) contains \"go-http-client\" or lower(http.user_agent) contains \"scrapy\" or lower(http.user_agent) contains \"httpx\" or lower(http.user_agent) contains \"aiohttp\" or lower(http.user_agent) contains \"java/\" or lower(http.user_agent) contains \"okhttp\" or lower(http.user_agent) contains \"node-fetch\" or lower(http.user_agent) contains \"axios/\" or lower(http.user_agent) contains \"headlesschrome\" or lower(http.user_agent) contains \"phantomjs\" or lower(http.user_agent) contains \"puppeteer\" or lower(http.user_agent) contains \"playwright\" or lower(http.user_agent) contains \"selenium\"))",
+          "expression": "(http.request.uri.path eq \"/api/v1/public/activities/search\" and (http.user_agent eq \"\" or lower(http.user_agent) contains \"python\" or lower(http.user_agent) contains \"curl/\" or lower(http.user_agent) contains \"wget/\" or lower(http.user_agent) contains \"go-http-client\" or lower(http.user_agent) contains \"scrapy\" or lower(http.user_agent) contains \"httpx\" or lower(http.user_agent) contains \"aiohttp\" or lower(http.user_agent) contains \"java/\" or lower(http.user_agent) contains \"okhttp\" or lower(http.user_agent) contains \"node-fetch\" or lower(http.user_agent) contains \"axios/\" or lower(http.user_agent) contains \"headlesschrome\" or lower(http.user_agent) contains \"phantomjs\" or lower(http.user_agent) contains \"puppeteer\" or lower(http.user_agent) contains \"playwright\" or lower(http.user_agent) contains \"selenium\"))",
           "action": "block",
           "enabled": true
         }
