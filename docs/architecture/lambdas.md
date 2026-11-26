@@ -35,14 +35,14 @@ their primary responsibilities.
 ### Listing events ingest
 - Function: ListingEventsIngestFunction
 - Handler: backend/lambda/listing_events_ingest/handler.py
-- Trigger: API Gateway `POST /v1/listing-events`
+- Trigger: API Gateway `POST /v1/public/listing-events`
 - Auth: API key + device attestation authorizer (same as public search)
 - Purpose: accept first-party listing funnel events (search, view, CTA,
   lead) from public www. Does not store PII. GA4 remains the board `web`
   tool source.
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`), INSERT on
   `listing_events`
-- Endpoint contract: [`docs/api/public.yaml`](../api/search.yaml)
+- Endpoint contract: [`docs/api/public.yaml`](../api/public.yaml)
 
 ### Listing events rollup
 - Function: ListingEventsRollupFunction
@@ -71,7 +71,7 @@ their primary responsibilities.
 ### Activity search
 - Function: SiutindeiSearchFunction
 - Handler: backend/lambda/search/handler.py
-- Trigger: API Gateway `GET /v1/activities/search` and
+- Trigger: API Gateway `GET /v1/public/activities/search` and
   `GET /v1/partner/activities/search`
 - Auth: API key + device attestation authorizer (mobile route);
   partner API-key authorizer (partner route, org-scoped keys are

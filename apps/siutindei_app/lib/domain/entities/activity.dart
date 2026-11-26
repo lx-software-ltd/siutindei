@@ -190,7 +190,7 @@ class PricingEntity {
 ///
 /// Values must match the API enum: per_class, per_sessions, per_hour,
 /// per_day, free, per_month, per_year
-/// (defined in docs/api/search.yaml).
+/// (defined in docs/api/public.yaml).
 enum PricingType {
   perClass,
   perSessions,
@@ -297,7 +297,7 @@ class ScheduleEntity {
 /// Schedule type enumeration.
 ///
 /// Values must match the API enum: weekly, monthly, date_specific
-/// (defined in docs/api/search.yaml).
+/// (defined in docs/api/public.yaml).
 enum ScheduleType {
   weekly,
   monthly,
