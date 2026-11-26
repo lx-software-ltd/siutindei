@@ -16,7 +16,7 @@ import sys
 import urllib.error
 import urllib.request
 from html.parser import HTMLParser
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 ORIGIN_ENV = "PUBLIC_WWW_SITE_ORIGIN"
 REMOVED_PATHS = ("/v1/activities/search", "/www/")
@@ -54,12 +54,22 @@ def script_urls(html: str) -> list[str]:
     return parser.sources
 
 
+def _https_url(url: str) -> str:
+    """Reject any scheme other than https, including file."""
+    parsed = urlsplit(url)
+    if parsed.scheme != "https" or not parsed.hostname:
+        raise ValueError(f"refusing a URL that is not https: {url}")
+    return url
+
+
 def _read_url(url: str) -> str:
     request = urllib.request.Request(
-        url,
+        _https_url(url),
         headers={"User-Agent": "siutindei-bundle-check"},
     )
-    with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+    # The URL is https-only. The origin comes from the operator's environment.
+    # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
+    with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:  # nosec B310
         return response.read().decode("utf-8", errors="replace")
 
 

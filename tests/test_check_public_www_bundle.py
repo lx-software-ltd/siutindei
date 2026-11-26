@@ -43,6 +43,19 @@ def test_script_urls_find_the_bundle() -> None:
     assert bundle_check.script_urls(html) == ["/_next/static/chunks/main-abc.js"]
 
 
+def test_refuses_a_non_https_origin(monkeypatch, capsys) -> None:
+    monkeypatch.setenv(bundle_check.ORIGIN_ENV, "file:///etc/passwd")
+
+    def boom(*_args, **_kwargs):
+        raise AssertionError("a non-https origin must not be opened")
+
+    monkeypatch.setattr(bundle_check.urllib.request, "urlopen", boom)
+    assert bundle_check.main() == 1
+    error = capsys.readouterr().err
+    assert "not https" in error
+    assert "file:///etc/passwd" in error
+
+
 def test_skips_when_the_origin_is_unset(monkeypatch, capsys) -> None:
     monkeypatch.delenv(bundle_check.ORIGIN_ENV, raising=False)
 
