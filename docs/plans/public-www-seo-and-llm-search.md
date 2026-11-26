@@ -363,7 +363,7 @@ Red, approval needed first:
   `dangerouslySetInnerHTML`, no inline `<svg>`, no `style=`.
 - Crawlers and visitors receive the same HTML.
 - `/v1/` stays disallowed in `robots.txt`, and the edge rules on
-  `/v1/activities/search` stay as they are.
+  `/api/v1/public/activities/search` stay as they are.
 - Staging stays out of indexes (`X-Robots-Tag` and deny-all
   `robots.txt`).
 - Pages expose only fields the public search API already returns, and

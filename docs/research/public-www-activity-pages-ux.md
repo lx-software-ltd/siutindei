@@ -79,7 +79,7 @@ parameter needs no infrastructure change.
 
 ## Callers
 
-`GET /v1/activities/search` is also called by the Flutter app
+`GET /v1/public/activities/search` is also called by the Flutter app
 (`apps/siutindei_app`) and by partners. Any response change must be
 additive.
 

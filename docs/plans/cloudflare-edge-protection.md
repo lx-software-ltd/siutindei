@@ -93,7 +93,7 @@ From the Cloudflare docs availability tables, fetched during the audit:
 ```
 browser ──TLS──> Cloudflare edge (siutindei.com, orange cloud)
                    │ Always HTTPS, Browser Integrity Check, DDoS
-                   │ rate limit  (/v1/activities/search, per IP, 10 s)
+                   │ rate limit  (/api/v1/public/activities/search, per IP, 10 s)
                    │ custom rules (limit allow-list, Sec-Fetch-Site, tooling UAs)
                    │ cache rules (bypass; only /_next/static/* cacheable)
                    │ transform   (adds x-proxy-verify: <secret>)
@@ -102,8 +102,8 @@ browser ──TLS──> Cloudflare edge (siutindei.com, orange cloud)
                    │ viewer-request functions reject when x-proxy-verify
                    │ does not match the current or previous secret
                    ├── default behaviour ─> S3 static export
-                   ├── /v1/activities/search ─> API Gateway (+X-Origin-Verify)
-                   └── /v1/listing-events   ─> API Gateway (+X-Origin-Verify)
+                   ├── /api/v1/public/activities/search ─> API Gateway (+X-Origin-Verify)
+                   └── /api/v1/public/listing-events   ─> API Gateway (+X-Origin-Verify)
 ```
 
 ### Cloudflare desired state (`scripts/cloudflare/public_www_edge_policy.json`)
@@ -121,7 +121,7 @@ Zone settings:
 
 Rate limit (phase `http_ratelimit`, the one Free rule):
 
-- Expression `http.request.uri.path eq "/v1/activities/search"`, 15
+- Expression `http.request.uri.path eq "/api/v1/public/activities/search"`, 15
   requests per 10 s per IP, block for 10 s. The home page issues three
   search fetches on load (24 + 12 + 12 items) and the search page one per
   interaction, so humans stay well below 15. A dump of the 3,780-item
@@ -130,19 +130,19 @@ Rate limit (phase `http_ratelimit`, the one Free rule):
 
 Custom rules (phase `http_request_firewall_custom`, 3 of the 5 slots):
 
-1. `search-limit-allowlist`: block `/v1/activities/search` unless `limit`
+1. `search-limit-allowlist`: block `/api/v1/public/activities/search` unless `limit`
    is exactly one of the values the site sends (`1`, `12`, `24`, `30`;
    source `apps/public_www/src/lib/activities/search-limits.ts` and
    `fetchActivityListingById`). The backend accepts up to 200, so this is
    what caps a page at 30 at the edge. A vitest contract test keeps the
    allow-list and the TypeScript constants in sync.
-2. `search-sec-fetch-site`: block `/v1/activities/search` when the
+2. `search-sec-fetch-site`: block `/api/v1/public/activities/search` when the
    `Sec-Fetch-Site` header is present and is not `same-origin`. Browsers
    set it on every fetch the site makes; a tab opened on the API URL
    (`none`) or a third-party page embedding the call is refused. Requests
    without the header (pre-2023 Safari) still pass, so no legacy browser is
    locked out.
-3. `search-tooling-user-agents`: block `/v1/activities/search` when the
+3. `search-tooling-user-agents`: block `/api/v1/public/activities/search` when the
    User-Agent is empty or contains common HTTP-library and headless
    markers (`python`, `curl/`, `wget/`, `go-http-client`, `scrapy`,
    `httpx`, `aiohttp`, `java/`, `okhttp`, `node-fetch`, `axios/`,
@@ -284,7 +284,7 @@ still open.
 9. **Turnstile** (later, separate plan): create a `siutindei` widget
    (invisible mode, pre-clearance on), render it on the home and search
    pages, send the token as `x-turnstile-token`, and verify it either in a
-   Worker on `siutindei.com/v1/activities/search*` (no AWS change) or in the
+   Worker on `siutindei.com/api/v1/public/activities/search*` (no AWS change) or in the
    device-attestation authorizer (red zone). This replaces the static
    `NEXT_PUBLIC_DEVICE_ATTESTATION_TOKEN` that anyone can copy from the
    bundle.
@@ -315,7 +315,7 @@ still open.
 - Googlebot and Bingbot keep crawling pages. No rule targets verified
   bots; the rate limit is path-scoped to the API.
 - The search fetch from the site's own pages is never challenged. Only
-  block actions are used on `/v1/activities/search`.
+  block actions are used on `/api/v1/public/activities/search`.
 - CloudFront remains the single cache for HTML and the search API.
   `deploy-public-www.sh` invalidations keep their meaning.
 - `X-Origin-Verify` between CloudFront and API Gateway is unchanged.
@@ -369,5 +369,5 @@ still open.
   Function code (same exposure as today's origin custom header).
 - Enable Bot Fight Mode after the observation period, accepting the CSP
   console error, or keep relying on the custom rules.
-- Whether to add `Sec-Fetch-Site` enforcement to `/v1/listing-events` as
+- Whether to add `Sec-Fetch-Site` enforcement to `/api/v1/public/listing-events` as
   well once the search rule has a clean week.

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 import sys
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
@@ -14,7 +13,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1] / "backend" / "src"))
 
 import app.auth.api_key_authorizer as authorizer_module  # noqa: E402
 from app.auth.api_key_authorizer import authorize_api_key  # noqa: E402
-from app.services.api_keys import generate_api_key, hash_api_key  # noqa: E402
+from app.services.api_keys import generate_api_key  # noqa: E402
 
 METHOD_ARN = "arn:aws:execute-api:eu-west-1:123:api/prod/GET/v1/partner"
 
@@ -39,10 +38,8 @@ class FakeRepo:
     def __init__(self, api_key) -> None:
         self._api_key = api_key
         self.touched = False
-        self.seen_hash: str | None = None
 
     def find_active_by_hash(self, key_hash: str):
-        self.seen_hash = key_hash
         return self._api_key
 
     def touch_last_used(self, api_key) -> None:
@@ -144,63 +141,9 @@ def test_recent_last_used_not_touched(monkeypatch) -> None:
     assert repo.touched is False
 
 
-def test_legacy_header_allowed_and_logged(monkeypatch, caplog) -> None:
-    """The old x-partner-key header authorizes for one deploy."""
-    api_key = SimpleNamespace(
-        id=uuid4(),
-        scope="read",
-        org_id=None,
-        last_used_at=None,
-    )
-    repo = _install_fakes(monkeypatch, api_key)
+def test_legacy_header_alone_is_denied() -> None:
+    """x-partner-key is not a credential."""
     plaintext = generate_api_key().plaintext
-    caplog.set_level(logging.INFO, logger="app.auth.api_key_authorizer")
-    response = authorize_api_key(_event({"X-Partner-Key": plaintext}))
-    assert _statement_effect(response) == "Allow"
-    assert repo.seen_hash == hash_api_key(plaintext)
-    assert "auth_scheme=legacy" in caplog.text
-
-
-def test_bearer_logs_auth_scheme(monkeypatch, caplog) -> None:
-    """Bearer authorization is logged as auth_scheme=bearer."""
-    api_key = SimpleNamespace(
-        id=uuid4(),
-        scope="read",
-        org_id=None,
-        last_used_at=None,
-    )
-    _install_fakes(monkeypatch, api_key)
-    plaintext = generate_api_key().plaintext
-    caplog.set_level(logging.INFO, logger="app.auth.api_key_authorizer")
-    response = authorize_api_key(_event(_bearer(plaintext)))
-    assert _statement_effect(response) == "Allow"
-    assert "auth_scheme=bearer" in caplog.text
-
-
-def test_bearer_wins_when_legacy_header_is_also_sent(monkeypatch, caplog) -> None:
-    """A bearer token is the credential even if the legacy header is set."""
-    api_key = SimpleNamespace(
-        id=uuid4(),
-        scope="read",
-        org_id=None,
-        last_used_at=None,
-    )
-    repo = _install_fakes(monkeypatch, api_key)
-    bearer = generate_api_key().plaintext
-    legacy = generate_api_key().plaintext
-    caplog.set_level(logging.INFO, logger="app.auth.api_key_authorizer")
-    response = authorize_api_key(
-        _event({"Authorization": f"Bearer {bearer}", "x-partner-key": legacy})
-    )
-    assert _statement_effect(response) == "Allow"
-    assert repo.seen_hash == hash_api_key(bearer)
-    assert "auth_scheme=bearer" in caplog.text
-
-
-def test_malformed_legacy_header_denied(caplog) -> None:
-    """A legacy header that is not an API key is denied before the database."""
-    caplog.set_level(logging.WARNING, logger="app.auth.api_key_authorizer")
-    response = authorize_api_key(_event({"x-partner-key": "not a key"}))
+    response = authorize_api_key(_event({"x-partner-key": plaintext}))
     assert _statement_effect(response) == "Deny"
-    assert response["context"]["reason"] == "invalid_key"
-    assert "auth_scheme=legacy" in caplog.text
+    assert response["context"]["reason"] == "missing_key"

@@ -166,10 +166,8 @@ in the `Authorization: Bearer` header:
   never logged.
 - A dedicated in-VPC Lambda request authorizer
   (`PartnerApiKeyAuthorizerFunction`) validates the hash against the
-  database and rejects revoked or expired keys. The legacy `x-partner-key`
-  header is accepted for one deploy when the bearer token is absent.
-  Authorizer caching is off for that deploy, so revocation applies on the
-  next request and the identity source includes neither header.
+  database and rejects revoked or expired keys. Authorizer results are
+  cached for 5 minutes, which bounds how long a revoked key keeps working.
 - Keys carry a scope (`read` = GET only, `crud` = full CRUD) and an
   optional organization scope. Because the cached Allow policy covers all
   partner routes, **scope is re-checked before dispatch, and a route

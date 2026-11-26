@@ -285,7 +285,7 @@ Workers Free allows 100k requests a day; staging is nowhere near that.
 
 Cloudflare rule interplay: the three `siutindei.com` custom rules and the
 rate limit are path-scoped, so they also run on
-`www-staging.siutindei.com/v1/activities/search` once it is proxied. That
+`www-staging.siutindei.com/api/v1/public/activities/search` once it is proxied. That
 is acceptable: staging sends the same `limit` values and the same
 `Sec-Fetch-Site` as production. The cache and transform rules are
 host-scoped to `siutindei.com` and do not touch staging; the Worker

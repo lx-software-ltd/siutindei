@@ -360,15 +360,16 @@ function assertOpsAlarmRules(stack: cdk.Stack): void {
         partnerFunctionId,
       ),
   );
-  const partnerIdentity = partnerAuthorizer?.Properties?.IdentitySource;
+  const partnerIdentity = JSON.stringify(
+    partnerAuthorizer?.Properties?.IdentitySource ?? "",
+  );
   if (
-    partnerAuthorizer?.Properties?.AuthorizerResultTtlInSeconds !== 0 ||
-    (partnerIdentity !== undefined && partnerIdentity !== "") ||
-    JSON.stringify(partnerIdentity ?? "").includes("Authorization") ||
-    JSON.stringify(partnerIdentity ?? "").includes("x-partner-key")
+    partnerAuthorizer?.Properties?.AuthorizerResultTtlInSeconds !== 300 ||
+    !partnerIdentity.includes("Authorization") ||
+    partnerIdentity.includes("x-partner-key")
   ) {
     throw new Error(
-      "Partner API-key authorizer cache key must include neither header while the legacy header is accepted",
+      "Partner API-key authorizer must cache Authorization for 5 minutes",
     );
   }
   const corsExposed = Object.values(parentResources)
