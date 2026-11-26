@@ -169,7 +169,9 @@ in the `Authorization: Bearer` header:
   database and rejects revoked or expired keys. The legacy `x-partner-key`
   header is accepted for one deploy when the bearer token is absent.
   Authorizer caching is off for that deploy, so revocation applies on the
-  next request and the identity source includes neither header.
+  next request and the identity source includes neither header. The
+  construct id is `PartnerApiKeyAuthorizerReplaced`, so CloudFormation
+  replaces the live authorizer instead of updating it in place.
 - Keys carry a scope (`read` = GET only, `crud` = full CRUD) and an
   optional organization scope. Because the cached Allow policy covers all
   partner routes, **scope is re-checked before dispatch, and a route
