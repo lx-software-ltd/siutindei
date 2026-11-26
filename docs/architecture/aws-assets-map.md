@@ -330,14 +330,14 @@ For each function above, the following resources are created:
 ### API Gateway Resources and Methods
 
 For the complete list of endpoints with request/response schemas, see
-the OpenAPI specs: [`docs/api/public.yaml`](../api/search.yaml)
+the OpenAPI specs: [`docs/api/public.yaml`](../api/public.yaml)
 and [`docs/api/admin.yaml`](../api/admin.yaml).
 
 | Resource Path | Method | Authorization | Integration | Notes |
 |--------------|--------|---------------|-------------|-------|
-| `/health` | GET | IAM | `HealthCheckFunction` | Health check |
+| `/health` | GET | NONE | `HealthCheckFunction` | Health check |
 | `/v1/public/activities/search` | GET | Device Attestation + API Key | `SiutindeiSearchFunction` | Cached at the website CloudFront edge for up to 5 minutes (`s-maxage=300`). The old `/v1/activities/search` behavior rewrites to this path. |
-| `/v1/listing-events` | POST | Device Attestation + API Key | `ListingEventsIngestFunction` | First-party funnel ingest; never cached |
+| `/v1/public/listing-events` | POST | Device Attestation + API Key | `ListingEventsIngestFunction` | First-party funnel ingest; never cached |
 | `/v1/admin/{resource}` | GET, POST | Admin Group | `SiutindeiAdminFunction` | CRUD (organizations, locations, activity-categories, activities, pricing, schedules, feedback-labels, organization-feedback) |
 | `/v1/admin/{resource}/{id}` | ANY | Admin Group | `SiutindeiAdminFunction` | CRUD by ID |
 | `/v1/admin/organizations/{id}/media` | POST, DELETE | Admin Group | `SiutindeiAdminFunction` | Media upload/delete |
