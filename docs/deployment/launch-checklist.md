@@ -175,7 +175,7 @@ can run and set the origin-lock header.
 |---|---|
 | `siutindei.com` | public-www CloudFront distribution (canonical, proxied, origin-locked) |
 | `www.siutindei.com` | 301 → `https://siutindei.com/$1` (Cloudflare Worker) |
-| `api.siutindei.com` | `ApiSecondaryCustomDomainTarget` stack output |
+| `api.siutindei.com` | `ApiCustomDomainTarget` stack output |
 | `auth.siutindei.com` | `CognitoCustomDomainCloudFront` stack output |
 | `admin.siutindei.com` | admin-web CloudFront distribution |
 | `www-staging.siutindei.com` | public-www staging distribution, proxied behind the IP allow-list Worker and origin-locked |

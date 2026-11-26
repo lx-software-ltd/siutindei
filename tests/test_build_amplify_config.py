@@ -68,7 +68,7 @@ def test_config_uses_custom_domains_and_mobile_redirects() -> None:
     }
 
 
-def test_config_prefers_secondary_api_domain_while_hosts_move() -> None:
+def test_config_reads_the_custom_domain_url_only() -> None:
     outputs = {
         **OUTPUTS,
         "ApiSecondaryCustomDomainUrl": "https://api.next.example.test",
@@ -77,7 +77,7 @@ def test_config_prefers_secondary_api_domain_while_hosts_move() -> None:
     config = _module().build_config(outputs, PARAMS, "ap-southeast-1")
 
     api = config["api"]["plugins"]["awsAPIPlugin"]["activitiesApi"]
-    assert api["endpoint"] == "https://api.next.example.test"
+    assert api["endpoint"] == "https://api.example.test"
 
 
 def test_config_rejects_the_execute_api_url() -> None:

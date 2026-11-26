@@ -639,29 +639,6 @@ export class ApiStack extends cdk.Stack {
           "For edge-optimized endpoints, must be in us-east-1.",
       }
     );
-    const apiSecondaryCustomDomainName = new cdk.CfnParameter(
-      this,
-      "ApiSecondaryCustomDomainName",
-      {
-        type: "String",
-        default: "",
-        description:
-          "Optional second custom domain mapped to the same stage while " +
-          "clients move between hostnames (e.g., api.siutindei.com). " +
-          "Leave empty when only ApiCustomDomainName is in use.",
-      }
-    );
-    const apiSecondaryCustomDomainCertificateArn = new cdk.CfnParameter(
-      this,
-      "ApiSecondaryCustomDomainCertificateArn",
-      {
-        type: "String",
-        default: "",
-        description:
-          "Regional ACM certificate ARN for ApiSecondaryCustomDomainName " +
-          "(same region as the API).",
-      }
-    );
     const apiDisableExecuteApiEndpoint = new cdk.CfnParameter(
       this,
       "ApiDisableExecuteApiEndpoint",
@@ -670,7 +647,7 @@ export class ApiStack extends cdk.Stack {
         default: "false",
         allowedValues: ["false", "true"],
         description:
-          "When true and the secondary API custom domain is configured, " +
+          "When true and the API custom domain is configured, " +
           "the default execute-api hostname returns 403.",
       }
     );
@@ -3140,89 +3117,46 @@ export class ApiStack extends cdk.Stack {
       ),
     });
 
-    // Import certificate for custom domain
-    const apiCertificate = acm.Certificate.fromCertificateArn(
-      this,
-      "ApiCertificate",
-      apiCustomDomainCertificateArn.valueAsString
-    );
-
-    // Create custom domain for API Gateway (Regional endpoint)
-    // Regional is preferred for APIs not requiring global edge caching
-    const apiDomain = new apigateway.DomainName(this, "ApiCustomDomain", {
-      domainName: apiCustomDomainName.valueAsString,
-      certificate: apiCertificate,
-      endpointType: apigateway.EndpointType.REGIONAL,
-      securityPolicy: apigateway.SecurityPolicy.TLS_1_2,
-    });
-    const apiDomainCfn = apiDomain.node.defaultChild as apigateway.CfnDomainName;
-    apiDomainCfn.cfnOptions.condition = useApiCustomDomain;
-
-    // Map the custom domain to the API stage
-    const apiMapping = new apigateway.BasePathMapping(this, "ApiBasePathMapping", {
-      domainName: apiDomain,
-      restApi: api,
-      stage: api.deploymentStage,
-    });
-    const apiMappingCfn = apiMapping.node.defaultChild as apigateway.CfnBasePathMapping;
-    apiMappingCfn.cfnOptions.condition = useApiCustomDomain;
-
-    const useApiSecondaryCustomDomain = new cdk.CfnCondition(
-      this,
-      "UseApiSecondaryCustomDomain",
-      {
-        expression: cdk.Fn.conditionAnd(
-          cdk.Fn.conditionNot(
-            cdk.Fn.conditionEquals(apiSecondaryCustomDomainName.valueAsString, "")
-          ),
-          cdk.Fn.conditionNot(
-            cdk.Fn.conditionEquals(
-              apiSecondaryCustomDomainCertificateArn.valueAsString,
-              ""
-            )
-          )
-        ),
-      }
-    );
-    const apiSecondaryDomain = new apigateway.DomainName(
+    // Construct ids are historical. The live domain was created under
+    // these ids, and renaming them would replace it.
+    const apiDomain = new apigateway.DomainName(
       this,
       "ApiSecondaryCustomDomain",
       {
-        domainName: apiSecondaryCustomDomainName.valueAsString,
+        domainName: apiCustomDomainName.valueAsString,
         certificate: acm.Certificate.fromCertificateArn(
           this,
           "ApiSecondaryCertificate",
-          apiSecondaryCustomDomainCertificateArn.valueAsString
+          apiCustomDomainCertificateArn.valueAsString
         ),
         endpointType: apigateway.EndpointType.REGIONAL,
         securityPolicy: apigateway.SecurityPolicy.TLS_1_2,
       }
     );
     (
-      apiSecondaryDomain.node.defaultChild as apigateway.CfnDomainName
-    ).cfnOptions.condition = useApiSecondaryCustomDomain;
-    const apiSecondaryMapping = new apigateway.BasePathMapping(
+      apiDomain.node.defaultChild as apigateway.CfnDomainName
+    ).cfnOptions.condition = useApiCustomDomain;
+    const apiMapping = new apigateway.BasePathMapping(
       this,
       "ApiSecondaryBasePathMapping",
       {
-        domainName: apiSecondaryDomain,
+        domainName: apiDomain,
         restApi: api,
         stage: api.deploymentStage,
       }
     );
     (
-      apiSecondaryMapping.node.defaultChild as apigateway.CfnBasePathMapping
-    ).cfnOptions.condition = useApiSecondaryCustomDomain;
+      apiMapping.node.defaultChild as apigateway.CfnBasePathMapping
+    ).cfnOptions.condition = useApiCustomDomain;
 
     // The RestApi flag only takes effect on the next stage update, so a
-    // stage variable changes with it. Gated on the secondary domain because
-    // that is the production host (ApiCustomDomainName is empty).
+    // stage variable changes with it. Gated on the custom domain.
     const disableExecuteApiEndpoint = new cdk.CfnCondition(
       this,
       "DisableExecuteApiEndpoint",
       {
         expression: cdk.Fn.conditionAnd(
-          useApiSecondaryCustomDomain,
+          useApiCustomDomain,
           cdk.Fn.conditionEquals(
             apiDisableExecuteApiEndpoint.valueAsString,
             "true"
@@ -3349,28 +3283,6 @@ export class ApiStack extends cdk.Stack {
       }
     );
     apiCustomDomainUrlOutput.condition = useApiCustomDomain;
-
-    const apiSecondaryCustomDomainTarget = new cdk.CfnOutput(
-      this,
-      "ApiSecondaryCustomDomainTarget",
-      {
-        value: apiSecondaryDomain.domainNameAliasDomainName,
-        description:
-          "CNAME target for the secondary API custom domain (Cloudflare, " +
-          "proxy disabled).",
-      }
-    );
-    apiSecondaryCustomDomainTarget.condition = useApiSecondaryCustomDomain;
-
-    const apiSecondaryCustomDomainUrlOutput = new cdk.CfnOutput(
-      this,
-      "ApiSecondaryCustomDomainUrl",
-      {
-        value: `https://${apiSecondaryCustomDomainName.valueAsString}`,
-        description: "The secondary custom domain URL for the API.",
-      }
-    );
-    apiSecondaryCustomDomainUrlOutput.condition = useApiSecondaryCustomDomain;
 
     // ---------------------------------------------------------------------
     // Per-session rate limit on signed-in routes (all served by the admin

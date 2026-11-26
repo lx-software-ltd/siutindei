@@ -512,10 +512,13 @@ and public-www):
 Phase 4, retirement (after the mobile builds and the board importer have
 moved; at least one admin-web release later):
 
-1. Swap the parameter wiring so `ApiCustomDomainName=api.siutindei.com`
-   drives the surviving construct; remove the secondary parameters. Drop
-   the `lx-software.com` origins from both CORS defaults; update
-   `tests/test_search_handler.py` to the new origin.
+The parameter swap is done. `ApiCustomDomainName` and
+`ApiCustomDomainCertificateArn` feed the surviving domain construct, and
+the secondary parameters are gone. The certificate secret name is
+unchanged. The remaining steps in this phase are still open.
+
+1. Done for the parameter swap. The CORS origin drop and the
+   search-handler origin update are not part of that swap.
 2. Delete `siutindei-api.lx-software.com` from Cloudflare. Keep the
    `siutindei.lx-software.com` redirect for as long as bookmarks matter.
 3. Remove the old Google and Apple redirect URIs.

@@ -697,10 +697,11 @@ own buckets and log groups.
 ## Estimated Resource Count
 
 CloudFormation allows 500 resources per stack, and a nested stack counts
-as one. The main stack synthesizes to 495 resources, including the admin
-`live` alias and its published version and the conditional secondary API
-custom domain and base path mapping (`ApiSecondaryCustomDomainName`,
-present while clients move hostnames). The API Gateway alone
+as one. The main stack synthesizes to 493 resources, including the admin
+`live` alias and its published version and the conditional API custom
+domain and base path mapping. The domain construct ids are historical
+(`ApiSecondaryCustomDomain`, `ApiSecondaryCertificate`,
+`ApiSecondaryBasePathMapping`) and must not change. The API Gateway alone
 accounts for 241 of them: 154 methods and 70 path resources. The 19 ops
 alarm rules live in the `OpsAlarmsStack` nested stack. The catalogue
 snapshot bucket, function, and schedule live in the
