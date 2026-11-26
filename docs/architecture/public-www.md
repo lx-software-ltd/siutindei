@@ -113,7 +113,7 @@ Source: [`apps/public_www`](../../apps/public_www).
   `colSpan`, optional `props`).
   The home route renders `DiscoveryHomePage` (Airbnb-style discovery: the
   immersive "Small World" hero, a 3-step search navigator in the hero, and
-  horizontal listing carousels fed by `/v1/activities/search`).
+  horizontal listing carousels fed by `/v1/public/activities/search`).
 - **Brand & immersive homepage:** the "Small World" brand system lives in
   the `@theme` tokens in `src/app/globals.css` (golden-yellow base with
   earth-teal / leaf-green support colors and chocolate ink, sampled from
@@ -164,7 +164,8 @@ Source: [`apps/public_www`](../../apps/public_www).
   entries for
   `maps.googleapis.com` / `maps.gstatic.com`. The search bar **area** label links
   to the map view for the selected region. Search uses browser-side `fetch` to
-  `NEXT_PUBLIC_SITE_ORIGIN` (`/v1/activities/search` on that host) unless
+  `NEXT_PUBLIC_SITE_ORIGIN` (the site proxy rewrites to
+  `/v1/public/activities/search`) unless
   `NEXT_PUBLIC_STAGING_SEARCH_DATA_ENABLED=true`, in which case listings are
   loaded at runtime from
   `{NEXT_PUBLIC_SITE_ORIGIN}/fixtures/activity_search_staging.json` (static
@@ -613,8 +614,8 @@ Request path:
 
 ```
 browser → Cloudflare (siutindei.com, proxied)
-            rate limit /v1/activities/search: 15 req / 10 s / IP, block 10 s
-            custom rules on /v1/activities/search only (block):
+            rate limit on the search proxy (rewrites to /v1/public/activities/search): 15 req / 10 s / IP, block 10 s
+            custom rules on that proxy only (block):
               limit ∉ {1, 12, 24, 30}; Sec-Fetch-Site present and ≠ same-origin;
               empty or HTTP-library/headless User-Agent
             cache rules: bypass everything except /_next/static/*

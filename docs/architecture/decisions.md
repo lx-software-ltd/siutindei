@@ -175,17 +175,21 @@ parallel environments (production + staging) inside a single CDK stack
   parameters.
 - API keys are rotated every 90 days by a scheduled Lambda.
 - Partner routes (`/v1/partner/*`) use custom DB-backed API keys sent in the
-  `Authorization: Bearer` header. Keys are SHA-256 hashed at rest, carry a scope
+  `Authorization: Bearer` header. The legacy `x-partner-key` header is
+  accepted for one deploy when the bearer token is absent. Keys are SHA-256
+  hashed at rest, carry a scope
   (`read` = GET only, `crud` = full CRUD) and an optional single-organization
-  scope, and are validated by a dedicated in-VPC Lambda authorizer
-  (5-minute result cache). Scope and organization filtering are re-enforced
+  scope, and are validated by a dedicated in-VPC Lambda authorizer.
+  Result caching is off for that deploy so the identity source includes
+  neither header. Scope and organization filtering are re-enforced
   in the handlers. A full-access `crud` key can post a catalog import
   file at `POST /v1/partner/imports`. The import is stored as an
   import job with source `partner`. Admins generate and revoke keys
   via `/v1/admin/api-keys` (revocation is a soft delete to preserve
   the audit trail).
 - Public search responses are cached at the CloudFront edge (5-minute TTL) via
-  the public-website distribution's `/v1/activities/search` behavior; the API
+  the public-website distribution's behavior for
+  `GET /v1/public/activities/search`; the API
   Gateway stage cache cluster is disabled. CloudFront caching is usage-based
   (within the free tier at current volumes), whereas the API Gateway cache
   cluster was a fixed hourly charge that dominated the API Gateway bill.

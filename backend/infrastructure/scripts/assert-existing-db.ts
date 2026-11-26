@@ -346,15 +346,89 @@ function assertOpsAlarmRules(stack: cdk.Stack): void {
       "SES send policies must grant the address and a domain padded so an empty sender cannot fail Fn::Select",
     );
   }
+  const partnerFunctionId = Object.entries(parentResources).find(
+    ([, resource]) =>
+      resource.Type === "AWS::Lambda::Function" &&
+      resource.Properties?.Handler ===
+        "lambda/authorizers/api_key/handler.lambda_handler",
+  )?.[0];
   const partnerAuthorizer = Object.values(parentResources).find(
     (resource) =>
       resource.Type === "AWS::ApiGateway::Authorizer" &&
-      JSON.stringify(resource.Properties?.IdentitySource ?? "").includes(
-        "Authorization",
+      partnerFunctionId !== undefined &&
+      JSON.stringify(resource.Properties?.AuthorizerUri ?? "").includes(
+        partnerFunctionId,
       ),
   );
-  if (partnerAuthorizer?.Properties?.AuthorizerResultTtlInSeconds !== 300) {
-    throw new Error("Partner API-key authorizer cache must be 5 minutes");
+  const partnerIdentity = partnerAuthorizer?.Properties?.IdentitySource;
+  if (
+    partnerAuthorizer?.Properties?.AuthorizerResultTtlInSeconds !== 0 ||
+    (partnerIdentity !== undefined && partnerIdentity !== "") ||
+    JSON.stringify(partnerIdentity ?? "").includes("Authorization") ||
+    JSON.stringify(partnerIdentity ?? "").includes("x-partner-key")
+  ) {
+    throw new Error(
+      "Partner API-key authorizer cache key must include neither header while the legacy header is accepted",
+    );
+  }
+  const corsExposed = Object.values(parentResources)
+    .filter((resource) => resource.Type === "AWS::S3::Bucket")
+    .flatMap((resource) => {
+      const cors = resource.Properties?.CorsConfiguration as
+        | { CorsRules?: Array<{ ExposedHeaders?: string[] }> }
+        | undefined;
+      return cors?.CorsRules ?? [];
+    })
+    .map((rule) => rule.ExposedHeaders ?? []);
+  const requestIdExposed = corsExposed.filter(
+    (headers) => headers.includes("ETag") && headers.includes("x-request-id"),
+  );
+  if (requestIdExposed.length !== 2) {
+    throw new Error(
+      `Both API-stack CORS rules must expose x-request-id; found ${requestIdExposed.length}`,
+    );
+  }
+  const gatewayResponses = Object.values(parentResources).filter(
+    (resource) => resource.Type === "AWS::ApiGateway::GatewayResponse",
+  );
+  if (gatewayResponses.length === 0) {
+    throw new Error("API stack must keep its gateway responses");
+  }
+  for (const response of gatewayResponses) {
+    const parameters = response.Properties?.ResponseParameters as
+      | Record<string, string>
+      | undefined;
+    const allowMethods = Object.entries(parameters ?? {}).find(([name]) =>
+      name.endsWith("Access-Control-Allow-Methods"),
+    )?.[1];
+    if (!allowMethods?.includes("PATCH")) {
+      throw new Error(
+        `Gateway Allow-Methods must include PATCH; found ${allowMethods}`,
+      );
+    }
+    const template = JSON.stringify(response.Properties?.ResponseTemplates ?? "");
+    if (template.includes('"title": "$context.error.responseType"')) {
+      throw new Error("Gateway error title must be the HTTP reason phrase");
+    }
+  }
+  const templateFor = (responseType: string): string => {
+    const response = gatewayResponses.find(
+      (resource) => resource.Properties?.ResponseType === responseType,
+    );
+    const templates = response?.Properties?.ResponseTemplates as
+      | Record<string, string>
+      | undefined;
+    return templates?.["application/json"] ?? "";
+  };
+  const clientErrorTemplate = templateFor("DEFAULT_4XX");
+  const serverErrorTemplate = templateFor("DEFAULT_5XX");
+  for (const phrase of ["Unauthorized", "Forbidden", "Bad Request", "Not Found"]) {
+    if (!clientErrorTemplate.includes(phrase)) {
+      throw new Error(`DEFAULT_4XX template must map to ${phrase}`);
+    }
+  }
+  if (!serverErrorTemplate.includes("Internal Server Error")) {
+    throw new Error("DEFAULT_5XX title must be Internal Server Error");
   }
   const partnerFunction = Object.values(parentResources).find(
     (resource) =>

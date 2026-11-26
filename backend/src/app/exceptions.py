@@ -66,12 +66,13 @@ class AppError(Exception):
         self.status_code = status_code
         self.detail = detail
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self, request_id: str = "") -> dict[str, Any]:
         """Convert exception to API response body."""
         return problem_body(
             self.status_code,
             self.message,
             self.detail,
+            request_id=request_id,
             field=getattr(self, "field", None),
         )
 

@@ -4,7 +4,10 @@
 The desired state lives in ``public_www_edge_policy.json`` next to this
 file. ``plan`` is read-only: it fetches the live zone and prints every
 setting, ruleset, bot-management field, and DNS proxy flag that differs.
-``apply`` writes the differences, section by section, and refuses to run
+``check`` is read-only and does not call Cloudflare. It reads a policy
+document from stdin, or the local policy file when stdin is empty, and
+fails when the ``/api/v1/public`` rate rule is absent. ``apply`` writes
+the differences, section by section, and refuses to run
 without ``--yes``. Every write is idempotent: zone settings are patched,
 each ruleset phase entrypoint is replaced as a whole, bot management is
 put, and the DNS record is patched.
@@ -18,6 +21,7 @@ Environment: ``CLOUDFLARE_API_TOKEN`` (required),
 ``PUBLIC_WWW_EDGE_VERIFY_SECRET`` (transform rule value).
 
     python3 scripts/cloudflare/edge_policy.py plan
+    python3 scripts/cloudflare/edge_policy.py check
     python3 scripts/cloudflare/edge_policy.py apply --yes --section settings
     python3 scripts/cloudflare/edge_policy.py apply --yes --section dns
     python3 scripts/cloudflare/edge_policy.py apply --yes --section dns --proxied false
@@ -42,6 +46,7 @@ from typing import Any
 
 API_BASE = "https://api.cloudflare.com/client/v4"
 DEFAULT_POLICY = Path(__file__).with_name("public_www_edge_policy.json")
+PUBLIC_API_RATE_PATH = "/api/v1/public"
 SECTIONS = ("settings", "rulesets", "bot", "dns")
 # Ruleset phases are applied in this order so the request-header secret and
 # cache behaviour exist before any blocking rule starts matching.
@@ -455,9 +460,46 @@ def apply_plan(api: CloudflareApi, changes: list[Change]) -> list[str]:
     return applied
 
 
+def public_api_rate_rule_present(document: Mapping[str, Any]) -> bool:
+    """Return True when a rate rule expression covers ``/api/v1/public``."""
+    rulesets = document.get("rulesets")
+    if not isinstance(rulesets, Mapping):
+        return False
+    ratelimit = rulesets.get("http_ratelimit")
+    if not isinstance(ratelimit, Mapping):
+        return False
+    rules = ratelimit.get("rules")
+    if not isinstance(rules, list):
+        return False
+    for rule in rules:
+        if not isinstance(rule, Mapping):
+            continue
+        expression = rule.get("expression")
+        if isinstance(expression, str) and PUBLIC_API_RATE_PATH in expression:
+            return True
+    return False
+
+
+def check_policy_text(text: str) -> int:
+    """Exit code for a policy document. Does not call Cloudflare or apply."""
+    try:
+        document = json.loads(text)
+    except json.JSONDecodeError as exc:
+        print(f"check failed: {exc}", file=sys.stderr)
+        return 1
+    if not isinstance(document, dict) or not public_api_rate_rule_present(document):
+        print(
+            f"check failed: {PUBLIC_API_RATE_PATH} rate rule is absent",
+            file=sys.stderr,
+        )
+        return 1
+    print(f"check ok: {PUBLIC_API_RATE_PATH} rate rule is present")
+    return 0
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("command", choices=("plan", "apply"))
+    parser.add_argument("command", choices=("plan", "apply", "check"))
     parser.add_argument("--policy", type=Path, default=DEFAULT_POLICY)
     parser.add_argument("--zone", help="Override the policy zone_name.")
     parser.add_argument("--hostname", help="Override the policy hostname.")
@@ -479,6 +521,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
+    if args.command == "check":
+        raw = ""
+        if not sys.stdin.isatty():
+            raw = sys.stdin.read()
+        if raw.strip():
+            return check_policy_text(raw)
+        return check_policy_text(args.policy.read_text())
     token = os.environ.get("CLOUDFLARE_API_TOKEN", "").strip()
     if not token:
         print("CLOUDFLARE_API_TOKEN is not set.", file=sys.stderr)
