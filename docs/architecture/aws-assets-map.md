@@ -405,7 +405,7 @@ in the main stack.
 
 | Resource Type | Logical ID | Physical Name/ID | Notes |
 |--------------|------------|------------------|-------|
-| WAFv2 WebACL | `ApiRateLimitApiWebAcl*` | `lxsoftware-siutindei-api-waf` | REGIONAL. Known-bad-inputs rule group blocks Log4j2 lookups (CVE-2021-44228) on every request. Session rule blocks over 300 requests / 60 s on `/v1/admin/*`, `/v1/manager/*`, `/v1/user/*` with a 429. Two partner rules apply the same limit on `/v1/partner/*`, one keyed by `authorization` and one by `x-partner-key`. The session rule does not include that path. The blocked-request alarm sums all three metrics. |
+| WAFv2 WebACL | `ApiRateLimitApiWebAcl*` | `lxsoftware-siutindei-api-waf` | REGIONAL. Known-bad-inputs rule group blocks Log4j2 lookups (CVE-2021-44228) on every request. Session rule blocks over 300 requests / 60 s on `/v1/admin/*`, `/v1/manager/*`, `/v1/user/*` with a 429. The partner rule applies the same limit on `/v1/partner/*`, keyed by `authorization` only. The session rule does not include that path. |
 | WAFv2 WebACL Association | `ApiRateLimitApiWebAclAssociation*` | — | Attaches the web ACL to the `prod` stage |
 | KMS Key + Alias | `ApiRateLimitApiWafLogKey*` | `lxsoftware-siutindei-kms-api-waf-log` | WAF log encryption (rotation enabled) |
 | Log Group | `ApiRateLimitApiWafLogGroup*` | `aws-waf-logs-lxsoftware-siutindei-api` | Retained on delete; `authorization` and `cookie` redacted |

@@ -298,12 +298,12 @@ function assertPartnerRateRules(resources: Record<string, ApiResource>): void {
   );
   const webAclText = JSON.stringify(webAcl ?? {});
   if (
-    !webAclText.includes('"x-partner-key"') ||
-    !webAclText.includes("PartnerLegacyKeyRateLimit")
+    webAclText.includes('"x-partner-key"') ||
+    webAclText.includes("PartnerLegacyKeyRateLimit") ||
+    !webAclText.includes("PartnerKeyRateLimit")
   ) {
-    throw new Error("Partner WAF must rate limit x-partner-key as well as authorization");
+    throw new Error("Partner WAF must rate limit authorization and not x-partner-key");
   }
-  const legacyMetric = "lxsoftware-siutindei-api-partner-legacy-rate-limit";
   const alarm = Object.values(resources).find(
     (resource) =>
       resource.Type === "AWS::CloudWatch::Alarm" &&
@@ -311,11 +311,11 @@ function assertPartnerRateRules(resources: Record<string, ApiResource>): void {
   );
   const alarmText = JSON.stringify(alarm ?? {});
   if (
-    !alarmText.includes(legacyMetric) ||
+    alarmText.includes("api-partner-legacy-rate-limit") ||
     !alarmText.includes("lxsoftware-siutindei-api-partner-rate-limit")
   ) {
     throw new Error(
-      "Rate-limit alarm must include the bearer and x-partner-key block metrics",
+      "Rate-limit alarm must include the bearer metric and not the legacy header",
     );
   }
 }
