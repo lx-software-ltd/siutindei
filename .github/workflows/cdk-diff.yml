@@ -129,7 +129,7 @@ jobs:
           # template:set
           param-file: ${{ vars.CDK_PARAM_FILE }}
           format: plain-json
-          pass-empty: WafWebAclArn,CognitoCustomDomainName,CognitoCustomDomainCertificateArn,ApiCustomDomainName,ApiCustomDomainCertificateArn,SearchAreaScope
+          pass-empty: WafWebAclArn,CognitoCustomDomainName,CognitoCustomDomainCertificateArn,SearchAreaScope
           escape-newlines: "true"
           include-extras: "false"
           # template:end
@@ -248,7 +248,7 @@ jobs:
           # template:set
           param-file: ${{ vars.CDK_PARAM_FILE }}
           format: plain-json
-          pass-empty: WafWebAclArn,CognitoCustomDomainName,CognitoCustomDomainCertificateArn,ApiCustomDomainName,ApiCustomDomainCertificateArn,SearchAreaScope
+          pass-empty: WafWebAclArn,CognitoCustomDomainName,CognitoCustomDomainCertificateArn,SearchAreaScope
           escape-newlines: "true"
           include-extras: "false"
           # template:end

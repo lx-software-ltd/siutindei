@@ -274,17 +274,17 @@ function assertOpsAlarmRules(stack: cdk.Stack): void {
     Resources: Record<string, { Type: string; Properties?: Record<string, unknown> }>;
   };
   const parentResources = synthesized.Resources;
-  // CloudFormation allows 500 resources. 495 includes the admin live
-  // alias and its published version and the conditional secondary API
-  // custom domain and mapping. Fail if a later edit crosses the cap or
-  // drifts from the documented count.
+  // CloudFormation allows 500 resources. 493 includes the admin live
+  // alias and its published version and the conditional API custom domain
+  // and mapping. Fail if a later edit crosses the cap or drifts from the
+  // documented count.
   const resourceCount = Object.keys(parentResources).length;
   if (resourceCount > 500) {
     throw new Error(
       `API stack has ${resourceCount} resources; CloudFormation allows 500`,
     );
   }
-  if (resourceCount !== 495) {
+  if (resourceCount !== 493) {
     throw new Error(
       `API stack resource count changed to ${resourceCount}; update docs/architecture/aws-assets-map.md`,
     );
@@ -293,11 +293,11 @@ function assertOpsAlarmRules(stack: cdk.Stack): void {
     synthesized.Conditions?.DisableExecuteApiEndpoint ?? null,
   );
   if (
-    !disableExecute.includes("UseApiSecondaryCustomDomain") ||
+    !disableExecute.includes("UseApiCustomDomain") ||
     !disableExecute.includes("ApiDisableExecuteApiEndpoint")
   ) {
     throw new Error(
-      `DisableExecuteApiEndpoint must require the secondary domain and the parameter; found ${disableExecute}`,
+      `DisableExecuteApiEndpoint must require the custom domain and the parameter; found ${disableExecute}`,
     );
   }
   const restApis = Object.values(synthesized.Resources).filter(

@@ -134,7 +134,7 @@ jobs:
           attempts: "3"
           # template:set
           format: plain-json
-          pass-empty: WafWebAclArn,CognitoCustomDomainName,CognitoCustomDomainCertificateArn,ApiCustomDomainName,ApiCustomDomainCertificateArn,SearchAreaScope
+          pass-empty: WafWebAclArn,CognitoCustomDomainName,CognitoCustomDomainCertificateArn,SearchAreaScope
           escape-newlines: "true"
           rollback-match: UPDATE_ROLLBACK_FAILED
           skip-resource: RunMigrations
