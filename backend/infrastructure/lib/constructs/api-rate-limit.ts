@@ -38,9 +38,12 @@ const TOO_MANY_REQUESTS_BODY = "too-many-requests";
  * public routes) are not counted.
  *
  * A third rule rate limits each partner API key on `/v1/partner/`. Its
- * key is the `authorization` header. The session rule's paths are
- * `/v1/admin/`, `/v1/manager/`, and `/v1/user/`, so a partner request
- * is counted only by the partner rule.
+ * key is the `authorization` header. A fourth rule uses the same limit
+ * and path, keyed on `x-partner-key`: a rate rule does not count a
+ * request that omits its key, so a legacy caller would otherwise be
+ * unlimited. The session rule's paths are `/v1/admin/`, `/v1/manager/`,
+ * and `/v1/user/`, so a partner request is counted only by the partner
+ * rules.
  *
  * Paths are matched with CONTAINS because the default `execute-api` host
  * includes the stage name (`/prod/v1/...`) and the custom domain does not.
@@ -57,6 +60,7 @@ export class ApiRateLimitConstruct extends Construct {
     const webAclName = name("api-waf");
     const ruleMetricName = name("api-session-rate-limit");
     const partnerMetricName = name("api-partner-rate-limit");
+    const legacyPartnerMetricName = name("api-partner-legacy-rate-limit");
 
     const pathStatements: wafv2.CfnWebACL.StatementProperty[] =
       props.pathSegments.map((segment) => ({
@@ -71,6 +75,14 @@ export class ApiRateLimitConstruct extends Construct {
       pathStatements.length === 1
         ? pathStatements[0]
         : { orStatement: { statements: pathStatements } };
+    const partnerPathScope: wafv2.CfnWebACL.StatementProperty = {
+      byteMatchStatement: {
+        fieldToMatch: { uriPath: {} },
+        positionalConstraint: "CONTAINS",
+        searchString: "/v1/partner/",
+        textTransformations: [{ priority: 0, type: "NONE" }],
+      },
+    };
 
     this.webAcl = new wafv2.CfnWebACL(this, "ApiWebAcl", {
       name: webAclName,
@@ -150,14 +162,14 @@ export class ApiRateLimitConstruct extends Construct {
           priority: 2,
           metricName: partnerMetricName,
           headerName: "authorization",
-          scopeDown: {
-            byteMatchStatement: {
-              fieldToMatch: { uriPath: {} },
-              positionalConstraint: "CONTAINS",
-              searchString: "/v1/partner/",
-              textTransformations: [{ priority: 0, type: "NONE" }],
-            },
-          },
+          scopeDown: partnerPathScope,
+        }),
+        rateRule(props, {
+          name: "PartnerLegacyKeyRateLimit",
+          priority: 3,
+          metricName: legacyPartnerMetricName,
+          headerName: "x-partner-key",
+          scopeDown: partnerPathScope,
         }),
       ],
     });
@@ -217,10 +229,11 @@ export class ApiRateLimitConstruct extends Construct {
         `A signed-in session or partner key sent more than ${props.limit} ` +
         `requests in ${props.evaluationWindowSec}s and was blocked by the API WAF`,
       metric: new cloudwatch.MathExpression({
-        expression: "FILL(session, 0) + FILL(partner, 0)",
+        expression: "FILL(session, 0) + FILL(partner, 0) + FILL(legacy, 0)",
         usingMetrics: {
           session: blockedMetric(webAclName, ruleMetricName, region),
           partner: blockedMetric(webAclName, partnerMetricName, region),
+          legacy: blockedMetric(webAclName, legacyPartnerMetricName, region),
         },
         period: cdk.Duration.minutes(5),
       }),
