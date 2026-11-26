@@ -27,7 +27,7 @@ export function buildActivitySearchRequest(
     'apiBaseUrl' | 'apiKey' | 'attestationToken'
   >,
 ): ActivitySearchRequest {
-  const url = new URL('/v1/activities/search', config.apiBaseUrl);
+  const url = new URL('/api/v1/public/activities/search', config.apiBaseUrl);
   if (params.age !== undefined) {
     url.searchParams.set('age', String(params.age));
   }

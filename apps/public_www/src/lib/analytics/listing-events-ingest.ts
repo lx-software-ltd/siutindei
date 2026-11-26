@@ -32,7 +32,7 @@ export async function ingestListingEvents(
     return;
   }
 
-  const url = new URL('/v1/listing-events', config.apiBaseUrl);
+  const url = new URL('/api/v1/public/listing-events', config.apiBaseUrl);
   const headers: Record<string, string> = {
     Accept: 'application/json',
     'Content-Type': 'application/json',

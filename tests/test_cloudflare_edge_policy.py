@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import sys
 from pathlib import Path
@@ -140,6 +141,10 @@ def test_search_rules_never_touch_html_navigations():
             assert (
                 'http.request.uri.path eq "/v1/activities/search"'
                 in (rule["expression"])
+            )
+            assert (
+                'http.request.uri.path eq "/api/v1/public/activities/search"'
+                in rule["expression"]
             )
 
 
@@ -288,3 +293,111 @@ def test_main_refuses_apply_without_yes_and_with_blocked_items(monkeypatch, caps
 def test_cli_rejects_unknown_choices(flag):
     with pytest.raises(SystemExit):
         edge_policy.parse_args(["plan", flag, "nonsense"])
+
+
+class _Stdin(io.StringIO):
+    def isatty(self) -> bool:
+        return False
+
+
+def test_check_accepts_the_local_policy_fixture():
+    """The committed policy document keeps the public API rate rule."""
+    assert edge_policy.check_policy_text(_POLICY.read_text()) == 0
+
+
+def test_check_fails_when_the_public_rate_rule_is_absent():
+    """A fixture that only names the old search path does not pass."""
+    document = {
+        "rulesets": {
+            "http_ratelimit": {
+                "rules": [
+                    {
+                        "expression": (
+                            'http.request.uri.path eq "/v1/activities/search"'
+                        ),
+                        "action": "block",
+                    }
+                ]
+            }
+        }
+    }
+    assert edge_policy.check_policy_text(json.dumps(document)) == 1
+
+
+def test_check_ignores_the_path_outside_the_rate_ruleset():
+    """A firewall rule is not the rate rule."""
+    document = {
+        "rulesets": {
+            "http_request_firewall_custom": {
+                "rules": [
+                    {
+                        "expression": (
+                            "http.request.uri.path eq "
+                            '"/api/v1/public/activities/search"'
+                        )
+                    }
+                ]
+            }
+        }
+    }
+    assert edge_policy.check_policy_text(json.dumps(document)) == 1
+
+
+def test_check_rejects_a_substring_of_the_rate_expression():
+    """A rate rule that only contains the path is not the expression."""
+    document = {
+        "rulesets": {
+            "http_ratelimit": {
+                "rules": [
+                    {
+                        "expression": (
+                            'http.request.uri.path contains "/api/v1/public"'
+                        ),
+                    }
+                ]
+            }
+        }
+    }
+    assert edge_policy.check_policy_text(json.dumps(document)) == 1
+
+
+def test_check_accepts_the_exact_rate_expression():
+    """The rate rule matches only the full public search expression."""
+    document = {
+        "rulesets": {
+            "http_ratelimit": {
+                "rules": [{"expression": edge_policy.PUBLIC_API_RATE_EXPRESSION}]
+            }
+        }
+    }
+    assert edge_policy.check_policy_text(json.dumps(document)) == 0
+
+
+def test_check_reads_stdin_only_for_policy_dash(monkeypatch, capsys):
+    """stdin is the policy only for --policy -, and check never calls Cloudflare."""
+    monkeypatch.setattr(sys, "stdin", _Stdin(_POLICY.read_text()))
+    monkeypatch.delenv("CLOUDFLARE_API_TOKEN", raising=False)
+
+    def boom(*_args, **_kwargs):
+        raise AssertionError("check must not call Cloudflare or apply")
+
+    monkeypatch.setattr(edge_policy, "CloudflareApi", boom)
+    monkeypatch.setattr(edge_policy, "apply_plan", boom)
+    assert edge_policy.main(["check", "--policy", "-"]) == 0
+    assert "check ok" in capsys.readouterr().out
+
+
+class _UnreadStdin(io.StringIO):
+    def read(self, *_args: object, **_kwargs: object) -> str:
+        raise AssertionError("check must not read stdin unless --policy -")
+
+    def isatty(self) -> bool:
+        return False
+
+
+def test_check_does_not_read_stdin_for_a_file(monkeypatch, capsys):
+    """A non-tty stdin is ignored when --policy is a file."""
+    monkeypatch.setattr(sys, "stdin", _UnreadStdin("not json"))
+    monkeypatch.delenv("CLOUDFLARE_API_TOKEN", raising=False)
+    assert edge_policy.main(["check", "--policy", str(_POLICY)]) == 0
+    assert "check ok" in capsys.readouterr().out
