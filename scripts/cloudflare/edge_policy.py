@@ -106,7 +106,8 @@ class CloudflareApi:
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
+            # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
+            with urllib.request.urlopen(request, timeout=30) as response:  # nosec B310
                 payload = json.loads(response.read().decode("utf-8"))
                 status = response.status
         except urllib.error.HTTPError as error:

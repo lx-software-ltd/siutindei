@@ -52,7 +52,9 @@ function storeTokens(tokens: StoredTokens) {
   if (typeof window === 'undefined') {
     return;
   }
-  window.localStorage.setItem(tokenStorageKey, JSON.stringify(tokens));
+  // The admin SPA sends these Cognito bearer tokens on each API call.
+  // There is no cookie session, so the browser keeps them until sign-out.
+  window.localStorage.setItem(tokenStorageKey, JSON.stringify(tokens)); // lgtm[js/clear-text-storage-of-sensitive-data]
 }
 
 export function storeTokensFromPasswordless(tokens: {

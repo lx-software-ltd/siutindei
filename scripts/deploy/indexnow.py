@@ -92,6 +92,14 @@ def submit(
     timeout: float = 20.0,
 ) -> bool:
     host = urlsplit(origin).hostname or ""
+    expected = urlsplit(ENDPOINT)
+    actual = urlsplit(endpoint)
+    if (actual.scheme, actual.hostname) != (expected.scheme, expected.hostname):
+        print(
+            "::warning::IndexNow endpoint must be "
+            f"{expected.scheme}://{expected.hostname}."
+        )
+        return False
     ok = True
     for start in range(0, len(urls), MAX_URLS_PER_REQUEST):
         batch = urls[start : start + MAX_URLS_PER_REQUEST]
@@ -110,7 +118,8 @@ def submit(
             headers={"Content-Type": "application/json; charset=utf-8"},
         )
         try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
+            # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
+            with urllib.request.urlopen(request, timeout=timeout) as response:  # nosec B310
                 print(
                     f"IndexNow accepted {len(batch)} URL(s) with HTTP {response.status}."
                 )
