@@ -60,7 +60,12 @@ def lambda_handler(event: Mapping[str, Any], context: Any) -> dict[str, Any]:
         validate_content_type(event)
     except ValidationError as exc:
         logger.warning(f"Content-Type validation failed: {exc.message}")
-        return json_response(exc.status_code, exc.to_dict(), event=event)
+        problem_request_id = request_id if isinstance(request_id, str) else ""
+        return json_response(
+            exc.status_code,
+            exc.to_dict(problem_request_id),
+            event=event,
+        )
 
     logger.info(
         f"Admin request: {method} {path}",

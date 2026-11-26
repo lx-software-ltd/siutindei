@@ -1334,7 +1334,7 @@ export class ApiStack extends cdk.Stack {
               ],
               allowedOrigins: corsAllowedOrigins,
               allowedHeaders: ["*"],
-              exposedHeaders: ["ETag"],
+              exposedHeaders: ["ETag", "x-request-id"],
               maxAge: 3000,
             },
           ],
@@ -1423,7 +1423,7 @@ export class ApiStack extends cdk.Stack {
             ],
             allowedOrigins: corsAllowedOrigins,
             allowedHeaders: ["*"],
-            exposedHeaders: ["ETag"],
+            exposedHeaders: ["ETag", "x-request-id"],
             maxAge: 3000,
           },
         ],
@@ -2090,17 +2090,23 @@ export class ApiStack extends cdk.Stack {
     database.grantAppUserSecretRead(partnerApiKeyAuthorizerFunction);
     database.grantConnect(partnerApiKeyAuthorizerFunction, "siutindei_app");
 
-    // 5 minutes bounds how long a revoked key remains usable, and how
-    // often a long partner sync pays for a cold authorizer.
+    // Caching is off while the legacy x-partner-key header is accepted
+    // beside Authorization: Bearer. API Gateway returns 401 before the
+    // Lambda when a listed identity source is missing, so the cache key
+    // includes neither header. Revocation applies on the next request.
+    // The Authorization cache returns when the legacy header is removed.
     const partnerApiKeyAuthorizer = new apigateway.RequestAuthorizer(
       this,
       "PartnerApiKeyAuthorizer",
       {
         handler: partnerApiKeyAuthorizerFunction,
-        identitySources: [apigateway.IdentitySource.header("Authorization")],
-        resultsCacheTtl: cdk.Duration.seconds(300),
+        identitySources: [],
+        resultsCacheTtl: cdk.Duration.seconds(0),
       }
     );
+    (
+      partnerApiKeyAuthorizer.node.defaultChild as apigateway.CfnAuthorizer
+    ).addPropertyDeletionOverride("IdentitySource");
 
     // Health check function
     const healthFunction = createPythonFunction("HealthCheckFunction", {
@@ -2331,7 +2337,8 @@ export class ApiStack extends cdk.Stack {
           },
         },
         // Response caching for the public search endpoint has been moved to the
-        // CloudFront edge (see PublicWwwStack `/v1/activities/search` behavior).
+        // CloudFront edge (see PublicWwwStack, which rewrites to
+        // `/v1/public/activities/search`).
         // The API Gateway stage cache cluster is a fixed hourly charge
         // (0.5 GB ≈ $0.028/hr ≈ $20/mo) regardless of traffic, which dominated
         // the API Gateway bill while serving only this one low-traffic method.
@@ -2347,7 +2354,8 @@ export class ApiStack extends cdk.Stack {
     // intentionally suppressed for the deployment stage. Stage caching is
     // disabled (see the `cacheClusterEnabled: false` rationale above): response
     // caching for the public search endpoint is handled at the CloudFront edge
-    // via the public-website distribution's `/v1/activities/search` behavior.
+    // via the public-website distribution's behavior for
+    // `/v1/public/activities/search`.
     // The suppression lives in `.checkov.yaml` (skip-check) rather than inline
     // CDK metadata, because skip-check excludes the finding from SARIF output
     // entirely instead of merely marking it skipped (inline metadata
@@ -2367,27 +2375,48 @@ export class ApiStack extends cdk.Stack {
       "method.response.header.Access-Control-Allow-Headers":
         "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'",
       "method.response.header.Access-Control-Allow-Methods":
-        "'GET,POST,PUT,DELETE,OPTIONS'",
+        "'GET,POST,PUT,PATCH,DELETE,OPTIONS'",
       "method.response.header.x-request-id": "'$context.requestId'",
     };
-    const gatewayErrorTemplate = [
-      "{",
-      '  "title": "$context.error.responseType",',
+    // Title is the HTTP reason phrase for the status. The response type
+    // stays in the template only so the known gateway types can be mapped.
+    const gatewayProblemFields = [
       '  "detail": $context.error.messageString,',
       '  "code": "gateway_error",',
       '  "request_id": "$context.requestId",',
       '  "message": $context.error.messageString',
+    ];
+    const gateway4xxTemplate = [
+      '#set($title = "Bad Request")',
+      '#if($context.error.responseType == "UNAUTHORIZED")',
+      '#set($title = "Unauthorized")',
+      '#elseif($context.error.responseType == "ACCESS_DENIED")',
+      '#set($title = "Forbidden")',
+      '#elseif($context.error.responseType == "MISSING_AUTHENTICATION_TOKEN")',
+      '#set($title = "Not Found")',
+      '#elseif($context.error.responseType == "DEFAULT_4XX")',
+      '#set($title = "Bad Request")',
+      "#end",
+      "{",
+      '  "title": "$title",',
+      ...gatewayProblemFields,
+      "}",
+    ].join("\n");
+    const gateway5xxTemplate = [
+      "{",
+      '  "title": "Internal Server Error",',
+      ...gatewayProblemFields,
       "}",
     ].join("\n");
     api.addGatewayResponse("GatewayResponseDefault4XX", {
       type: apigateway.ResponseType.DEFAULT_4XX,
       responseHeaders: gatewayResponseHeaders,
-      templates: { "application/json": gatewayErrorTemplate },
+      templates: { "application/json": gateway4xxTemplate },
     });
     api.addGatewayResponse("GatewayResponseDefault5XX", {
       type: apigateway.ResponseType.DEFAULT_5XX,
       responseHeaders: gatewayResponseHeaders,
-      templates: { "application/json": gatewayErrorTemplate },
+      templates: { "application/json": gateway5xxTemplate },
     });
     // /health was the last IAM method. A missing signature now means the
     // path is not a route, so the response is 404.
@@ -2395,7 +2424,7 @@ export class ApiStack extends cdk.Stack {
       type: apigateway.ResponseType.MISSING_AUTHENTICATION_TOKEN,
       statusCode: "404",
       responseHeaders: gatewayResponseHeaders,
-      templates: { "application/json": gatewayErrorTemplate },
+      templates: { "application/json": gateway4xxTemplate },
     });
 
     const mobileApiKey = new apigateway.ApiKey(this, "MobileSearchApiKey", {
