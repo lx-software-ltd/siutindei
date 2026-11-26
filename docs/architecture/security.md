@@ -166,8 +166,10 @@ in the `Authorization: Bearer` header:
   never logged.
 - A dedicated in-VPC Lambda request authorizer
   (`PartnerApiKeyAuthorizerFunction`) validates the hash against the
-  database and rejects revoked or expired keys. Authorizer results are
-  cached for 15 minutes, which bounds how long a revoked key keeps working.
+  database and rejects revoked or expired keys. The legacy `x-partner-key`
+  header is accepted for one deploy when the bearer token is absent.
+  Authorizer caching is off for that deploy, so revocation applies on the
+  next request and the identity source includes neither header.
 - Keys carry a scope (`read` = GET only, `crud` = full CRUD) and an
   optional organization scope. Because the cached Allow policy covers all
   partner routes, **scope is re-checked before dispatch, and a route
@@ -246,7 +248,7 @@ client enables `ALLOW_ADMIN_USER_PASSWORD_AUTH` for
 
 ### Edge caching of the public search endpoint
 
-`GET /v1/activities/search` is cached at the CloudFront edge via the
+`GET /v1/public/activities/search` is cached at the CloudFront edge via the
 public-website distribution (see
 [`public-www.md`](./public-www.md#search-api-edge-caching)). On a cache **hit**,
 CloudFront serves the response without re-invoking the origin, so the
@@ -255,7 +257,8 @@ for cached entries. This is acceptable because:
 
 - These controls are **anti-abuse / rate-limiting**, not data protection — the
   search results are public.
-- Only the exact `/v1/activities/search` path is proxied; admin endpoints
+- The website proxies `/v1/public/activities/search` (viewer paths rewrite
+  to it); admin endpoints
   (`/v1/admin/*`) are never reachable through the website domain.
 - Edge abuse protection for this cached path is Cloudflare's rate limit
   and custom rules. The CloudFront WAF WebACL is detached from the

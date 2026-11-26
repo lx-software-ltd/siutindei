@@ -320,7 +320,7 @@ For each function above, the following resources are created:
 - X-Ray Tracing: Enabled
 - Caching: Disabled (no stage cache cluster). Public search responses are
   cached at the CloudFront edge instead — see the public-website distribution
-  `/v1/activities/search` behavior in
+  `/v1/public/activities/search` behavior in
   [`public-www.md`](./public-www.md#search-api-edge-caching).
 
 **CORS Configuration:**
@@ -389,7 +389,7 @@ read error status codes instead of silently blocking them.
 | Request Authorizer | `AdminGroupAuthorizer` | Lambda | `AdminGroupAuthorizerFunction` | JWT + admin group, or importer on catalog import, import history, owner-UI organization lookup and PATCH, and organization enrichment GET/POST, 5-min cache |
 | Request Authorizer | `ManagerGroupAuthorizer` | Lambda | `ManagerGroupAuthorizerFunction` | JWT + admin/manager group check, 5-min cache |
 | Request Authorizer | `UserAuthorizer` | Lambda | `UserAuthorizerFunction` | JWT validation (any user), 5-min cache |
-| Request Authorizer | `PartnerApiKeyAuthorizer` | Lambda | `PartnerApiKeyAuthorizerFunction` | Validates `Authorization: Bearer` against hashed DB keys, 5-minute cache |
+| Request Authorizer | `PartnerApiKeyAuthorizer` | Lambda | `PartnerApiKeyAuthorizerFunction` | Validates `Authorization: Bearer`, and `x-partner-key` for one deploy. Cache is off so the identity source includes neither header |
 
 ### API Gateway API Key and Usage Plan
 
