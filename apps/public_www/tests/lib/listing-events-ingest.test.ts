@@ -70,7 +70,7 @@ describe('ingestListingEvents', () => {
       string,
       RequestInit,
     ];
-    expect(url).toBe('https://siutindei.com/v1/listing-events');
+    expect(url).toBe('https://siutindei.com/api/v1/public/listing-events');
     expect(init.method).toBe('POST');
     expect(init.headers).toMatchObject({
       'x-api-key': 'key',

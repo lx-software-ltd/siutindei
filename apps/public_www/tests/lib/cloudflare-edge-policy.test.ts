@@ -20,7 +20,10 @@ import {
 const SMOKE_CHECK_LIMIT = 1;
 /** Discovery carousels after the first page render 12 at a time. */
 const DISCOVERY_CAROUSEL_LIMIT = 12;
-const SEARCH_PATH = '/v1/activities/search';
+const SEARCH_PATHS = [
+  '/v1/activities/search',
+  '/api/v1/public/activities/search',
+] as const;
 
 interface EdgeRule {
   readonly description: string;
@@ -74,19 +77,24 @@ describe('Cloudflare edge policy contract', () => {
     const blockingPhases = ['http_ratelimit', 'http_request_firewall_custom'];
     for (const phase of blockingPhases) {
       for (const rule of policy.rulesets[phase].rules) {
-        expect(rule.expression).toContain(
-          `http.request.uri.path eq "${SEARCH_PATH}"`,
-        );
+        for (const searchPath of SEARCH_PATHS) {
+          expect(rule.expression).toContain(
+            `http.request.uri.path eq "${searchPath}"`,
+          );
+        }
         expect(rule.action).toBe('block');
       }
     }
   });
 
   it('keeps robots.txt and the proxied API path aligned', () => {
-    const apiPrefix = ROBOTS_DISALLOWED_PATHS.find((prefix) =>
-      SEARCH_PATH.startsWith(prefix),
-    );
-    expect(apiPrefix).toBe('/v1/');
+    expect(ROBOTS_DISALLOWED_PATHS).toContain('/api/');
+    expect(ROBOTS_DISALLOWED_PATHS).toContain('/v1/');
+    expect(
+      SEARCH_PATHS.every((searchPath) =>
+        ROBOTS_DISALLOWED_PATHS.some((prefix) => searchPath.startsWith(prefix)),
+      ),
+    ).toBe(true);
     expect(ROBOTS_DISALLOWED_PATHS).toContain('/cdn-cgi/');
   });
 

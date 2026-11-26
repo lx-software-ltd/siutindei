@@ -17,7 +17,7 @@ describe('robots.txt', () => {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/v1/', '/cdn-cgi/'],
+        disallow: ['/api/', '/v1/', '/cdn-cgi/'],
       },
       {
         userAgent: [
@@ -29,7 +29,7 @@ describe('robots.txt', () => {
           'Claude-User',
         ],
         allow: '/',
-        disallow: ['/v1/', '/cdn-cgi/'],
+        disallow: ['/api/', '/v1/', '/cdn-cgi/'],
       },
       {
         userAgent: [

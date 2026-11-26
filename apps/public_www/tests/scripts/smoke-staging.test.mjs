@@ -24,7 +24,7 @@ describe('buildLiveSearchProbe', () => {
     });
 
     expect(probe.url).toBe(
-      'https://www-staging.example.com/v1/activities/search?limit=1',
+      'https://www-staging.example.com/api/v1/public/activities/search?limit=1',
     );
     expect(probe.headers).toEqual({
       accept: 'application/json',

@@ -33,7 +33,7 @@ describe('buildActivitySearchRequest', () => {
 
     const parsed = new URL(url);
     expect(parsed.origin).toBe('https://siutindei.com');
-    expect(parsed.pathname).toBe('/v1/activities/search');
+    expect(parsed.pathname).toBe('/api/v1/public/activities/search');
     expect(parsed.searchParams.get('age')).toBe('5');
     expect(parsed.searchParams.get('area_id')).toBe(
       'a1111111-1111-1111-1111-111111111102',
@@ -138,7 +138,7 @@ describe('fetchActivitySearch live API integration', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe(
-      'https://siutindei.com/v1/activities/search?include_incomplete=true&limit=10',
+      'https://siutindei.com/api/v1/public/activities/search?include_incomplete=true&limit=10',
     );
     expect(init.headers).toMatchObject({
       'x-api-key': 'key',
@@ -173,7 +173,7 @@ describe('fetchActivitySearch live API integration', () => {
 
     const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe(
-      'https://www-staging.example.com/v1/activities/search?include_incomplete=true&limit=1',
+      'https://www-staging.example.com/api/v1/public/activities/search?include_incomplete=true&limit=1',
     );
   });
 });
