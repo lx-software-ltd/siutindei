@@ -172,6 +172,47 @@ def test_scans_search_pages_and_manifest_chunks(monkeypatch, capsys) -> None:
     assert any(url.endswith("split-search.js") for url in opened)
 
 
+def test_reports_an_off_host_script_and_a_missing_chunk(monkeypatch, capsys) -> None:
+    """An off-host script and a missing chunk are both reported."""
+    pages = {
+        "https://siutindei.com/": (
+            "<html>"
+            "<script src='https://evil.example/tracker.js'></script>"
+            "<script src='/_next/static/chunks/missing.js'></script>"
+            "<script src='/_next/static/chunks/later.js'></script>"
+            "</html>"
+        ),
+        "https://siutindei.com/en/search/": "<html></html>",
+        "https://siutindei.com/zh-HK/search/": "<html></html>",
+        "https://siutindei.com/_next/static/chunks/later.js": "home",
+    }
+    opened: list[str] = []
+
+    def open_request(request, _timeout, _origin_host):
+        opened.append(request.full_url)
+        if "evil.example" in request.full_url or request.full_url.startswith("http://"):
+            raise AssertionError(f"disallowed URL was fetched: {request.full_url}")
+        if request.full_url.endswith("/missing.js"):
+            raise bundle_check.urllib.error.URLError("not found")
+        body = pages.get(request.full_url)
+        if body is None:
+            raise AssertionError(f"unexpected fetch {request.full_url}")
+        return _Body(body.encode())
+
+    monkeypatch.setattr(bundle_check, "_open_request", open_request)
+    assert bundle_check.check_origin("https://siutindei.com/") == 1
+    captured = capsys.readouterr()
+    error = captured.err
+    assert "evil.example" in error
+    assert "missing.js" in error
+    assert "check ok" not in captured.out
+    assert any(url.endswith("/missing.js") for url in opened)
+    assert any(url.endswith("/later.js") for url in opened)
+    assert any(url.endswith("/en/search/") for url in opened)
+    assert any(url.endswith("/zh-HK/search/") for url in opened)
+    assert not any("evil.example" in url for url in opened)
+
+
 def test_off_host_script_is_not_fetched(monkeypatch, capsys) -> None:
     """A script on another host fails the check and is not opened."""
 

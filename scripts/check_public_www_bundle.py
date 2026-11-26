@@ -5,7 +5,8 @@ Reads ``PUBLIC_WWW_SITE_ORIGIN``. When that variable is unset, the check
 prints that it was skipped and exits 0. Otherwise it downloads the origin,
 the locale search pages, and the JavaScript chunks those pages and the
 Next.js ``_buildManifest.js`` list. It exits 1 if a bundle contains
-``/v1/activities/search`` or ``/www/``.
+``/v1/activities/search`` or ``/www/``, or if a page or chunk is off-host,
+not https, or cannot be read. Those findings are reported together.
 
 Fetches stay on https and on the origin host. A redirect to any other
 scheme or host is refused. Each response is capped. The script only reads
@@ -149,6 +150,23 @@ def _scan(url: str, text: str, failed: list[str]) -> None:
         failed.append(f"check failed: {url} contains {', '.join(found)}")
 
 
+def _note_read_failure(url: str, exc: BaseException, findings: list[str]) -> None:
+    findings.append(f"check failed: could not read {url}: {exc}")
+
+
+def _read_text(
+    url: str,
+    origin_host: str,
+    findings: list[str],
+) -> str | None:
+    """Read one page or chunk. A bad URL is recorded and does not stop the scan."""
+    try:
+        return _read_url(url, origin_host)
+    except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+        _note_read_failure(url, exc, findings)
+        return None
+
+
 def check_origin(origin: str) -> int:
     """Download the origin, search pages, and manifest chunks."""
     try:
@@ -159,44 +177,43 @@ def check_origin(origin: str) -> int:
     pages: list[str] = []
     bundles: list[str] = []
     manifests: list[str] = []
-    try:
-        for page in _pages(origin):
-            html = _read_url(page, host)
-            pages.append(page)
-            bundles.extend(urljoin(page, src) for src in script_urls(html))
-            bundles.extend(chunk_urls(html, origin))
-            manifests.extend(manifest_urls(html, origin))
-    except (urllib.error.URLError, TimeoutError, ValueError) as exc:
-        print(f"check failed: could not read {origin}: {exc}", file=sys.stderr)
-        return 1
+    findings: list[str] = []
+    for page in _pages(origin):
+        html = _read_text(page, host, findings)
+        if html is None:
+            continue
+        pages.append(page)
+        bundles.extend(urljoin(page, src) for src in script_urls(html))
+        bundles.extend(chunk_urls(html, origin))
+        manifests.extend(manifest_urls(html, origin))
     seen: set[str] = set()
     failed: list[str] = []
-    try:
-        for manifest in manifests:
-            if manifest in seen:
-                continue
-            seen.add(manifest)
-            text = _read_url(manifest, host)
-            _scan(manifest, text, failed)
-            bundles.extend(chunk_urls(text, origin))
-        unique_bundles = []
-        for url in bundles:
-            if url in seen:
-                continue
-            seen.add(url)
-            unique_bundles.append(url)
-        if not unique_bundles and not manifests:
-            print(f"check failed: no JavaScript bundle in {origin}", file=sys.stderr)
-            return 1
-        for url in unique_bundles:
-            text = _read_url(url, host)
-            _scan(url, text, failed)
-    except (urllib.error.URLError, TimeoutError, ValueError) as exc:
-        print(f"check failed: could not read {origin}: {exc}", file=sys.stderr)
+    for manifest in manifests:
+        if manifest in seen:
+            continue
+        seen.add(manifest)
+        text = _read_text(manifest, host, findings)
+        if text is None:
+            continue
+        _scan(manifest, text, failed)
+        bundles.extend(chunk_urls(text, origin))
+    unique_bundles = []
+    for url in bundles:
+        if url in seen:
+            continue
+        seen.add(url)
+        unique_bundles.append(url)
+    if not unique_bundles and not manifests and not findings:
+        print(f"check failed: no JavaScript bundle in {origin}", file=sys.stderr)
         return 1
-    for line in failed:
+    for url in unique_bundles:
+        text = _read_text(url, host, findings)
+        if text is None:
+            continue
+        _scan(url, text, failed)
+    for line in (*findings, *failed):
         print(line, file=sys.stderr)
-    if failed:
+    if findings or failed:
         return 1
     print(f"check ok: {len(seen)} bundle(s) at {origin} across {len(pages)} page(s)")
     return 0
