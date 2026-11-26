@@ -38,8 +38,9 @@ const TOO_MANY_REQUESTS_BODY = "too-many-requests";
  * public routes) are not counted.
  *
  * A third rule rate limits each partner API key on `/v1/partner/`. Its
- * key is the `x-partner-key` header. Partner requests do not send
- * `Authorization`, so the session rule does not count them.
+ * key is the `authorization` header. The session rule's paths are
+ * `/v1/admin/`, `/v1/manager/`, and `/v1/user/`, so a partner request
+ * is counted only by the partner rule.
  *
  * Paths are matched with CONTAINS because the default `execute-api` host
  * includes the stage name (`/prod/v1/...`) and the custom domain does not.
@@ -148,7 +149,7 @@ export class ApiRateLimitConstruct extends Construct {
           name: "PartnerKeyRateLimit",
           priority: 2,
           metricName: partnerMetricName,
-          headerName: "x-partner-key",
+          headerName: "authorization",
           scopeDown: {
             byteMatchStatement: {
               fieldToMatch: { uriPath: {} },

@@ -42,7 +42,7 @@ their primary responsibilities.
   tool source.
 - DB access: RDS Proxy with IAM auth (`siutindei_admin`), INSERT on
   `listing_events`
-- Endpoint contract: [`docs/api/search.yaml`](../api/search.yaml)
+- Endpoint contract: [`docs/api/public.yaml`](../api/search.yaml)
 
 ### Listing events rollup
 - Function: ListingEventsRollupFunction
@@ -128,7 +128,7 @@ their primary responsibilities.
   `PATCH /v1/admin/organizations/{id}`,
   `GET` and `POST /v1/admin/organizations/{id}/enrichment`),
   admin/manager group for `/v1/manager/*`, any authenticated user for
-  `/v1/user/*`; partner API keys (`x-partner-key`) for `/v1/partner/*`
+  `/v1/user/*`; partner API keys (`Authorization: Bearer`) for `/v1/partner/*`
 - Purpose: admin CRUD (including activity categories, category
   suggestions, and partner API key
   management), manager CRUD (filtered by ownership), partner CRUD
@@ -409,7 +409,7 @@ their primary responsibilities.
 - Function: PartnerApiKeyAuthorizerFunction
 - Handler: backend/lambda/authorizers/api_key/handler.py
 - Trigger: API Gateway request authorizer for `/v1/partner/*` routes
-- Purpose: validate the `x-partner-key` header against SHA-256 hashed
+- Purpose: validate the `Authorization: Bearer` token against SHA-256 hashed
   keys in the `api_keys` table; passes key id, scope (`read`/`crud`),
   and organization scope to handlers via authorizer context. Scope and
   organization enforcement happens in the handlers because the cached

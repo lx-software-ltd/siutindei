@@ -1,12 +1,12 @@
 """Core logic for the partner API-key request authorizer.
 
-Validates the ``x-partner-key`` header against hashed keys in the
+Validates ``Authorization: Bearer <token>`` against hashed keys in the
 ``api_keys`` table and produces an IAM policy plus authorizer context.
 
 SECURITY NOTES:
 - Only SHA-256 hashes are compared; plaintext keys are never stored/logged.
 - Revoked and expired keys are rejected at lookup time. The API Gateway
-  authorizer cache (15 minutes) bounds how long a revoked key keeps working.
+  authorizer cache (5 minutes) bounds how long a revoked key keeps working.
 - Scope enforcement happens in the handlers (read vs crud), because a
   cached Allow policy applies to every partner route.
 """
@@ -26,8 +26,22 @@ from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-PARTNER_KEY_HEADER = "x-partner-key"
+_MAX_API_KEY_LEN = 256
 _LAST_USED_REFRESH_INTERVAL = timedelta(minutes=1)
+
+
+def _bearer_token(headers: dict[str, Any]) -> str | None:
+    """Return the token from ``Authorization: Bearer``, or None."""
+    raw = get_header(headers, "Authorization")
+    if not isinstance(raw, str):
+        return None
+    scheme, separator, token = raw.strip().partition(" ")
+    if not separator or scheme.lower() != "bearer":
+        return None
+    key = token.strip()
+    if not key or len(key) > _MAX_API_KEY_LEN or " " in key:
+        return None
+    return key
 
 
 def authorize_api_key(event: dict[str, Any]) -> dict[str, Any]:
@@ -35,9 +49,9 @@ def authorize_api_key(event: dict[str, Any]) -> dict[str, Any]:
     headers = event.get("headers") or {}
     method_arn = event.get("methodArn", "")
 
-    plaintext = get_header(headers, PARTNER_KEY_HEADER)
+    plaintext = _bearer_token(headers)
     if not plaintext:
-        logger.warning("Missing x-partner-key header")
+        logger.warning("Missing Authorization bearer token")
         return policy("Deny", method_arn, "anonymous", {"reason": "missing_key"})
 
     if not looks_like_api_key(plaintext):

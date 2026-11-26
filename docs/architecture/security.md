@@ -158,7 +158,7 @@ const deviceAttestationFailClosed = new cdk.CfnParameter(
 ### Partner API keys
 
 The `/v1/partner/*` endpoints are authenticated with custom API keys sent
-in the `x-partner-key` header:
+in the `Authorization: Bearer` header:
 
 - Keys are generated with the `secrets` module
   (`stk_<43 urlsafe characters>`) and only a **SHA-256 hash** is stored in
@@ -325,7 +325,7 @@ browser tab cannot exhaust its concurrency. The key is the
 Requests without that header are not counted.
 
 The partner rule (priority 2) applies the same limit on
-`/v1/partner/*`. Its key is the `x-partner-key` header. WAF logs
+`/v1/partner/*`. Its key is the `authorization` header. WAF logs
 redact that header along with `authorization` and `cookie`.
 
 - A rate-limited request gets HTTP 429, `Retry-After: 60`, the admin web

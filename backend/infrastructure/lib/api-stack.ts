@@ -2090,15 +2090,15 @@ export class ApiStack extends cdk.Stack {
     database.grantAppUserSecretRead(partnerApiKeyAuthorizerFunction);
     database.grantConnect(partnerApiKeyAuthorizerFunction, "siutindei_app");
 
-    // 15 minutes bounds how long a revoked key remains usable, and how
+    // 5 minutes bounds how long a revoked key remains usable, and how
     // often a long partner sync pays for a cold authorizer.
     const partnerApiKeyAuthorizer = new apigateway.RequestAuthorizer(
       this,
       "PartnerApiKeyAuthorizer",
       {
         handler: partnerApiKeyAuthorizerFunction,
-        identitySources: [apigateway.IdentitySource.header("x-partner-key")],
-        resultsCacheTtl: cdk.Duration.minutes(15),
+        identitySources: [apigateway.IdentitySource.header("Authorization")],
+        resultsCacheTtl: cdk.Duration.seconds(300),
       }
     );
 
@@ -2324,6 +2324,12 @@ export class ApiStack extends cdk.Stack {
         loggingLevel: apigateway.MethodLoggingLevel.INFO,
         dataTraceEnabled: false,
         tracingEnabled: true,
+        methodOptions: {
+          "/health/GET": {
+            throttlingRateLimit: 10,
+            throttlingBurstLimit: 20,
+          },
+        },
         // Response caching for the public search endpoint has been moved to the
         // CloudFront edge (see PublicWwwStack `/v1/activities/search` behavior).
         // The API Gateway stage cache cluster is a fixed hourly charge
@@ -2362,14 +2368,34 @@ export class ApiStack extends cdk.Stack {
         "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'",
       "method.response.header.Access-Control-Allow-Methods":
         "'GET,POST,PUT,DELETE,OPTIONS'",
+      "method.response.header.x-request-id": "'$context.requestId'",
     };
+    const gatewayErrorTemplate = [
+      "{",
+      '  "title": "$context.error.responseType",',
+      '  "detail": $context.error.messageString,',
+      '  "code": "gateway_error",',
+      '  "request_id": "$context.requestId",',
+      '  "message": $context.error.messageString',
+      "}",
+    ].join("\n");
     api.addGatewayResponse("GatewayResponseDefault4XX", {
       type: apigateway.ResponseType.DEFAULT_4XX,
       responseHeaders: gatewayResponseHeaders,
+      templates: { "application/json": gatewayErrorTemplate },
     });
     api.addGatewayResponse("GatewayResponseDefault5XX", {
       type: apigateway.ResponseType.DEFAULT_5XX,
       responseHeaders: gatewayResponseHeaders,
+      templates: { "application/json": gatewayErrorTemplate },
+    });
+    // /health was the last IAM method. A missing signature now means the
+    // path is not a route, so the response is 404.
+    api.addGatewayResponse("GatewayResponseMissingAuthenticationToken", {
+      type: apigateway.ResponseType.MISSING_AUTHENTICATION_TOKEN,
+      statusCode: "404",
+      responseHeaders: gatewayResponseHeaders,
+      templates: { "application/json": gatewayErrorTemplate },
     });
 
     const mobileApiKey = new apigateway.ApiKey(this, "MobileSearchApiKey", {
@@ -2559,15 +2585,16 @@ export class ApiStack extends cdk.Stack {
     // API Routes
     // ---------------------------------------------------------------------
 
-    // Health check endpoint (IAM auth)
+    // Open health check. A direct invocation still runs the database check.
     const health = api.root.addResource("health");
     health.addMethod("GET", new apigateway.LambdaIntegration(healthFunction), {
-      authorizationType: apigateway.AuthorizationType.IAM,
+      authorizationType: apigateway.AuthorizationType.NONE,
     });
 
     // v1 API
     const v1 = api.root.addResource("v1");
-    const activities = v1.addResource("activities");
+    const publicApi = v1.addResource("public");
+    const activities = publicApi.addResource("activities");
     const search = activities.addResource("search");
 
     const cacheKeyParameters = [
@@ -2600,7 +2627,7 @@ export class ApiStack extends cdk.Stack {
       requestParameters,
     });
 
-    const listingEvents = v1.addResource("listing-events");
+    const listingEvents = publicApi.addResource("listing-events");
     listingEvents.addMethod(
       "POST",
       new apigateway.LambdaIntegration(listingEventsIngestFunction),
@@ -2877,7 +2904,7 @@ export class ApiStack extends cdk.Stack {
     }
 
     // -------------------------------------------------------------------------
-    // Partner routes at /v1/partner (authenticated with x-partner-key)
+    // Partner routes at /v1/partner (Authorization: Bearer)
     // Read: /v1/partner/activities/search (read or crud scoped keys).
     // CRUD: /v1/partner/{resource}[/{id}] (crud scoped keys only for
     // writes; enforced in the Lambda because the cached authorizer policy

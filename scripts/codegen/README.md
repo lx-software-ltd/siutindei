@@ -10,7 +10,7 @@ build and copy shared data files.
   live in `apps/admin_web/src/types/api-admin.generated.ts` and must be
   committed when the spec changes.
 - **Public website** and **Flutter** hand-write their search clients against
-  `docs/api/search.yaml`; keep them aligned when the API surface changes.
+  `docs/api/public.yaml`; keep them aligned when the API surface changes.
 - The historical `packages/api_client_ts` / `packages/api_client_dart`
   paths are not present in this repository. Use the admin_web workflow above
   for TypeScript types, or run `openapi_codegen.sh` into a new package if you
@@ -34,7 +34,7 @@ Example:
 
 ```
 ./scripts/codegen/openapi_codegen.sh \
-  --spec docs/api/search.yaml \
+  --spec docs/api/public.yaml \
   --generator typescript-fetch \
   --output packages/api_client_ts
 ```
