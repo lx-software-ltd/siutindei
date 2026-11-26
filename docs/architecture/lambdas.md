@@ -128,7 +128,8 @@ their primary responsibilities.
   `PATCH /v1/admin/organizations/{id}`,
   `GET` and `POST /v1/admin/organizations/{id}/enrichment`),
   admin/manager group for `/v1/manager/*`, any authenticated user for
-  `/v1/user/*`; partner API keys (`Authorization: Bearer`) for `/v1/partner/*`
+  `/v1/user/*`; partner API keys (`Authorization: Bearer`, and `x-partner-key`
+  for one deploy) for `/v1/partner/*`
 - Purpose: admin CRUD (including activity categories, category
   suggestions, and partner API key
   management), manager CRUD (filtered by ownership), partner CRUD
@@ -410,9 +411,11 @@ their primary responsibilities.
 - Handler: backend/lambda/authorizers/api_key/handler.py
 - Trigger: API Gateway request authorizer for `/v1/partner/*` routes
 - Purpose: validate the `Authorization: Bearer` token against SHA-256 hashed
-  keys in the `api_keys` table; passes key id, scope (`read`/`crud`),
+  keys in the `api_keys` table. The legacy `x-partner-key` header is
+  accepted for one deploy when the bearer token is absent. The authorizer
+  logs `auth_scheme=legacy|bearer` and passes key id, scope (`read`/`crud`),
   and organization scope to handlers via authorizer context. Scope and
-  organization enforcement happens in the handlers because the cached
+  organization enforcement happens in the handlers because an
   Allow policy covers all partner routes.
 - DB access: RDS Proxy with IAM auth (`siutindei_app`; column-scoped
   UPDATE grant for `last_used_at`)
@@ -421,8 +424,8 @@ their primary responsibilities.
   Proxy TLS handshake); 256 MB made one cold call about 7 seconds.
 - Dependencies: `requirements-core.txt`, same as search. The handler
   must not import PyJWT, phonenumbers, pycountry, pypdf, or alembic.
-- Cache: authorizer results cached 15 minutes, bounding how long a
-  revoked key keeps working
+- Cache: off while the legacy header is accepted, so the identity source
+  includes neither header and revocation applies on the next request
 - Concurrency: no reserved concurrency (account unreserved pool is at
   the AWS minimum of 100; authorizer caching keeps invocations low)
 

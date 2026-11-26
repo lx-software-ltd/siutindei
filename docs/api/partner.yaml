@@ -93,7 +93,7 @@ paths:
       summary: Search activities
       description: |
         Search for activities matching the specified filters. Same filter
-        semantics as the public `GET /v1/activities/search` endpoint
+        semantics as the public `GET /v1/public/activities/search` endpoint
         (see `public.yaml`), but authenticated with a partner API key
         instead of the mobile API key + device attestation.
         Results are paginated and ordered by schedule time. Org-scoped

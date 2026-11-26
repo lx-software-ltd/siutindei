@@ -199,7 +199,8 @@ pull requests for dependency updates:
 ## Caching
 
 - Public search responses are cached at the CloudFront edge (5-minute TTL)
-  via the public-website distribution's `/v1/activities/search` behavior.
+  via the public-website distribution's behavior for
+  `GET /v1/public/activities/search`.
   The search Lambda sends `Cache-Control: public, max-age=60,
   s-maxage=300` on successful public searches. The API
   Gateway stage cache cluster is intentionally disabled (Checkov CKV_AWS_120 is
