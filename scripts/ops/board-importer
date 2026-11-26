@@ -30,7 +30,7 @@ SIUTINDEI_STACK="${SIUTINDEI_STACK:-lxsoftware-siutindei}"
 SECRET_NAME="${SECRET_NAME:-lxsoftware-admin-siutindei-board-importer-credentials}"
 IMPORTER_EMAIL="${IMPORTER_EMAIL:-siutindei-board-importer@lx-software.com}"
 IMPORTER_GROUP="${IMPORTER_GROUP:-importer}"
-API_BASE="${API_BASE:-https://api.siutindei.com/v1}"
+API_BASE="${API_BASE:-https://api.siutindei.com}"
 
 COMMAND=""
 ROTATE_PASSWORD=false
@@ -362,7 +362,7 @@ smoke_auth_and_routes() {
   presign_file="$(mktemp "$WORKDIR/presign.XXXXXX")"
   export_file="$(mktemp "$WORKDIR/export.XXXXXX")"
   presign_code="$(curl -sS -o "$presign_file" -w '%{http_code}' \
-    -X POST "${API_BASE}/admin/imports/presign" \
+    -X POST "${API_BASE}/v1/admin/imports/presign" \
     -H "Authorization: Bearer ${id_token}" \
     -H "Content-Type: application/json" \
     -d '{"file_name":"board-importer-smoke.json","content_type":"application/json"}')"
@@ -374,7 +374,7 @@ smoke_auth_and_routes() {
   fi
 
   export_code="$(curl -sS -o "$export_file" -w '%{http_code}' \
-    -X GET "${API_BASE}/admin/imports/export" \
+    -X GET "${API_BASE}/v1/admin/imports/export" \
     -H "Authorization: Bearer ${id_token}")"
   echo "GET /v1/admin/imports/export -> ${export_code} (expect 403)"
   if [[ "$export_code" != "403" ]]; then

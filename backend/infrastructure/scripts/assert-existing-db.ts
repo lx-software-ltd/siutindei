@@ -274,9 +274,10 @@ function assertOpsAlarmRules(stack: cdk.Stack): void {
     Resources: Record<string, { Type: string; Properties?: Record<string, unknown> }>;
   };
   const parentResources = synthesized.Resources;
-  // CloudFormation allows 500 resources. 493 includes the admin live
-  // alias and its published version and the conditional API custom domain
-  // and mapping. Fail if a later edit crosses the cap or drifts from the
+  // CloudFormation allows 500 resources. 496 includes the admin live
+  // alias and its published version, the conditional API custom domain
+  // and mapping, the public route parent, and the missing-token gateway
+  // response. Fail if a later edit crosses the cap or drifts from the
   // documented count.
   const resourceCount = Object.keys(parentResources).length;
   if (resourceCount > 500) {
@@ -284,7 +285,7 @@ function assertOpsAlarmRules(stack: cdk.Stack): void {
       `API stack has ${resourceCount} resources; CloudFormation allows 500`,
     );
   }
-  if (resourceCount !== 493) {
+  if (resourceCount !== 496) {
     throw new Error(
       `API stack resource count changed to ${resourceCount}; update docs/architecture/aws-assets-map.md`,
     );
@@ -349,11 +350,11 @@ function assertOpsAlarmRules(stack: cdk.Stack): void {
     (resource) =>
       resource.Type === "AWS::ApiGateway::Authorizer" &&
       JSON.stringify(resource.Properties?.IdentitySource ?? "").includes(
-        "x-partner-key",
+        "Authorization",
       ),
   );
-  if (partnerAuthorizer?.Properties?.AuthorizerResultTtlInSeconds !== 900) {
-    throw new Error("Partner API-key authorizer cache must be 15 minutes");
+  if (partnerAuthorizer?.Properties?.AuthorizerResultTtlInSeconds !== 300) {
+    throw new Error("Partner API-key authorizer cache must be 5 minutes");
   }
   const partnerFunction = Object.values(parentResources).find(
     (resource) =>

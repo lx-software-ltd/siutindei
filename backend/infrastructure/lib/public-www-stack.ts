@@ -635,14 +635,19 @@ function handler(event) {
     return rejection;
   }
   var method = request.method;
-  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {
-    return request;
+  if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+    return {
+      statusCode: 405,
+      statusDescription: 'Method Not Allowed',
+      headers: { 'allow': { value: 'GET, HEAD, OPTIONS' } },
+    };
   }
-  return {
-    statusCode: 405,
-    statusDescription: 'Method Not Allowed',
-    headers: { 'allow': { value: 'GET, HEAD, OPTIONS' } },
-  };
+  if (request.uri === '/v1/activities/search') {
+    request.uri = '/v1/public/activities/search';
+  } else if (request.uri.indexOf('/api/') === 0) {
+    request.uri = request.uri.substring(4);
+  }
+  return request;
 }
 `,
             config.edgeVerifySecrets,
@@ -670,14 +675,19 @@ function handler(event) {
     return rejection;
   }
   var method = request.method;
-  if (method === 'POST' || method === 'OPTIONS') {
-    return request;
+  if (method !== 'POST' && method !== 'OPTIONS') {
+    return {
+      statusCode: 405,
+      statusDescription: 'Method Not Allowed',
+      headers: { 'allow': { value: 'POST, OPTIONS' } },
+    };
   }
-  return {
-    statusCode: 405,
-    statusDescription: 'Method Not Allowed',
-    headers: { 'allow': { value: 'POST, OPTIONS' } },
-  };
+  if (request.uri === '/v1/listing-events') {
+    request.uri = '/v1/public/listing-events';
+  } else if (request.uri.indexOf('/api/') === 0) {
+    request.uri = request.uri.substring(4);
+  }
+  return request;
 }
 `,
             config.edgeVerifySecrets,
@@ -759,6 +769,34 @@ function handler(event) {
           },
           // First-party funnel ingest: proxied, never cached.
           [LISTING_EVENTS_PROXY_PATH]: {
+            origin: searchApiOrigin,
+            viewerProtocolPolicy:
+              cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+            allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+            cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+            originRequestPolicy: config.listingEventsOriginRequestPolicy,
+            functionAssociations: [
+              {
+                function: listingEventsProxyFunction,
+                eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+              },
+            ],
+          },
+          "/api/v1/public/activities/search": {
+            origin: searchApiOrigin,
+            viewerProtocolPolicy:
+              cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+            allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+            cachePolicy: config.searchApiCachePolicy,
+            originRequestPolicy: config.searchApiOriginRequestPolicy,
+            functionAssociations: [
+              {
+                function: searchProxyFunction,
+                eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+              },
+            ],
+          },
+          "/api/v1/public/listing-events": {
             origin: searchApiOrigin,
             viewerProtocolPolicy:
               cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,

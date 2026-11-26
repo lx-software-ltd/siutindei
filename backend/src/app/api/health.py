@@ -158,6 +158,11 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
     from app.utils.responses import json_response
 
+    # An HTTP request is the open probe. It does not open a database
+    # connection. A direct invocation keeps the deeper check.
+    if event.get("httpMethod") or (event.get("requestContext") or {}).get("httpMethod"):
+        return json_response(200, {"status": "ok"}, event=event)
+
     # Check if detailed info is requested (only for internal calls)
     include_details = (event.get("queryStringParameters", {}) or {}).get(
         "details"

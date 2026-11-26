@@ -126,7 +126,7 @@ parallel environments (production + staging) inside a single CDK stack
 - OpenAPI contracts live under `docs/api/` and are the single source
   of truth for all API endpoint details (paths, methods, parameters,
   request/response schemas, authentication requirements).
-- Activities search contract: [`docs/api/search.yaml`](../api/search.yaml).
+- Activities search contract: [`docs/api/public.yaml`](../api/search.yaml).
 - Admin, manager, user, and health contracts: [`docs/api/admin.yaml`](../api/admin.yaml).
 - Partner API contract: [`docs/api/partner.yaml`](../api/partner.yaml).
 - Search responses are cursor-paginated (schedule time + type ordering).
@@ -175,7 +175,7 @@ parallel environments (production + staging) inside a single CDK stack
   parameters.
 - API keys are rotated every 90 days by a scheduled Lambda.
 - Partner routes (`/v1/partner/*`) use custom DB-backed API keys sent in the
-  `x-partner-key` header. Keys are SHA-256 hashed at rest, carry a scope
+  `Authorization: Bearer` header. Keys are SHA-256 hashed at rest, carry a scope
   (`read` = GET only, `crud` = full CRUD) and an optional single-organization
   scope, and are validated by a dedicated in-VPC Lambda authorizer
   (5-minute result cache). Scope and organization filtering are re-enforced

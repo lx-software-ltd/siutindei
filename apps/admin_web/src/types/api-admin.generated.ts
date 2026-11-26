@@ -7590,16 +7590,13 @@ export interface paths {
         };
         /**
          * Health check
-         * @description Service health check endpoint. Returns overall health status,
-         *     including database connectivity and configuration checks.
-         *     Requires IAM authentication.
+         * @description Open health check. An HTTP request returns `{"status": "ok"}`
+         *     and does not open a database connection. A direct invocation
+         *     still runs the database check.
          */
         get: {
             parameters: {
-                query?: {
-                    /** @description Set to 'true' to include detailed check information */
-                    details?: "true" | "false";
-                };
+                query?: never;
                 header?: never;
                 path?: never;
                 cookie?: never;
