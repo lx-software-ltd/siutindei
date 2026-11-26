@@ -168,6 +168,9 @@ in the `Authorization: Bearer` header:
   (`PartnerApiKeyAuthorizerFunction`) validates the hash against the
   database and rejects revoked or expired keys. Authorizer results are
   cached for 5 minutes, which bounds how long a revoked key keeps working.
+  The construct id stays `PartnerApiKeyAuthorizerReplaced`, so this
+  updates the authorizer created for the legacy header instead of
+  replacing it again.
 - Keys carry a scope (`read` = GET only, `crud` = full CRUD) and an
   optional organization scope. Because the cached Allow policy covers all
   partner routes, **scope is re-checked before dispatch, and a route

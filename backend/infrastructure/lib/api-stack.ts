@@ -2092,10 +2092,12 @@ export class ApiStack extends cdk.Stack {
 
     // 5 minutes bounds how long a revoked key remains usable. The cache
     // key is only Authorization. The legacy x-partner-key header is not
-    // accepted.
+    // accepted. The construct id stays PartnerApiKeyAuthorizerReplaced
+    // so this updates the authorizer created for the legacy header
+    // instead of replacing it again.
     const partnerApiKeyAuthorizer = new apigateway.RequestAuthorizer(
       this,
-      "PartnerApiKeyAuthorizer",
+      "PartnerApiKeyAuthorizerReplaced",
       {
         handler: partnerApiKeyAuthorizerFunction,
         identitySources: [apigateway.IdentitySource.header("Authorization")],
@@ -2365,16 +2367,23 @@ export class ApiStack extends cdk.Stack {
     // CORS headers, causing the browser to block the response.  The frontend
     // then sees a CORS / network error instead of a useful status code.
     // -------------------------------------------------------------------------
+    // CDK prefixes each key with `gatewayresponse.header.` and copies the
+    // value unchanged (GatewayResponse.buildResponseParameters). A
+    // `method.response.header.` key never reaches the client. Values keep
+    // the one pair of single quotes the CDK README requires. API Gateway
+    // evaluates `$context.requestId` inside that pair; CDK does not add
+    // another, so this is the mapping and not a quoted literal.
     const gatewayResponseHeaders: Record<string, string> = {
-      "method.response.header.Access-Control-Allow-Origin": `'${corsAllowedOrigins[0]}'`,
-      "method.response.header.Access-Control-Allow-Headers":
+      "Access-Control-Allow-Origin": `'${corsAllowedOrigins[0]}'`,
+      "Access-Control-Allow-Headers":
         "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'",
-      "method.response.header.Access-Control-Allow-Methods":
-        "'GET,POST,PUT,PATCH,DELETE,OPTIONS'",
-      "method.response.header.x-request-id": "'$context.requestId'",
+      "Access-Control-Allow-Methods": "'GET,POST,PUT,PATCH,DELETE,OPTIONS'",
+      "x-request-id": "'$context.requestId'",
     };
-    // Title is the HTTP reason phrase for the status. The response type
-    // stays in the template only so the known gateway types can be mapped.
+    // DEFAULT_4XX is the catch-all. `$context.error.responseType` is still
+    // the specific type, so the title is that status's reason phrase.
+    // A response whose type is only DEFAULT_4XX stays Bad Request.
+    // MISSING_AUTHENTICATION_TOKEN is its own response, forced to 404.
     const gatewayProblemFields = [
       '  "detail": $context.error.messageString,',
       '  "code": "gateway_error",',
@@ -2387,8 +2396,20 @@ export class ApiStack extends cdk.Stack {
       '#set($title = "Unauthorized")',
       '#elseif($context.error.responseType == "ACCESS_DENIED")',
       '#set($title = "Forbidden")',
+      '#elseif($context.error.responseType == "INVALID_API_KEY")',
+      '#set($title = "Forbidden")',
+      '#elseif($context.error.responseType == "WAF_FILTERED")',
+      '#set($title = "Forbidden")',
+      '#elseif($context.error.responseType == "EXPIRED_TOKEN")',
+      '#set($title = "Forbidden")',
       '#elseif($context.error.responseType == "MISSING_AUTHENTICATION_TOKEN")',
       '#set($title = "Not Found")',
+      '#elseif($context.error.responseType == "RESOURCE_NOT_FOUND")',
+      '#set($title = "Not Found")',
+      '#elseif($context.error.responseType == "THROTTLED")',
+      '#set($title = "Too Many Requests")',
+      '#elseif($context.error.responseType == "QUOTA_EXCEEDED")',
+      '#set($title = "Too Many Requests")',
       '#elseif($context.error.responseType == "DEFAULT_4XX")',
       '#set($title = "Bad Request")',
       "#end",
@@ -2611,9 +2632,27 @@ export class ApiStack extends cdk.Stack {
 
     // Open health check. A direct invocation still runs the database check.
     const health = api.root.addResource("health");
-    health.addMethod("GET", new apigateway.LambdaIntegration(healthFunction), {
-      authorizationType: apigateway.AuthorizationType.NONE,
-    });
+    const healthMethod = health.addMethod(
+      "GET",
+      new apigateway.LambdaIntegration(healthFunction),
+      {
+        authorizationType: apigateway.AuthorizationType.NONE,
+      }
+    );
+    // CKV_AWS_59 flags an open method. This one is the public liveness
+    // probe and the HTTP path does not touch the database.
+    (healthMethod.node.defaultChild as apigateway.CfnMethod).addMetadata(
+      "checkov",
+      {
+        skip: [
+          {
+            id: "CKV_AWS_59",
+            comment:
+              "This is the public liveness check and it does not touch the database.",
+          },
+        ],
+      }
+    );
 
     // v1 API
     const v1 = api.root.addResource("v1");

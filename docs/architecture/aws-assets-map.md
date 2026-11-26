@@ -378,8 +378,8 @@ read error status codes instead of silently blocking them.
 
 | Response Type | Headers Added |
 |--------------|---------------|
-| `DEFAULT_4XX` | `Access-Control-Allow-Origin`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Methods` |
-| `DEFAULT_5XX` | `Access-Control-Allow-Origin`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Methods` |
+| `DEFAULT_4XX` | `Access-Control-Allow-Origin`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Methods`, `x-request-id` |
+| `DEFAULT_5XX` | `Access-Control-Allow-Origin`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Methods`, `x-request-id` |
 
 ### API Gateway Authorizers
 
@@ -389,7 +389,7 @@ read error status codes instead of silently blocking them.
 | Request Authorizer | `AdminGroupAuthorizer` | Lambda | `AdminGroupAuthorizerFunction` | JWT + admin group, or importer on catalog import, import history, owner-UI organization lookup and PATCH, and organization enrichment GET/POST, 5-min cache |
 | Request Authorizer | `ManagerGroupAuthorizer` | Lambda | `ManagerGroupAuthorizerFunction` | JWT + admin/manager group check, 5-min cache |
 | Request Authorizer | `UserAuthorizer` | Lambda | `UserAuthorizerFunction` | JWT validation (any user), 5-min cache |
-| Request Authorizer | `PartnerApiKeyAuthorizer` | Lambda | `PartnerApiKeyAuthorizerFunction` | Validates `Authorization: Bearer` against hashed DB keys, 5-minute cache |
+| Request Authorizer | `PartnerApiKeyAuthorizerReplaced` | Lambda | `PartnerApiKeyAuthorizerFunction` | Validates `Authorization: Bearer` against hashed DB keys, 5-minute cache. The construct id is the replacement created while the legacy header was accepted, and this deploy updates that authorizer in place |
 
 ### API Gateway API Key and Usage Plan
 
@@ -405,7 +405,7 @@ in the main stack.
 
 | Resource Type | Logical ID | Physical Name/ID | Notes |
 |--------------|------------|------------------|-------|
-| WAFv2 WebACL | `ApiRateLimitApiWebAcl*` | `lxsoftware-siutindei-api-waf` | REGIONAL. Known-bad-inputs rule group blocks Log4j2 lookups (CVE-2021-44228) on every request. Session rule blocks over 300 requests / 60 s on `/v1/admin/*`, `/v1/manager/*`, `/v1/user/*` with a 429. Partner rule applies the same limit on `/v1/partner/*`, keyed by `authorization`. The session rule does not include that path. |
+| WAFv2 WebACL | `ApiRateLimitApiWebAcl*` | `lxsoftware-siutindei-api-waf` | REGIONAL. Known-bad-inputs rule group blocks Log4j2 lookups (CVE-2021-44228) on every request. Session rule blocks over 300 requests / 60 s on `/v1/admin/*`, `/v1/manager/*`, `/v1/user/*` with a 429. Two partner rules apply the same limit on `/v1/partner/*`, one keyed by `authorization` and one by `x-partner-key`. The session rule does not include that path. The blocked-request alarm sums all three metrics. |
 | WAFv2 WebACL Association | `ApiRateLimitApiWebAclAssociation*` | — | Attaches the web ACL to the `prod` stage |
 | KMS Key + Alias | `ApiRateLimitApiWafLogKey*` | `lxsoftware-siutindei-kms-api-waf-log` | WAF log encryption (rotation enabled) |
 | Log Group | `ApiRateLimitApiWafLogGroup*` | `aws-waf-logs-lxsoftware-siutindei-api` | Retained on delete; `authorization` and `cookie` redacted |

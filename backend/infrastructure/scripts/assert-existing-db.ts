@@ -219,6 +219,134 @@ function collectReferences(value: unknown, found: Set<string>): void {
   }
 }
 
+type ApiResource = {
+  Type: string;
+  Properties?: Record<string, unknown>;
+  Metadata?: Record<string, unknown>;
+};
+
+function refOf(value: unknown): string | undefined {
+  if (value && typeof value === "object" && "Ref" in value) {
+    const ref = (value as { Ref?: unknown }).Ref;
+    return typeof ref === "string" ? ref : undefined;
+  }
+  return undefined;
+}
+
+function apiResourcePath(
+  resourceId: string,
+  resources: Record<string, ApiResource>,
+  seen = new Set<string>(),
+): string {
+  if (seen.has(resourceId)) {
+    throw new Error(`API resource cycle at ${resourceId}`);
+  }
+  seen.add(resourceId);
+  const resource = resources[resourceId];
+  if (!resource || resource.Type !== "AWS::ApiGateway::Resource") {
+    return "";
+  }
+  const parentId = refOf(resource.Properties?.ParentId);
+  const parentPath = parentId
+    ? apiResourcePath(parentId, resources, seen)
+    : "";
+  return `${parentPath}/${String(resource.Properties?.PathPart ?? "")}`;
+}
+
+function assertPartnerAndPublicAuthorizers(
+  resources: Record<string, ApiResource>,
+  partnerAuthorizerLogicalId: string,
+): void {
+  let partnerMethods = 0;
+  let publicMethods = 0;
+  for (const resource of Object.values(resources)) {
+    if (resource.Type !== "AWS::ApiGateway::Method") {
+      continue;
+    }
+    const resourceId = refOf(resource.Properties?.ResourceId);
+    const path = resourceId ? apiResourcePath(resourceId, resources) : "";
+    const httpMethod = String(resource.Properties?.HttpMethod ?? "");
+    const authorizerId = refOf(resource.Properties?.AuthorizerId);
+    if (path.includes("/v1/public/")) {
+      publicMethods += 1;
+      if (authorizerId === partnerAuthorizerLogicalId) {
+        throw new Error(
+          `${httpMethod} ${path} must not use the partner authorizer`,
+        );
+      }
+    }
+    if (!path.includes("/v1/partner/") || httpMethod === "OPTIONS") {
+      continue;
+    }
+    partnerMethods += 1;
+    if (authorizerId !== partnerAuthorizerLogicalId) {
+      throw new Error(
+        `${httpMethod} ${path} must use the partner authorizer`,
+      );
+    }
+  }
+  if (partnerMethods === 0 || publicMethods === 0) {
+    throw new Error(
+      `Expected partner and public methods, found ${partnerMethods} and ${publicMethods}`,
+    );
+  }
+}
+
+function assertPartnerRateRules(resources: Record<string, ApiResource>): void {
+  const webAcl = Object.values(resources).find(
+    (resource) => resource.Type === "AWS::WAFv2::WebACL",
+  );
+  const webAclText = JSON.stringify(webAcl ?? {});
+  if (
+    !webAclText.includes('"x-partner-key"') ||
+    !webAclText.includes("PartnerLegacyKeyRateLimit")
+  ) {
+    throw new Error("Partner WAF must rate limit x-partner-key as well as authorization");
+  }
+  const legacyMetric = "lxsoftware-siutindei-api-partner-legacy-rate-limit";
+  const alarm = Object.values(resources).find(
+    (resource) =>
+      resource.Type === "AWS::CloudWatch::Alarm" &&
+      JSON.stringify(resource).includes("api-session-rate-limit-alarm"),
+  );
+  const alarmText = JSON.stringify(alarm ?? {});
+  if (
+    !alarmText.includes(legacyMetric) ||
+    !alarmText.includes("lxsoftware-siutindei-api-partner-rate-limit")
+  ) {
+    throw new Error(
+      "Rate-limit alarm must include the bearer and x-partner-key block metrics",
+    );
+  }
+}
+
+function assertOpenHealthSuppression(resources: Record<string, ApiResource>): void {
+  const healthMethod = Object.values(resources).find((resource) => {
+    if (resource.Type !== "AWS::ApiGateway::Method") {
+      return false;
+    }
+    if (resource.Properties?.HttpMethod !== "GET") {
+      return false;
+    }
+    const resourceId = refOf(resource.Properties?.ResourceId);
+    return resourceId !== undefined && apiResourcePath(resourceId, resources) === "/health";
+  });
+  const skip = (
+    healthMethod?.Metadata?.checkov as
+      | { skip?: Array<{ id?: string; comment?: string }> }
+      | undefined
+  )?.skip;
+  const suppression = skip?.find((entry) => entry.id === "CKV_AWS_59");
+  if (
+    !suppression?.comment?.includes("public liveness check") ||
+    !suppression.comment.includes("does not touch the database")
+  ) {
+    throw new Error(
+      "Open /health must suppress CKV_AWS_59 as the public liveness check",
+    );
+  }
+}
+
 // The ops alarm rules were moved into OpsAlarmsStack by a stack refactor
 // that kept their logical IDs. They must keep referencing only literals and
 // pseudo parameters: a nested stack parameter or a rename would make
@@ -271,7 +399,14 @@ function assertOpsAlarmRules(stack: cdk.Stack): void {
 
   const synthesized = Template.fromStack(stack).toJSON() as {
     Conditions?: Record<string, unknown>;
-    Resources: Record<string, { Type: string; Properties?: Record<string, unknown> }>;
+    Resources: Record<
+      string,
+      {
+        Type: string;
+        Properties?: Record<string, unknown>;
+        Metadata?: Record<string, unknown>;
+      }
+    >;
   };
   const parentResources = synthesized.Resources;
   // CloudFormation allows 500 resources. 496 includes the admin live
@@ -352,26 +487,36 @@ function assertOpsAlarmRules(stack: cdk.Stack): void {
       resource.Properties?.Handler ===
         "lambda/authorizers/api_key/handler.lambda_handler",
   )?.[0];
-  const partnerAuthorizer = Object.values(parentResources).find(
-    (resource) =>
+  const partnerAuthorizerEntry = Object.entries(parentResources).find(
+    ([, resource]) =>
       resource.Type === "AWS::ApiGateway::Authorizer" &&
       partnerFunctionId !== undefined &&
       JSON.stringify(resource.Properties?.AuthorizerUri ?? "").includes(
         partnerFunctionId,
       ),
   );
+  const partnerAuthorizerLogicalId = partnerAuthorizerEntry?.[0];
+  const partnerAuthorizer = partnerAuthorizerEntry?.[1];
   const partnerIdentity = JSON.stringify(
     partnerAuthorizer?.Properties?.IdentitySource ?? "",
   );
   if (
+    !partnerAuthorizerLogicalId?.startsWith("PartnerApiKeyAuthorizerReplaced") ||
     partnerAuthorizer?.Properties?.AuthorizerResultTtlInSeconds !== 300 ||
     !partnerIdentity.includes("Authorization") ||
     partnerIdentity.includes("x-partner-key")
   ) {
     throw new Error(
-      "Partner API-key authorizer must cache Authorization for 5 minutes",
+      "Partner API-key authorizer must be the replacement construct " +
+        `${partnerAuthorizerLogicalId ?? "(missing)"} and cache Authorization for 5 minutes`,
     );
   }
+  assertPartnerAndPublicAuthorizers(
+    parentResources,
+    partnerAuthorizerLogicalId,
+  );
+  assertPartnerRateRules(parentResources);
+  assertOpenHealthSuppression(parentResources);
   const corsExposed = Object.values(parentResources)
     .filter((resource) => resource.Type === "AWS::S3::Bucket")
     .flatMap((resource) => {
@@ -395,16 +540,31 @@ function assertOpsAlarmRules(stack: cdk.Stack): void {
   if (gatewayResponses.length === 0) {
     throw new Error("API stack must keep its gateway responses");
   }
+  const gatewayHeaderKey = (header: string): string =>
+    `gatewayresponse.header.${header}`;
   for (const response of gatewayResponses) {
     const parameters = response.Properties?.ResponseParameters as
       | Record<string, string>
       | undefined;
-    const allowMethods = Object.entries(parameters ?? {}).find(([name]) =>
-      name.endsWith("Access-Control-Allow-Methods"),
-    )?.[1];
-    if (!allowMethods?.includes("PATCH")) {
+    const keys = Object.keys(parameters ?? {});
+    const allowMethodsKey = gatewayHeaderKey("Access-Control-Allow-Methods");
+    const allowMethods = parameters?.[allowMethodsKey];
+    if (
+      keys.some((key) => key.includes("method.response.header.")) ||
+      !keys.includes(allowMethodsKey) ||
+      !keys.includes(gatewayHeaderKey("Access-Control-Allow-Origin")) ||
+      !keys.includes(gatewayHeaderKey("Access-Control-Allow-Headers")) ||
+      !keys.includes(gatewayHeaderKey("x-request-id")) ||
+      !allowMethods?.includes("PATCH")
+    ) {
       throw new Error(
-        `Gateway Allow-Methods must include PATCH; found ${allowMethods}`,
+        `Gateway response parameter keys must be the CDK gatewayresponse.header names; found ${keys.join(", ")}`,
+      );
+    }
+    const requestId = parameters?.[gatewayHeaderKey("x-request-id")];
+    if (requestId !== "'$context.requestId'") {
+      throw new Error(
+        `x-request-id must be the context mapping with one pair of quotes; found ${requestId}`,
       );
     }
     const template = JSON.stringify(response.Properties?.ResponseTemplates ?? "");
@@ -423,7 +583,13 @@ function assertOpsAlarmRules(stack: cdk.Stack): void {
   };
   const clientErrorTemplate = templateFor("DEFAULT_4XX");
   const serverErrorTemplate = templateFor("DEFAULT_5XX");
-  for (const phrase of ["Unauthorized", "Forbidden", "Bad Request", "Not Found"]) {
+  for (const phrase of [
+    "Unauthorized",
+    "Forbidden",
+    "Bad Request",
+    "Not Found",
+    "Too Many Requests",
+  ]) {
     if (!clientErrorTemplate.includes(phrase)) {
       throw new Error(`DEFAULT_4XX template must map to ${phrase}`);
     }

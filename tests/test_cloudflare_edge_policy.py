@@ -340,8 +340,38 @@ def test_check_ignores_the_path_outside_the_rate_ruleset():
     assert edge_policy.check_policy_text(json.dumps(document)) == 1
 
 
-def test_check_reads_stdin_and_does_not_apply(monkeypatch, capsys):
-    """stdin is the policy, and check never calls Cloudflare or apply."""
+def test_check_rejects_a_substring_of_the_rate_expression():
+    """A rate rule that only contains the path is not the expression."""
+    document = {
+        "rulesets": {
+            "http_ratelimit": {
+                "rules": [
+                    {
+                        "expression": (
+                            'http.request.uri.path contains "/api/v1/public"'
+                        ),
+                    }
+                ]
+            }
+        }
+    }
+    assert edge_policy.check_policy_text(json.dumps(document)) == 1
+
+
+def test_check_accepts_the_exact_rate_expression():
+    """The rate rule matches only the full public search expression."""
+    document = {
+        "rulesets": {
+            "http_ratelimit": {
+                "rules": [{"expression": edge_policy.PUBLIC_API_RATE_EXPRESSION}]
+            }
+        }
+    }
+    assert edge_policy.check_policy_text(json.dumps(document)) == 0
+
+
+def test_check_reads_stdin_only_for_policy_dash(monkeypatch, capsys):
+    """stdin is the policy only for --policy -, and check never calls Cloudflare."""
     monkeypatch.setattr(sys, "stdin", _Stdin(_POLICY.read_text()))
     monkeypatch.delenv("CLOUDFLARE_API_TOKEN", raising=False)
 
@@ -350,5 +380,21 @@ def test_check_reads_stdin_and_does_not_apply(monkeypatch, capsys):
 
     monkeypatch.setattr(edge_policy, "CloudflareApi", boom)
     monkeypatch.setattr(edge_policy, "apply_plan", boom)
-    assert edge_policy.main(["check"]) == 0
+    assert edge_policy.main(["check", "--policy", "-"]) == 0
+    assert "check ok" in capsys.readouterr().out
+
+
+class _UnreadStdin(io.StringIO):
+    def read(self, *_args: object, **_kwargs: object) -> str:
+        raise AssertionError("check must not read stdin unless --policy -")
+
+    def isatty(self) -> bool:
+        return False
+
+
+def test_check_does_not_read_stdin_for_a_file(monkeypatch, capsys):
+    """A non-tty stdin is ignored when --policy is a file."""
+    monkeypatch.setattr(sys, "stdin", _UnreadStdin("not json"))
+    monkeypatch.delenv("CLOUDFLARE_API_TOKEN", raising=False)
+    assert edge_policy.main(["check", "--policy", str(_POLICY)]) == 0
     assert "check ok" in capsys.readouterr().out

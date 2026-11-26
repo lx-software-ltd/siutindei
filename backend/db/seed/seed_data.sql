@@ -293,8 +293,7 @@ WHERE NOT EXISTS (
 );
 
 -- Partner API keys for local development only.
--- Send the plaintext as Authorization: Bearer <key>.
--- Plaintext values:
+-- Plaintext values (send as the x-partner-key header):
 --   read  (full access): stk_dev_read_00000000000000000000000000000000
 --   crud  (Harbor Arts Studio only):
 --         stk_dev_crud_00000000000000000000000000000000
