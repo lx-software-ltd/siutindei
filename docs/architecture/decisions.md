@@ -126,7 +126,7 @@ parallel environments (production + staging) inside a single CDK stack
 - OpenAPI contracts live under `docs/api/` and are the single source
   of truth for all API endpoint details (paths, methods, parameters,
   request/response schemas, authentication requirements).
-- Activities search contract: [`docs/api/public.yaml`](../api/search.yaml).
+- Activities search contract: [`docs/api/public.yaml`](../api/public.yaml).
 - Admin, manager, user, and health contracts: [`docs/api/admin.yaml`](../api/admin.yaml).
 - Partner API contract: [`docs/api/partner.yaml`](../api/partner.yaml).
 - Search responses are cursor-paginated (schedule time + type ordering).
