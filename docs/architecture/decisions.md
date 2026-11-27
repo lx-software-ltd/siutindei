@@ -292,7 +292,7 @@ Lambdas or NAT Gateway.
 - Node.js: `package-lock.json`
 - iOS: `Podfile.lock`
 - Python: exact `==` pins in the backend requirements files
-- CI workflow: `.github/workflows/check-lockfiles.yml`
+- CI jobs: `node-lockfiles`, `python-requirements`, and `flutter-lockfiles` in `.github/workflows/lint.yml`. The `lint` gate needs them.
 
 ## 7) Dependency Updates
 

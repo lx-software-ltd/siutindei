@@ -44,8 +44,8 @@ You get updates while the fix is in progress and a note when it ships. The advis
 
 `siutindei` deploys the Siu Tin Dei mobile app, the admin console, the public website, and the backend API they share.
 
-- `security.yml` runs Checkov, CodeQL, the personal-data denylist, Gitleaks, pip-audit, Bandit, and npm audit. `semgrep.yml` runs Semgrep.
-- pip-audit ignores one advisory, `PYSEC-2025-183`. Semgrep excludes one rule, `gha-curl-pipe-shell`. The reason is on each step, in `security.yml` and `semgrep.yml`.
+- `security.yml` runs Checkov, CodeQL, the personal-data denylist, Gitleaks, pip-audit, Bandit, npm audit, and Semgrep. `lint.yml` checks the lockfiles. Both gates are required.
+- pip-audit ignores one advisory, `PYSEC-2025-183`. Semgrep excludes one rule, `gha-curl-pipe-shell`. The reason is on each step in `security.yml`.
 - Known limitations: Cognito MFA is off. The stacks here do not set up CloudTrail.
 
 The controls for secrets, logging, authentication, the API, and infrastructure are in [`docs/architecture/security.md`](docs/architecture/security.md). Database audit logging is in [`docs/architecture/audit-logging.md`](docs/architecture/audit-logging.md).
