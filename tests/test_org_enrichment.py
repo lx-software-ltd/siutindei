@@ -2284,3 +2284,683 @@ def test_provider_busy_on_the_last_delivery_explains_the_failure(
     finally:
         with Session(test_engine) as session:
             _delete_run(session, run_id, org_id)
+
+
+def test_dismissed_picture_can_be_applied_again(db_session) -> None:
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    picture = _proposal(
+        run,
+        section="Media",
+        kind="add_media",
+        label="Photo",
+        proposed_value={"source_url": "https://ok.test/photo.jpg"},
+        proposed_hash="hash-dismissed-photo",
+        status="dismissed",
+    )
+    description = _proposal(
+        run,
+        section="Organization",
+        kind="update_organization",
+        field="description",
+        label="Description",
+        proposed_value={"description": "Saturday art class for children."},
+        proposed_hash="hash-dismissed-description",
+        status="dismissed",
+    )
+    db_session.add_all([picture, description])
+    db_session.flush()
+
+    def copy_image(url: str, org_id: str) -> str:
+        del url, org_id
+        return "https://cdn.example/stored.jpg"
+
+    results, _quality_run = apply_proposals(
+        db_session,
+        org.id,
+        [str(picture.id), str(description.id)],
+        {},
+        user_id="admin",
+        request_id="req-reapply",
+        copy_image=copy_image,
+    )
+    by_id = {row["id"]: row for row in results}
+    assert by_id[str(picture.id)]["status"] == "applied"
+    assert by_id[str(description.id)] == {
+        "id": str(description.id),
+        "status": "error",
+        "error": "not pending",
+    }
+    assert picture.status == "applied"
+    assert description.status == "dismissed"
+    assert list(org.media_urls or []) == ["https://cdn.example/stored.jpg"]
+
+
+def test_dismissed_picture_hash_is_skipped_until_it_is_applied(db_session) -> None:
+    import hashlib
+    import json
+
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(run)
+    db_session.flush()
+    proposed = {"source_url": "https://ok.test/photo.jpg"}
+    digest = hashlib.sha256(
+        json.dumps(proposed, sort_keys=True, default=str).encode("utf-8")
+    ).hexdigest()
+    picture = _proposal(
+        run,
+        section="Media",
+        kind="add_media",
+        label="Photo",
+        proposed_value=proposed,
+        proposed_hash=digest,
+        status="dismissed",
+    )
+    db_session.add(picture)
+    db_session.flush()
+    later = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(later)
+    db_session.flush()
+    item = {
+        "section": "Media",
+        "kind": "add_media",
+        "label": "Photo",
+        "current": None,
+        "proposed": proposed,
+        "confidence": 0.9,
+        "evidence": [],
+    }
+    assert save_proposals(db_session, later, [item], min_confidence=Decimal("0.5")) == 0
+
+    def copy_image(url: str, org_id: str) -> str:
+        del url, org_id
+        return "https://cdn.example/stored.jpg"
+
+    apply_proposals(
+        db_session,
+        org.id,
+        [str(picture.id)],
+        {},
+        user_id="admin",
+        request_id="req-reapply-hash",
+        copy_image=copy_image,
+    )
+    assert picture.status == "applied"
+    assert save_proposals(db_session, later, [item], min_confidence=Decimal("0.5")) == 1
+
+
+def _read_enrichment(db_session, monkeypatch, org_id, run_id=None) -> dict:
+    import json
+
+    from app.api.admin_enrichment import handle_org_enrichment
+
+    class _OpenSession:
+        def __enter__(self):
+            return db_session
+
+        def __exit__(self, *_args) -> bool:
+            return False
+
+    monkeypatch.setattr("app.api.admin_enrichment.get_engine", lambda: None)
+    monkeypatch.setattr(
+        "app.api.admin_enrichment.Session",
+        lambda _engine: _OpenSession(),
+    )
+    monkeypatch.setattr(db_session, "commit", db_session.flush)
+    event = {
+        "httpMethod": "GET",
+        "path": f"/v1/admin/organizations/{org_id}/enrichment",
+        "requestContext": {
+            "authorizer": {"groups": "admin", "userSub": "admin-user"},
+        },
+    }
+    if run_id is not None:
+        event["queryStringParameters"] = {"run_id": str(run_id)}
+    response = handle_org_enrichment(
+        event,
+        "GET",
+        str(org_id),
+    )
+    assert response["statusCode"] == 200
+    body = json.loads(response["body"])
+    assert isinstance(body, dict)
+    return body
+
+
+def test_read_includes_an_older_dismissed_picture(db_session, monkeypatch) -> None:
+    org = _org(db_session, website="https://ok.test")
+    old = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://ok.test/",
+        created_at=datetime.now(UTC) - timedelta(days=2),
+    )
+    latest = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://ok.test/",
+        created_at=datetime.now(UTC) - timedelta(hours=1),
+    )
+    db_session.add_all([old, latest])
+    db_session.flush()
+    decided = datetime.now(UTC) - timedelta(days=2)
+    picture = _proposal(
+        old,
+        section="Media",
+        kind="add_media",
+        label="Photo then",
+        proposed_value={"source_url": "https://ok.test/old.jpg"},
+        proposed_hash="hash-old-photo",
+        status="dismissed",
+        decided_at=decided,
+    )
+    description = _proposal(
+        old,
+        section="Organization",
+        kind="update_organization",
+        field="description",
+        label="Old description",
+        proposed_value={"description": "Saturday art class for children."},
+        proposed_hash="hash-old-description",
+        status="dismissed",
+        decided_at=decided,
+    )
+    current = _proposal(
+        latest,
+        section="Organization",
+        kind="update_organization",
+        field="description",
+        label="Description",
+        proposed_value={"description": "Weekday art class for children."},
+        proposed_hash="hash-current-description",
+    )
+    db_session.add_all([picture, description, current])
+    db_session.flush()
+    labels = [
+        row["label"]
+        for row in _read_enrichment(db_session, monkeypatch, org.id)["proposals"]
+    ]
+    assert labels == ["Photo then", "Description"]
+
+
+def test_read_does_not_repeat_a_picture_hash(db_session, monkeypatch) -> None:
+    org = _org(db_session, website="https://ok.test")
+    old = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://ok.test/",
+        created_at=datetime.now(UTC) - timedelta(days=2),
+    )
+    latest = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://ok.test/",
+        created_at=datetime.now(UTC) - timedelta(hours=1),
+    )
+    db_session.add_all([old, latest])
+    db_session.flush()
+    older = _proposal(
+        old,
+        section="Media",
+        kind="add_media",
+        label="Photo then",
+        proposed_value={"source_url": "https://ok.test/photo.jpg"},
+        proposed_hash="hash-same-photo",
+        status="dismissed",
+        decided_at=datetime.now(UTC) - timedelta(days=2),
+    )
+    current = _proposal(
+        latest,
+        section="Media",
+        kind="add_media",
+        label="Photo now",
+        proposed_value={"source_url": "https://ok.test/photo.jpg"},
+        proposed_hash="hash-same-photo",
+        status="pending",
+    )
+    db_session.add_all([older, current])
+    db_session.flush()
+    labels = [
+        row["label"]
+        for row in _read_enrichment(db_session, monkeypatch, org.id)["proposals"]
+    ]
+    assert labels == ["Photo now"]
+
+
+def test_dismissed_leaflet_cannot_be_applied(db_session) -> None:
+    org = _org(db_session, website="https://ok.test")
+    run = OrgEnrichmentRun(
+        org_id=org.id, status="ready", seed_url="https://ok.test/", source="leaflet"
+    )
+    db_session.add(run)
+    db_session.flush()
+    picture = _proposal(
+        run,
+        section="Media",
+        kind="add_media",
+        label="Leaflet photo",
+        proposed_value={
+            "source_url": "https://cdn.example/leaflet.jpg",
+            "leaflet": True,
+            "object_key": "leaflets/gone.jpg",
+        },
+        proposed_hash="hash-dismissed-leaflet",
+        status="dismissed",
+    )
+    db_session.add(picture)
+    db_session.flush()
+    results, _quality_run = apply_proposals(
+        db_session,
+        org.id,
+        [str(picture.id)],
+        {},
+        user_id="admin",
+        request_id="req-leaflet",
+    )
+    assert results == [
+        {"id": str(picture.id), "status": "error", "error": "not pending"}
+    ]
+    assert picture.status == "dismissed"
+
+
+def test_applying_a_picture_clears_every_dismissed_copy(db_session) -> None:
+    org = _org(db_session, website="https://ok.test")
+    first = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://ok.test/",
+        created_at=datetime.now(UTC) - timedelta(days=2),
+    )
+    second = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://ok.test/",
+        created_at=datetime.now(UTC) - timedelta(days=1),
+    )
+    db_session.add_all([first, second])
+    db_session.flush()
+    proposed = {"source_url": "https://ok.test/photo.jpg"}
+    older = _proposal(
+        first,
+        section="Media",
+        kind="add_media",
+        label="Photo then",
+        proposed_value=proposed,
+        proposed_hash="hash-shared-photo",
+        status="dismissed",
+        decided_at=datetime.now(UTC) - timedelta(days=2),
+        created_at=datetime.now(UTC) - timedelta(days=2),
+    )
+    newer = _proposal(
+        second,
+        section="Media",
+        kind="add_media",
+        label="Photo again",
+        proposed_value=proposed,
+        proposed_hash="hash-shared-photo",
+        status="dismissed",
+        decided_at=datetime.now(UTC) - timedelta(days=1),
+        created_at=datetime.now(UTC) - timedelta(days=1),
+    )
+    db_session.add_all([older, newer])
+    db_session.flush()
+
+    def copy_image(url: str, org_id: str) -> str:
+        del url, org_id
+        return "https://cdn.example/stored.jpg"
+
+    apply_proposals(
+        db_session,
+        org.id,
+        [str(older.id)],
+        {},
+        user_id="admin",
+        request_id="req-clear-hash",
+        copy_image=copy_image,
+    )
+    assert older.status == "applied"
+    assert newer.status == "superseded"
+    later = OrgEnrichmentRun(org_id=org.id, status="ready", seed_url="https://ok.test/")
+    db_session.add(later)
+    db_session.flush()
+    item = {
+        "section": "Media",
+        "kind": "add_media",
+        "label": "Photo",
+        "current": None,
+        "proposed": proposed,
+        "confidence": 0.9,
+        "evidence": [],
+    }
+    assert save_proposals(db_session, later, [item], min_confidence=Decimal("0.5")) == 1
+
+
+def test_mixed_runs_still_link_the_newest_run(db_session, monkeypatch) -> None:
+    linked: list[str] = []
+    monkeypatch.setattr(
+        "app.services.enrichment.apply._link_run",
+        lambda _session, run_id: linked.append(run_id),
+    )
+    org = _org(db_session, website="https://ok.test")
+    old = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://ok.test/",
+        created_at=datetime.now(UTC) - timedelta(days=2),
+    )
+    latest = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://ok.test/",
+        created_at=datetime.now(UTC) - timedelta(hours=1),
+    )
+    db_session.add_all([old, latest])
+    db_session.flush()
+    picture = _proposal(
+        old,
+        section="Media",
+        kind="add_media",
+        label="Photo",
+        proposed_value={"source_url": "https://ok.test/photo.jpg"},
+        proposed_hash="hash-old-photo-link",
+        status="dismissed",
+        created_at=datetime.now(UTC) - timedelta(days=2),
+    )
+    description = _proposal(
+        latest,
+        field="description",
+        label="Description",
+        proposed_value={"description": "Saturday art class for children."},
+        proposed_hash="hash-new-description",
+        created_at=datetime.now(UTC) - timedelta(hours=1),
+    )
+    db_session.add_all([picture, description])
+    db_session.flush()
+
+    def copy_image(url: str, org_id: str) -> str:
+        del url, org_id
+        return "https://cdn.example/stored.jpg"
+
+    apply_proposals(
+        db_session,
+        org.id,
+        [str(picture.id), str(description.id)],
+        {},
+        user_id="admin",
+        request_id="req-link-runs",
+        copy_image=copy_image,
+    )
+    assert linked == [str(latest.id)]
+
+
+def test_read_keeps_a_newer_dismissal_off_an_older_run(db_session, monkeypatch) -> None:
+    org = _org(db_session, website="https://ok.test")
+    old = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://ok.test/",
+        created_at=datetime.now(UTC) - timedelta(days=2),
+    )
+    latest = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://ok.test/",
+        created_at=datetime.now(UTC) - timedelta(hours=1),
+    )
+    db_session.add_all([old, latest])
+    db_session.flush()
+    note = _proposal(
+        old,
+        label="Old note",
+        proposed_value={"description": "Saturday art class for children."},
+        proposed_hash="hash-old-note",
+    )
+    picture = _proposal(
+        latest,
+        section="Media",
+        kind="add_media",
+        label="New photo",
+        proposed_value={"source_url": "https://ok.test/new.jpg"},
+        proposed_hash="hash-new-photo",
+        status="dismissed",
+        decided_at=datetime.now(UTC) - timedelta(hours=1),
+    )
+    db_session.add_all([note, picture])
+    db_session.flush()
+    labels = [
+        row["label"]
+        for row in _read_enrichment(db_session, monkeypatch, org.id, old.id)[
+            "proposals"
+        ]
+    ]
+    assert labels == ["Old note"]
+
+
+def test_read_does_not_mix_leaflet_and_website_pictures(
+    db_session, monkeypatch
+) -> None:
+    org = _org(db_session, website="https://ok.test")
+    website = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://ok.test/",
+        source="website",
+        created_at=datetime.now(UTC) - timedelta(days=2),
+    )
+    leaflet = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://leaflets.example/term.pdf",
+        source="leaflet",
+        created_at=datetime.now(UTC) - timedelta(hours=1),
+    )
+    db_session.add_all([website, leaflet])
+    db_session.flush()
+    site_photo = _proposal(
+        website,
+        section="Media",
+        kind="add_media",
+        label="Website photo",
+        proposed_value={"source_url": "https://ok.test/photo.jpg"},
+        proposed_hash="hash-website-photo",
+        status="dismissed",
+        decided_at=datetime.now(UTC) - timedelta(days=2),
+    )
+    leaflet_photo = _proposal(
+        leaflet,
+        section="Media",
+        kind="add_media",
+        label="Leaflet photo",
+        proposed_value={
+            "source_url": "https://cdn.example/leaflet.jpg",
+            "leaflet": True,
+        },
+        proposed_hash="hash-leaflet-photo",
+        status="dismissed",
+        decided_at=datetime.now(UTC) - timedelta(hours=1),
+    )
+    db_session.add_all([site_photo, leaflet_photo])
+    db_session.flush()
+    leaflet_labels = [
+        row["label"]
+        for row in _read_enrichment(db_session, monkeypatch, org.id)["proposals"]
+    ]
+    assert leaflet_labels == ["Leaflet photo"]
+    website_labels = [
+        row["label"]
+        for row in _read_enrichment(db_session, monkeypatch, org.id, website.id)[
+            "proposals"
+        ]
+    ]
+    assert website_labels == ["Website photo"]
+
+
+def test_read_merges_only_earlier_website_pictures(db_session, monkeypatch) -> None:
+    org = _org(db_session, website="https://ok.test")
+    leaflet = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://leaflets.example/term.pdf",
+        source="leaflet",
+        created_at=datetime.now(UTC) - timedelta(days=3),
+    )
+    website = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://ok.test/",
+        source="website",
+        created_at=datetime.now(UTC) - timedelta(days=2),
+    )
+    latest = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://ok.test/",
+        source="website",
+        created_at=datetime.now(UTC) - timedelta(hours=1),
+    )
+    db_session.add_all([leaflet, website, latest])
+    db_session.flush()
+    from_leaflet = _proposal(
+        leaflet,
+        section="Media",
+        kind="add_media",
+        label="From leaflet",
+        proposed_value={"source_url": "https://ok.test/leaflet.jpg"},
+        proposed_hash="hash-from-leaflet",
+        status="dismissed",
+        decided_at=datetime.now(UTC) - timedelta(days=3),
+    )
+    flagged = _proposal(
+        website,
+        section="Media",
+        kind="add_media",
+        label="Flagged leaflet",
+        proposed_value={"source_url": "https://ok.test/flagged.jpg", "leaflet": True},
+        proposed_hash="hash-flagged",
+        status="dismissed",
+        decided_at=datetime.now(UTC) - timedelta(days=2),
+    )
+    kept = _proposal(
+        website,
+        section="Media",
+        kind="add_media",
+        label="Kept photo",
+        proposed_value={"source_url": "https://ok.test/kept.jpg"},
+        proposed_hash="hash-kept",
+        status="dismissed",
+        decided_at=datetime.now(UTC) - timedelta(days=2, minutes=1),
+    )
+    current = _proposal(
+        latest,
+        label="Current note",
+        proposed_value={"description": "Saturday art class for children."},
+        proposed_hash="hash-merge-note",
+    )
+    db_session.add_all([from_leaflet, flagged, kept, current])
+    db_session.flush()
+    labels = [
+        row["label"]
+        for row in _read_enrichment(db_session, monkeypatch, org.id)["proposals"]
+    ]
+    assert labels == ["Kept photo", "Current note"]
+
+
+def test_read_caps_older_dismissed_pictures(db_session, monkeypatch) -> None:
+    from app.api.admin_validators import MAX_MEDIA_URLS_COUNT
+
+    org = _org(db_session, website="https://ok.test")
+    old = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://ok.test/",
+        created_at=datetime.now(UTC) - timedelta(days=3),
+    )
+    latest = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://ok.test/",
+        created_at=datetime.now(UTC) - timedelta(hours=1),
+    )
+    db_session.add_all([old, latest])
+    db_session.flush()
+    current = _proposal(
+        latest,
+        label="Current note",
+        proposed_value={"description": "Saturday art class for children."},
+        proposed_hash="hash-current-note",
+    )
+    pictures = []
+    total = MAX_MEDIA_URLS_COUNT + 1
+    for index in range(total):
+        pictures.append(
+            _proposal(
+                old,
+                section="Media",
+                kind="add_media",
+                label=f"Photo {index:02d}",
+                proposed_value={"source_url": f"https://ok.test/{index}.jpg"},
+                proposed_hash=f"hash-cap-{index}",
+                status="dismissed",
+                decided_at=datetime.now(UTC) - timedelta(days=2, minutes=total - index),
+            )
+        )
+    db_session.add_all([current, *pictures])
+    db_session.flush()
+    labels = [
+        row["label"]
+        for row in _read_enrichment(db_session, monkeypatch, org.id)["proposals"]
+    ]
+    assert "Current note" in labels
+    assert "Photo 00" not in labels
+    assert sum(label.startswith("Photo ") for label in labels) == MAX_MEDIA_URLS_COUNT
+
+
+def test_read_orders_rows_the_same_way_with_an_older_picture(
+    db_session, monkeypatch
+) -> None:
+    org = _org(db_session, website="https://ok.test")
+    old = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://ok.test/",
+        created_at=datetime.now(UTC) - timedelta(days=2),
+    )
+    latest = OrgEnrichmentRun(
+        org_id=org.id,
+        status="ready",
+        seed_url="https://ok.test/",
+        created_at=datetime.now(UTC) - timedelta(hours=1),
+    )
+    db_session.add_all([old, latest])
+    db_session.flush()
+    zebra = _proposal(
+        latest,
+        label="Note",
+        proposed_value={"description": "Zebra class for children."},
+        proposed_hash="hash-zebra",
+    )
+    alpha = _proposal(
+        latest,
+        label="Note",
+        proposed_value={"description": "Alpha class for children."},
+        proposed_hash="hash-alpha",
+    )
+    picture = _proposal(
+        old,
+        section="Media",
+        kind="add_media",
+        label="Photo",
+        proposed_value={"source_url": "https://ok.test/photo.jpg"},
+        proposed_hash="hash-order-photo",
+        status="dismissed",
+        decided_at=datetime.now(UTC) - timedelta(days=2),
+    )
+    db_session.add_all([zebra, alpha, picture])
+    db_session.flush()
+    rows = _read_enrichment(db_session, monkeypatch, org.id)["proposals"]
+    notes = [row["id"] for row in rows if row["label"] == "Note"]
+    assert notes == sorted(notes)
+    assert [row["section"] for row in rows] == sorted(row["section"] for row in rows)

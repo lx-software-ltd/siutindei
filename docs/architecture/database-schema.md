@@ -458,7 +458,7 @@ Columns:
 - `confidence` (numeric), `unverified` (boolean)
 - `evidence` (jsonb)
 - `status` (text) — `pending`, `applied`, `dismissed`, or `superseded`
-- `proposed_hash` (text) — identity of the suggestion; a dismissed hash is not proposed again
+- `proposed_hash` (text) — identity of the suggestion; a dismissed hash is not proposed again. Applying that picture clears every dismissed copy of the hash.
 - `decided_by` / `decided_at` (optional)
 - `created_at` (timestamptz)
 

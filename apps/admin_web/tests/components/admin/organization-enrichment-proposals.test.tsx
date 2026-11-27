@@ -5,7 +5,9 @@ import {
   ProposalTable,
   areaIdFromPath,
   currentText,
+  enrichmentActionsVisible,
   matchedAreaId,
+  proposalCanApply,
   proposedText,
   selectionAfterToggle,
 } from '@/components/admin/organization-enrichment-proposals';
@@ -100,13 +102,17 @@ function proposal(patch: Partial<EnrichmentProposal>): EnrichmentProposal {
   };
 }
 
-function renderTable(rows: EnrichmentProposal[]) {
+function renderTable(
+  rows: EnrichmentProposal[],
+  applyErrors: Record<string, string> = {}
+) {
   return render(
     <ProposalTable
       rows={rows}
       venues={[]}
       selected={[]}
       overrides={{}}
+      applyErrors={applyErrors}
       onToggle={() => undefined}
       onOverride={() => undefined}
     />
@@ -231,6 +237,69 @@ describe('logo selection', () => {
 
     expect(switched).toEqual(['logo-facebook']);
     expect(withPhoto).toEqual(['logo-facebook', 'photo']);
+  });
+});
+
+describe('dismissed picture selection', () => {
+  it('enables a dismissed picture and locks a dismissed description', () => {
+    renderTable([
+      proposal({
+        id: 'prop-photo',
+        section: 'Media',
+        kind: 'add_media',
+        field: 'media',
+        label: 'Photo · dismissed',
+        proposed_value: { source_url: MEDIA_URL, alt: 'Class' },
+        status: 'dismissed',
+      }),
+      proposal({
+        id: 'prop-old',
+        label: 'Old description',
+        status: 'dismissed',
+      }),
+    ]);
+    expect(screen.getByRole('checkbox', { name: 'Select Photo · dismissed' })).toBeEnabled();
+    expect(screen.getByRole('checkbox', { name: 'Select Old description' })).toBeDisabled();
+  });
+
+  it('locks a dismissed leaflet and shows an apply error on a dismissed picture', () => {
+    const leaflet = proposal({
+      id: 'prop-leaflet',
+      section: 'Media',
+      kind: 'add_media',
+      field: 'media',
+      label: 'Leaflet photo',
+      proposed_value: { source_url: MEDIA_URL, leaflet: true },
+      status: 'dismissed',
+    });
+    const picture = proposal({
+      id: 'prop-photo',
+      section: 'Media',
+      kind: 'add_media',
+      field: 'media',
+      label: 'Photo · dismissed',
+      proposed_value: { source_url: MEDIA_URL, alt: 'Class' },
+      status: 'dismissed',
+    });
+    expect(proposalCanApply(leaflet)).toBe(false);
+    expect(proposalCanApply(picture)).toBe(true);
+    renderTable([leaflet, picture], { 'prop-photo': 'media_urls is full' });
+    expect(screen.getByRole('checkbox', { name: 'Select Leaflet photo' })).toBeDisabled();
+    expect(screen.getByText('media_urls is full')).toBeVisible();
+  });
+
+  it('shows the apply bar for pending rows, or after a dismissed picture is selected', () => {
+    const picture = proposal({
+      id: 'prop-photo',
+      section: 'Media',
+      kind: 'add_media',
+      label: 'Photo · dismissed',
+      status: 'dismissed',
+    });
+    const pending = proposal({ id: 'prop-note', status: 'pending' });
+    expect(enrichmentActionsVisible([picture], [])).toBe(false);
+    expect(enrichmentActionsVisible([picture], ['prop-photo'])).toBe(true);
+    expect(enrichmentActionsVisible([pending, picture], [])).toBe(true);
   });
 });
 
