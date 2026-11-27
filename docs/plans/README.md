@@ -29,3 +29,4 @@ the plan turns out to be wrong.
 | [`staging-smoke-origin.md`](staging-smoke-origin.md) | Point staging smoke at the resolve-step origin |
 | [`2026-11-10-search-area-scope.md`](2026-11-10-search-area-scope.md) | Limit public search to selected Hong Kong areas |
 | [`2026-11-25-code-scanning-alerts.md`](2026-11-25-code-scanning-alerts.md) | Clear the open Semgrep and CodeQL alerts |
+| [`2026-11-27-dependabot-batch.md`](2026-11-27-dependabot-batch.md) | Open one pull request for routine Dependabot updates |
