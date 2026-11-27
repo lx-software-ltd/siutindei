@@ -1,6 +1,6 @@
 # Plan: Re-approve dismissed pictures, and fit website photos to the tile
 
-**Status**: Draft
+**Status**: Done
 **Zone**: yellow
 
 ## Decisions

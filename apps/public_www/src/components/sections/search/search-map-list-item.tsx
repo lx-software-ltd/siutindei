@@ -12,7 +12,7 @@ import {
 import { useActivityHref } from '@/components/shared/static-activity-pages';
 import type { ActivityListing } from '@/lib/activities/types';
 import { listingAgeLabel } from '@/lib/activities/listing-facts';
-import { listingImageUrl, listingTitle } from '@/lib/activities/listing-utils';
+import { listingImageIsLogo, listingImageUrl, listingTitle } from '@/lib/activities/listing-utils';
 import { formatListingPriceSummary } from '@/lib/activities/price-format';
 import { iconSrcForListing } from '@/lib/home-wizard/choice-icons';
 import { LISTING_IMAGE_HEIGHT, LISTING_IMAGE_WIDTH } from '@/lib/listing-image';
@@ -49,6 +49,7 @@ export type SearchMapListItemProps = SearchMapSelectItemProps | SearchMapSummary
 
 function Thumbnail({ listing, title }: { readonly listing: ActivityListing; readonly title: string }) {
   const imageUrl = listingImageUrl(listing);
+  const isLogo = listingImageIsLogo(listing);
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const showImage = imageUrl !== null && imageUrl !== failedUrl;
   return (
@@ -62,7 +63,11 @@ function Thumbnail({ listing, title }: { readonly listing: ActivityListing; read
           loading="lazy"
           decoding="async"
           onError={() => setFailedUrl(imageUrl)}
-          className="h-full w-full object-cover"
+          className={
+            isLogo
+              ? 'absolute inset-0 h-full w-full bg-white object-contain p-2'
+              : 'absolute inset-0 h-full w-full object-cover'
+          }
         />
       ) : (
         <span className="flex h-full items-center justify-center">

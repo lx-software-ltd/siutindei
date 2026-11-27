@@ -73,8 +73,8 @@ export function ActivityGallery({
   }
 
   const imageClassName = isLogo
-    ? 'h-full w-full bg-white object-contain p-8'
-    : 'h-full w-full object-cover';
+    ? 'absolute inset-0 h-full w-full bg-white object-contain p-8'
+    : 'absolute inset-0 h-full w-full object-cover';
   const smallTiles = photos.slice(1, 1 + MOSAIC_SMALL_TILES);
   const counter = formatTemplate(copy.photoCounterLabel, {
     current: Math.min(current + 1, photos.length),
@@ -89,7 +89,7 @@ export function ActivityGallery({
         className="listing-carousel__track activity-gallery__frame flex snap-x snap-mandatory overflow-x-auto rounded-2xl md:hidden short:flex"
       >
         {photos.map((url, index) => (
-          <div key={url} className="aspect-[4/3] w-full shrink-0 snap-start bg-brand-100">
+          <div key={url} className="relative aspect-[4/3] w-full shrink-0 snap-start overflow-hidden bg-brand-100">
             <img
               src={url}
               alt={index === 0 ? title : ''}
@@ -137,7 +137,7 @@ export function ActivityGallery({
             key={url}
             type="button"
             onClick={() => setIsOpen(true)}
-            className={`relative overflow-hidden bg-brand-100 ${index >= 2 ? 'hidden lg:block' : ''}`}
+            className={`relative h-full min-h-0 overflow-hidden bg-brand-100 ${index >= 2 ? 'hidden lg:block' : ''}`}
           >
             <img
               src={url}
@@ -147,7 +147,7 @@ export function ActivityGallery({
               loading="lazy"
               decoding="async"
               onError={() => markFailed(url)}
-              className="h-full w-full object-cover"
+              className="absolute inset-0 h-full w-full object-cover"
             />
           </button>
         ))}
@@ -173,7 +173,11 @@ export function ActivityGallery({
                 height={LISTING_IMAGE_HEIGHT}
                 loading="lazy"
                 decoding="async"
-                className={isLogo ? 'w-full bg-white object-contain p-8' : 'w-full object-cover'}
+                className={
+                  isLogo
+                    ? 'max-h-[70vh] w-full bg-white object-contain p-8'
+                    : 'max-h-[70vh] w-full object-contain'
+                }
               />
             </li>
           ))}

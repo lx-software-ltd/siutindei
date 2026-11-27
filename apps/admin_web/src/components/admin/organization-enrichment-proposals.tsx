@@ -310,6 +310,7 @@ export function ProposalTable({
         {rows.map((row) => {
           const current = currentText(row.current_value);
           const pending = row.status === 'pending';
+          const selectable = proposalCanApply(row);
           return (
             <tr key={row.id}>
               <AdminDataTableCell>
@@ -317,7 +318,7 @@ export function ProposalTable({
                   type='checkbox'
                   aria-label={`Select ${row.label}`}
                   checked={selected.includes(row.id)}
-                  disabled={!pending}
+                  disabled={!selectable}
                   onChange={() => onToggle(row.id)}
                 />
               </AdminDataTableCell>
@@ -816,6 +817,11 @@ function BlockerLine({
 
 function isLogoProposal(row: EnrichmentProposal | undefined): boolean {
   return Boolean(row && row.kind === 'add_media' && row.proposed_value.logo);
+}
+
+/** Pending rows, and a picture that was dismissed earlier. */
+export function proposalCanApply(row: { status: string; kind: string }): boolean {
+  return row.status === 'pending' || (row.status === 'dismissed' && row.kind === 'add_media');
 }
 
 export function selectionAfterToggle(

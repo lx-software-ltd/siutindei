@@ -234,6 +234,29 @@ describe('logo selection', () => {
   });
 });
 
+describe('dismissed picture selection', () => {
+  it('enables a dismissed picture and locks a dismissed description', () => {
+    renderTable([
+      proposal({
+        id: 'prop-photo',
+        section: 'Media',
+        kind: 'add_media',
+        field: 'media',
+        label: 'Photo · dismissed',
+        proposed_value: { source_url: MEDIA_URL, alt: 'Class' },
+        status: 'dismissed',
+      }),
+      proposal({
+        id: 'prop-old',
+        label: 'Old description',
+        status: 'dismissed',
+      }),
+    ]);
+    expect(screen.getByRole('checkbox', { name: 'Select Photo · dismissed' })).toBeEnabled();
+    expect(screen.getByRole('checkbox', { name: 'Select Old description' })).toBeDisabled();
+  });
+});
+
 describe('ProposalTable media preview', () => {
   it('shows the image instead of the source URL', () => {
     renderTable([

@@ -34,6 +34,7 @@ import { Textarea } from '../ui/textarea';
 import { chosenEnrichmentOverrides, firstBlockerMessage } from '../../lib/enrichment-overrides';
 import {
   ProposalTable,
+  proposalCanApply,
   selectionAfterToggle,
 } from './organization-enrichment-proposals';
 import { OrganizationEnrichmentSettings } from './organization-enrichment-settings';
@@ -424,6 +425,10 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
     () => proposals.filter((row) => row.status === 'pending').map((row) => row.id),
     [proposals]
   );
+  const canApplyAny = useMemo(
+    () => proposals.some((row) => proposalCanApply(row)),
+    [proposals]
+  );
   const leafletKey = proposals
     .filter((row) => row.status === 'pending' && row.proposed_value.leaflet === true)
     .map((row) => row.id)
@@ -467,8 +472,17 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
     return chosenEnrichmentOverrides(selected, overrides, proposals);
   }
 
+  function idsFor(action: 'apply' | 'dismiss') {
+    if (action === 'apply') {
+      return selected;
+    }
+    const pending = new Set(pendingIds);
+    return selected.filter((id) => pending.has(id));
+  }
+
   async function decide(action: 'apply' | 'dismiss') {
-    if (!scope?.orgId || selected.length === 0) {
+    const ids = idsFor(action);
+    if (!scope?.orgId || ids.length === 0) {
       return;
     }
     if (action === 'apply' && scope.detailsDirty) {
@@ -481,7 +495,7 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
       const result = await decideOrgEnrichment(
         scope.orgId,
         action,
-        selected,
+        ids,
         action === 'apply' ? chosenOverrides() : undefined
       );
       const failed = result.results.filter((row) => row.status === 'error');
@@ -548,7 +562,7 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
         ) : null
       }
       actions={
-        pendingIds.length ? (
+        canApplyAny ? (
           <>
             <Button
               type='button'
@@ -576,7 +590,7 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
               variant='secondary'
               loading={busy === 'dismiss'}
               loadingLabel='Dismissing…'
-              disabled={selected.length === 0 || busy !== null}
+              disabled={idsFor('dismiss').length === 0 || busy !== null}
               onClick={() => void decide('dismiss')}
             >
               Dismiss selected

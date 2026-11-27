@@ -52,7 +52,7 @@ def apply_proposals(
         if proposal is None:
             results.append({"id": raw_id, "status": "error", "error": "not found"})
             continue
-        if proposal.status != "pending":
+        if not _can_apply(proposal):
             results.append({"id": raw_id, "status": "error", "error": "not pending"})
             continue
         pending.append((index, raw_id, proposal))
@@ -122,6 +122,13 @@ def apply_proposals(
     session.flush()
     quality_run_id = _stage_quality(session, org_id, applied, user_id)
     return results, quality_run_id
+
+
+def _can_apply(proposal: OrgEnrichmentProposal) -> bool:
+    """Pending rows, and a picture an admin dismissed earlier."""
+    if proposal.status == "pending":
+        return True
+    return proposal.status == "dismissed" and proposal.kind == "add_media"
 
 
 def _is_logo(proposal: OrgEnrichmentProposal) -> bool:

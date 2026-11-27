@@ -860,6 +860,37 @@ test.describe('Organizations Panel', () => {
     ).toHaveCount(0);
   });
 
+  test('applies a picture that was dismissed', async ({ adminPage }) => {
+    let applyBody: { ids?: string[] } = {};
+    await adminPage.route(
+      '**/api/mock/**/admin/organizations/*/enrichment/apply',
+      async (route) => {
+        applyBody = route.request().postDataJSON();
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            results: (applyBody.ids ?? []).map((id) => ({
+              id,
+              status: 'applied',
+            })),
+          }),
+        });
+      }
+    );
+    await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
+    await adminPage.getByTestId('enrich-from-website').click();
+    const card = adminPage.getByTestId('website-enrichment');
+    const picture = card.getByRole('checkbox', { name: 'Select Photo · dismissed' });
+    await expect(picture).toBeEnabled();
+    await expect(card.getByRole('checkbox', { name: 'Select Old description' })).toBeDisabled();
+    await picture.check();
+    await expect(card.getByRole('button', { name: 'Dismiss selected' })).toBeDisabled();
+    await card.getByRole('button', { name: 'Apply selected' }).click();
+    await expect(card.getByText('Selected changes were applied.')).toBeVisible();
+    expect(applyBody.ids).toEqual(['prop-dismissed-photo']);
+  });
+
   test('enriches one organization from a leaflet url', async ({ adminPage }) => {
     let started = false;
     await adminPage.route(

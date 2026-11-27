@@ -159,11 +159,20 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
         if run is None:
             payload = {"run": None, "proposals": [], "venues": []}
         else:
-            proposals = session.scalars(
-                select(OrgEnrichmentProposal)
-                .where(OrgEnrichmentProposal.run_id == run.id)
-                .order_by(OrgEnrichmentProposal.section, OrgEnrichmentProposal.label)
-            ).all()
+            proposals = _with_dismissed_pictures(
+                session,
+                org_id,
+                list(
+                    session.scalars(
+                        select(OrgEnrichmentProposal)
+                        .where(OrgEnrichmentProposal.run_id == run.id)
+                        .order_by(
+                            OrgEnrichmentProposal.section,
+                            OrgEnrichmentProposal.label,
+                        )
+                    ).all()
+                ),
+            )
             organization = session.get(Organization, org_id)
             venues = session.scalars(
                 select(Location).where(Location.org_id == org_id)
@@ -220,6 +229,41 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
         if expired:
             session.commit()
     return json_response(200, payload, event=event)
+
+
+def _with_dismissed_pictures(
+    session: Session,
+    org_id: UUID,
+    proposals: list[OrgEnrichmentProposal],
+) -> list[OrgEnrichmentProposal]:
+    """Add picture rows dismissed on an earlier run.
+
+    One row per hash. A hash already on this run is left as it is.
+    """
+    seen = {row.proposed_hash for row in proposals}
+    older = session.scalars(
+        select(OrgEnrichmentProposal)
+        .where(
+            OrgEnrichmentProposal.org_id == org_id,
+            OrgEnrichmentProposal.kind == "add_media",
+            OrgEnrichmentProposal.status == "dismissed",
+        )
+        .order_by(
+            OrgEnrichmentProposal.decided_at.desc().nulls_last(),
+            OrgEnrichmentProposal.created_at.desc(),
+        )
+    ).all()
+    extra: list[OrgEnrichmentProposal] = []
+    for row in older:
+        if row.proposed_hash in seen:
+            continue
+        seen.add(row.proposed_hash)
+        extra.append(row)
+    if not extra:
+        return proposals
+    combined = [*proposals, *extra]
+    combined.sort(key=lambda row: (row.section, row.label))
+    return combined
 
 
 def _body_requests_leaflet(event: Mapping[str, Any]) -> bool:

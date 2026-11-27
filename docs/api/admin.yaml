@@ -404,7 +404,10 @@ paths:
         applied type is `per_sessions`. `activity_id` chooses a catalog
         activity when the proposed name does not match. Each id returns
         its own result, including `error` when that row was refused.
-        Nothing is applied automatically. When at least one proposal
+        Nothing is applied automatically. A dismissed picture
+        (`add_media`, including a logo) can be applied later. Any other
+        dismissed row stays final. A hash that is still dismissed is
+        not suggested again. When at least one proposal
         is applied, the response includes `data_quality_run_id` for
         the checks selected in import settings. Locations is included
         only when a venue or activity was saved, and categories only
