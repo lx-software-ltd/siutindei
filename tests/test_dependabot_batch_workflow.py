@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PIN = "b911ce02864881b95506a008a471108db22ce29e"
+PIN = "1433c6db97db3d774638175d1882138ef89ecce5"
 
 
 class DependabotBatchWorkflowTest(unittest.TestCase):
