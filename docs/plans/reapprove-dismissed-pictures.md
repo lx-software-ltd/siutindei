@@ -11,21 +11,30 @@
    catalog row.
 2. Apply uses the existing media path. A dismissed picture becomes
    `applied` and is copied or attached the same way as a pending one.
-   The hash leaves the dismissed set because the status is no longer
-   `dismissed`.
-3. The enrichment card lists dismissed pictures from earlier runs when
-   the latest run no longer has that hash. One row per hash, the
-   newest decision. A hash already on the latest run is not repeated.
-4. Dismiss still accepts only `pending` rows. A selection that is only
-   dismissed pictures can be applied and cannot be dismissed again.
-5. A dismissed leaflet whose file was deleted on dismiss still fails
-   apply and stays `dismissed`. Website pictures are copied from
+   Every other dismissed row with that hash becomes `superseded`, so
+   the hash leaves the dismissed set even when two runs stored it.
+3. The enrichment card lists website pictures dismissed on an earlier
+   website run when the run being read no longer has that hash. One
+   row per hash, the newest decision, at most the media-list cap.
+   Reading an older run does not pull a picture dismissed later. A
+   leaflet run is not mixed with a website run. The returned list is
+   ordered in one place, so merging rows does not reshuffle the run.
+4. Dismiss still accepts only `pending` rows. The apply bar stays up
+   while any row is pending. When the only selectable rows are
+   dismissed pictures, the bar appears once one of them is selected.
+   An unsaved Details form shows the save-or-discard note whenever
+   that bar is up. A failed re-apply shows its reason on the row.
+5. A dismissed leaflet cannot be selected and apply refuses it. Its
+   file was deleted on dismiss. Website pictures are copied from
    `source_url` at apply time, so they do not need a stored object.
 6. Public photos fill their tile. The frame has a definite size and
    hides overflow. The image is taken out of flow and painted with
    `object-cover`. Logos stay `object-contain` and are also taken out
-   of flow so a wide mark cannot stretch the tile. The gallery
-   lightbox shows the whole picture inside the dialog.
+   of flow so a wide mark cannot stretch the tile. From tablet width
+   up, the gallery mosaic is two rows and the main photo spans both.
+   Lightbox photos sit in equal frames and show the whole picture.
+7. An apply that mixes runs still links the catalog version. The
+   linked run is the newest applied proposal's run.
 
 ## Goal
 
@@ -71,10 +80,13 @@ held inside the dialog.
 
 ## Files
 
-- `backend/src/app/services/enrichment/apply.py` — accept `dismissed`
-  when `kind` is `add_media`. Other kinds still require `pending`.
-- `backend/src/app/api/admin_enrichment.py` — merge older dismissed
-  `add_media` rows into the read, deduped by `proposed_hash`.
+- `backend/src/app/services/enrichment/apply.py` — accept a dismissed
+  website picture. A dismissed leaflet stays refused. Applying a
+  picture supersedes the other dismissed copies of its hash. A mixed
+  apply still links the catalog version to the newest run.
+- `backend/src/app/api/admin_enrichment.py` — merge earlier website
+  pictures into a website run, one per hash, capped, and sort every
+  read the same way.
 - `docs/api/admin.yaml` — one sentence on apply: a dismissed picture
   can be applied later. The dismiss sentence stays: a hash that is
   still dismissed is not suggested again.

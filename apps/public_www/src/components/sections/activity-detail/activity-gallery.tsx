@@ -113,14 +113,14 @@ export function ActivityGallery({
       <div
         className={
           smallTiles.length > 0
-            ? 'activity-gallery__frame hidden h-[420px] gap-2 overflow-hidden rounded-2xl md:grid md:grid-cols-3 lg:grid-cols-4 lg:grid-rows-2 short:hidden'
+            ? 'activity-gallery__frame hidden h-[420px] gap-2 overflow-hidden rounded-2xl md:grid md:grid-cols-3 md:grid-rows-2 lg:grid-cols-4 short:hidden'
             : 'activity-gallery__frame hidden h-[420px] overflow-hidden rounded-2xl md:block short:hidden'
         }
       >
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="relative h-full w-full overflow-hidden bg-brand-100 md:col-span-2 lg:row-span-2"
+          className="relative h-full min-h-0 w-full overflow-hidden bg-brand-100 md:col-span-2 md:row-span-2"
         >
           <img
             src={photos[0]}
@@ -165,7 +165,7 @@ export function ActivityGallery({
       <Modal isOpen={isOpen} title={copy.photosLabel} onClose={() => setIsOpen(false)}>
         <ul className="grid gap-3 sm:grid-cols-2">
           {photos.map((url) => (
-            <li key={url} className="overflow-hidden rounded-xl bg-brand-100">
+            <li key={url} className="relative aspect-[4/3] overflow-hidden rounded-xl bg-brand-100">
               <img
                 src={url}
                 alt=""
@@ -175,8 +175,8 @@ export function ActivityGallery({
                 decoding="async"
                 className={
                   isLogo
-                    ? 'max-h-[70vh] w-full bg-white object-contain p-8'
-                    : 'max-h-[70vh] w-full object-contain'
+                    ? 'absolute inset-0 h-full w-full bg-white object-contain p-8'
+                    : 'absolute inset-0 h-full w-full object-contain'
                 }
               />
             </li>

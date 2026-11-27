@@ -34,7 +34,7 @@ import { Textarea } from '../ui/textarea';
 import { chosenEnrichmentOverrides, firstBlockerMessage } from '../../lib/enrichment-overrides';
 import {
   ProposalTable,
-  proposalCanApply,
+  enrichmentActionsVisible,
   selectionAfterToggle,
 } from './organization-enrichment-proposals';
 import { OrganizationEnrichmentSettings } from './organization-enrichment-settings';
@@ -425,10 +425,7 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
     () => proposals.filter((row) => row.status === 'pending').map((row) => row.id),
     [proposals]
   );
-  const canApplyAny = useMemo(
-    () => proposals.some((row) => proposalCanApply(row)),
-    [proposals]
-  );
+  const actionsVisible = enrichmentActionsVisible(proposals, selected);
   const leafletKey = proposals
     .filter((row) => row.status === 'pending' && row.proposed_value.leaflet === true)
     .map((row) => row.id)
@@ -562,7 +559,7 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
         ) : null
       }
       actions={
-        canApplyAny ? (
+        actionsVisible ? (
           <>
             <Button
               type='button'
@@ -599,7 +596,7 @@ export function OrganizationEnrichmentCard({ hidden }: { hidden: boolean }) {
         ) : null
       }
     >
-      {scope.detailsDirty && pendingIds.length ? (
+      {scope.detailsDirty && actionsVisible ? (
         <p className='mb-3 text-sm text-ink-700'>
           Save or discard the Details edits before applying these changes.
         </p>

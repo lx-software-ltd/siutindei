@@ -404,8 +404,10 @@ paths:
         applied type is `per_sessions`. `activity_id` chooses a catalog
         activity when the proposed name does not match. Each id returns
         its own result, including `error` when that row was refused.
-        Nothing is applied automatically. A dismissed picture
-        (`add_media`, including a logo) can be applied later. Any other
+        Nothing is applied automatically. A dismissed website picture
+        (`add_media`, including a logo) can be applied later. A dismissed
+        leaflet cannot, because its file is removed on dismiss. Applying
+        a picture clears every dismissed copy of that hash. Any other
         dismissed row stays final. A hash that is still dismissed is
         not suggested again. When at least one proposal
         is applied, the response includes `data_quality_run_id` for

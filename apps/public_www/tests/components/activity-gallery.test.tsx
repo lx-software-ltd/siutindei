@@ -29,11 +29,16 @@ describe('ActivityGallery', () => {
       expect(img).toHaveClass('absolute', 'inset-0', 'h-full', 'w-full', 'object-cover');
     }
     expect(container.querySelector('button.min-h-0')).not.toBeNull();
+    expect(container.querySelector('.md\\:grid-rows-2')).not.toBeNull();
+    expect(container.querySelector('button.md\\:row-span-2')).not.toBeNull();
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Kowloon art' })[0]);
+    const frames = document.querySelectorAll('li.aspect-\\[4\\/3\\]');
+    expect(frames.length).toBe(PHOTOS.length);
     const opened = document.querySelector(
       'img[src="https://images.example.com/tall.jpg"].object-contain',
     );
-    expect(opened).toHaveClass('max-h-[70vh]', 'w-full', 'object-contain');
+    expect(opened).toHaveClass('absolute', 'inset-0', 'h-full', 'w-full', 'object-contain');
+    expect(opened).not.toHaveClass('max-h-[70vh]');
   });
 });

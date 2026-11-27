@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.db.audit import AuditService
@@ -87,6 +87,7 @@ def apply_proposals(
                 proposal.status = "applied"
                 proposal.decided_by = user_id
                 proposal.decided_at = datetime.now(UTC)
+                _release_dismissed_hash(session, proposal)
         except (ValidationError, AppError) as exc:
             results.append({"id": raw_id, "status": "error", "error": exc.message})
             continue
@@ -116,19 +117,59 @@ def apply_proposals(
                 "proposal_ids": [str(row.id) for row in applied],
             },
         )
-        run_ids = {str(row.run_id) for row in applied}
-        if len(run_ids) == 1:
-            _link_run(session, run_ids.pop())
+        _link_run(session, _linked_run_id(applied))
     session.flush()
     quality_run_id = _stage_quality(session, org_id, applied, user_id)
     return results, quality_run_id
 
 
 def _can_apply(proposal: OrgEnrichmentProposal) -> bool:
-    """Pending rows, and a picture an admin dismissed earlier."""
+    """Pending rows, and a website picture an admin dismissed earlier.
+
+    A dismissed leaflet is not included. Its file was deleted on dismiss,
+    so apply cannot attach it.
+    """
     if proposal.status == "pending":
         return True
-    return proposal.status == "dismissed" and proposal.kind == "add_media"
+    return proposal.status == "dismissed" and _is_reapplicable_picture(proposal)
+
+
+def _is_reapplicable_picture(proposal: OrgEnrichmentProposal) -> bool:
+    if proposal.kind != "add_media":
+        return False
+    proposed = (
+        proposal.proposed_value if isinstance(proposal.proposed_value, dict) else {}
+    )
+    return not proposed.get("leaflet")
+
+
+def _release_dismissed_hash(session: Session, proposal: OrgEnrichmentProposal) -> None:
+    """Applying a picture clears every dismissed copy of that hash."""
+    if proposal.kind != "add_media":
+        return
+    others = session.scalars(
+        select(OrgEnrichmentProposal).where(
+            OrgEnrichmentProposal.org_id == proposal.org_id,
+            OrgEnrichmentProposal.proposed_hash == proposal.proposed_hash,
+            OrgEnrichmentProposal.status == "dismissed",
+            OrgEnrichmentProposal.id != proposal.id,
+        )
+    ).all()
+    for row in others:
+        row.status = "superseded"
+        row.decided_by = proposal.decided_by
+        row.decided_at = proposal.decided_at
+
+
+def _linked_run_id(applied: list[OrgEnrichmentProposal]) -> str:
+    """The run a mixed apply should stamp on the catalog version.
+
+    One transaction can include a pending row from the open run and a
+    picture dismissed on an older run. The version still needs one run.
+    The newest applied row is the open run when both are present.
+    """
+    newest = max(applied, key=lambda row: (row.created_at, str(row.id)))
+    return str(newest.run_id)
 
 
 def _is_logo(proposal: OrgEnrichmentProposal) -> bool:
@@ -222,8 +263,6 @@ def _delete_dismissed_leaflet(
     urls = list(org.media_urls or []) if org is not None else []
     if any(str(url).endswith(key) for url in urls):
         return
-    from sqlalchemy import select
-
     others = session.scalars(
         select(OrgEnrichmentProposal).where(
             OrgEnrichmentProposal.org_id == org_id,

@@ -324,6 +324,11 @@ export function ProposalTable({
               </AdminDataTableCell>
               <AdminDataTableCell>
                 <AdminTableName>{row.label}</AdminTableName>
+                {!pending && applyErrors[row.id] ? (
+                  <div className='mt-2'>
+                    <AdminInlineError size='xs'>{applyErrors[row.id]}</AdminInlineError>
+                  </div>
+                ) : null}
                 <AdminDataTableCellMeta label='Now' until='secondary'>
                   {current}
                 </AdminDataTableCellMeta>
@@ -819,9 +824,37 @@ function isLogoProposal(row: EnrichmentProposal | undefined): boolean {
   return Boolean(row && row.kind === 'add_media' && row.proposed_value.logo);
 }
 
-/** Pending rows, and a picture that was dismissed earlier. */
-export function proposalCanApply(row: { status: string; kind: string }): boolean {
-  return row.status === 'pending' || (row.status === 'dismissed' && row.kind === 'add_media');
+/** Pending rows, and a website picture that was dismissed earlier. */
+export function proposalCanApply(row: {
+  status: string;
+  kind: string;
+  proposed_value?: { leaflet?: unknown };
+}): boolean {
+  if (row.status === 'pending') {
+    return true;
+  }
+  return (
+    row.status === 'dismissed' &&
+    row.kind === 'add_media' &&
+    row.proposed_value?.leaflet !== true
+  );
+}
+
+/** The apply bar stays up for pending rows, or once a picture is selected. */
+export function enrichmentActionsVisible(
+  rows: readonly {
+    id: string;
+    status: string;
+    kind: string;
+    proposed_value?: { leaflet?: unknown };
+  }[],
+  selected: readonly string[]
+): boolean {
+  if (rows.some((row) => row.status === 'pending')) {
+    return true;
+  }
+  const chosen = new Set(selected);
+  return rows.some((row) => chosen.has(row.id) && proposalCanApply(row));
 }
 
 export function selectionAfterToggle(
