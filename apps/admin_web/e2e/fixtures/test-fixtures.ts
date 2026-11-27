@@ -1212,7 +1212,7 @@ export async function setupApiMocks(
                     kind: 'add_media',
                     field: 'media',
                     label: 'Photo · dismissed',
-                    current_value: { photos: 2 },
+                    current_value: null,
                     proposed_value: {
                       source_url: 'https://cdn.example/class.png',
                       alt: 'Dismissed class photo',
