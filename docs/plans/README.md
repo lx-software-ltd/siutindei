@@ -23,6 +23,7 @@ the plan turns out to be wrong.
 | [`org-website.md`](org-website.md) | Organization website |
 | [`org-website-enrichment.md`](org-website-enrichment.md) | Enrich one organization from its website |
 | [`public-www-activity-pages-ux.md`](public-www-activity-pages-ux.md) | Activity information on the public website |
+| [`reapprove-dismissed-pictures.md`](reapprove-dismissed-pictures.md) | Re-approve dismissed enrichment pictures, and fit public photos to the tile |
 | [`public-www-seo-and-llm-search.md`](public-www-seo-and-llm-search.md) | SEO and LLM-search visibility |
 | [`search-incomplete-approved.md`](search-incomplete-approved.md) | Approved activities that lack a price or schedule |
 | [`siutindei-domain-consolidation.md`](siutindei-domain-consolidation.md) | Move admin, API, and Cognito onto siutindei.com |
