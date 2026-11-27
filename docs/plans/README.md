@@ -10,7 +10,6 @@ the plan turns out to be wrong.
 | File | What it covers |
 | --- | --- |
 | [`agent-harness.md`](agent-harness.md) | Agent harness |
-| [`api-standard.md`](api-standard.md) | One API shape: `/v1/<audience>/`, bearer tokens, snake_case on the wire |
 | [`catalog-versioning.md`](catalog-versioning.md) | Catalog versioning |
 | [`cloudflare-edge-protection.md`](cloudflare-edge-protection.md) | Cloudflare edge protection for the public website |
 | [`enrichment-now-empty-and-template-flag.md`](enrichment-now-empty-and-template-flag.md) | Enrichment "Now" and the template description flag |

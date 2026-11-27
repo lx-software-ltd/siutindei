@@ -379,7 +379,6 @@ invalidate_distribution() {
       "/privacy*"
       "/terms*"
       "/fixtures/*"
-      "/v1/activities/search*"
       "/api/v1/public*"
       "/robots.txt"
       "/sitemap.xml"

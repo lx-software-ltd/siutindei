@@ -12,7 +12,7 @@ The site's static pages (home, about, privacy, terms) are technically
 sound: unique canonicals, reciprocal hreflang, Open Graph and Twitter
 tags, one H1, and a Lighthouse SEO score of 100. The catalogue is the
 problem. Every activity name, description, price, and link is fetched
-in the browser from `/v1/activities/search`, and `robots.txt`
+in the browser from `/api/v1/public/activities/search`, and `robots.txt`
 disallows `/v1/`. No crawler can see any activity:
 
 1. Crawlers that do not run JavaScript (AI search crawlers and link
@@ -46,7 +46,7 @@ Run on 13 Nov 2026 (Hong Kong time) at commit `main` as of that day.
 - **Render audit.** Served `out/` behind a local stand-in for
   CloudFront (same path rewrite and 302 behaviour as
   `backend/infrastructure/lib/functions/public-www-path-rewrite.js`)
-  with a mock `/v1/activities/search` backed by the staging fixture,
+  with a mock `/api/v1/public/activities/search` backed by the staging fixture,
   scoped to Stanley (`NEXT_PUBLIC_SEARCH_AREA_SCOPE=southern-stanley`,
   26 fixture activities). Loaded 11 URLs in system Chrome through
   Playwright in three views: `raw` (JavaScript off), `crawler`
@@ -123,7 +123,7 @@ Causes:
 - `ROBOTS_DISALLOWED_PATHS` contains `/v1/`. Google states that it
   does not fetch disallowed resources while rendering and advises
   against blocking resources a page needs.
-- The edge policy rate-limits `/v1/activities/search` to 15 requests
+- The edge policy rate-limits `/api/v1/public/activities/search` to 15 requests
   per 10 seconds per IP and blocks tooling user agents. Removing the
   `robots.txt` rule alone would leave rendering dependent on those
   rules and would still do nothing for crawlers that do not run

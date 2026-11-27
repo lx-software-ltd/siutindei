@@ -48,8 +48,7 @@ from typing import Any
 API_BASE = "https://api.cloudflare.com/client/v4"
 DEFAULT_POLICY = Path(__file__).with_name("public_www_edge_policy.json")
 PUBLIC_API_RATE_EXPRESSION = (
-    '((http.request.uri.path eq "/v1/activities/search" or '
-    'http.request.uri.path eq "/api/v1/public/activities/search"))'
+    '(http.request.uri.path eq "/api/v1/public/activities/search")'
 )
 SECTIONS = ("settings", "rulesets", "bot", "dns")
 # Ruleset phases are applied in this order so the request-header secret and
