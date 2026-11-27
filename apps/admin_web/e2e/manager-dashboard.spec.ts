@@ -141,6 +141,11 @@ test.describe('Manager Organizations Panel', () => {
     await expect(managerPage.getByLabel('Website')).toHaveValue(
       'https://org-one.example'
     );
+    await expect(managerPage.getByRole('link', { name: 'Send a new email' })).toHaveCount(0);
+    await expect(managerPage.getByRole('link', { name: 'Open the website' })).toHaveCount(0);
+    await expect(
+      managerPage.getByRole('link', { name: 'Start a new chat (whatsapp)' })
+    ).toHaveCount(0);
     await expect(managerPage.getByText('Version 2', { exact: true })).toBeVisible();
     await expect(managerPage.getByRole('button', { name: /Version/ })).toHaveCount(0);
     await expect(managerPage.getByRole('button', { name: 'History' })).toHaveCount(0);
