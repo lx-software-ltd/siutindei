@@ -37,20 +37,20 @@ jobs:
         # template:end
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-node@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
         with:
           cache: npm
           working-directory: backend/infrastructure
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-python@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
 
       - name: Synthesize CDK templates
         working-directory: backend/infrastructure
         run: npm run synth:ci
 
       - name: Run Checkov
-        uses: lx-software-ltd/actions/checkov-cloudformation@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/checkov-cloudformation@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
         with:
           directory: backend/infrastructure/cdk.out
           config-file: backend/infrastructure/.checkov.yaml
@@ -71,7 +71,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Analyze
-        uses: lx-software-ltd/actions/codeql@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/codeql@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
         with:
           language: ${{ matrix.language }}
           queries: security-extended
@@ -89,10 +89,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-python@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
 
       - name: Check hashed PII denylist
-        uses: lx-software-ltd/actions/pii-denylist@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/pii-denylist@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
 
   secrets-scan:
     permissions:
@@ -106,7 +106,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run Gitleaks
-        uses: lx-software-ltd/actions/gitleaks@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/gitleaks@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
         with:
           config-path: .gitleaks.toml
 
@@ -120,10 +120,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-python@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
 
       - name: Audit Python requirements
-        uses: lx-software-ltd/actions/pip-audit@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/pip-audit@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
         with:
           # template:set
           requirements: backend/requirements.txt
@@ -140,10 +140,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
-        uses: lx-software-ltd/actions/setup-python@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-python@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
 
       - name: Run Bandit
-        uses: lx-software-ltd/actions/bandit@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/bandit@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
         with:
           # template:set
           paths: src lambda
@@ -160,10 +160,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Node.js
-        uses: lx-software-ltd/actions/setup-node@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-node@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
 
       - name: Audit npm lockfiles
-        uses: lx-software-ltd/actions/npm-audit@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/npm-audit@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
         with:
           # template:set
           directories: |
@@ -171,6 +171,27 @@ jobs:
             apps/public_www
             backend/infrastructure
           # template:end
+
+  semgrep:
+    name: semgrep/ci
+    runs-on: ubuntu-26.04
+    container:
+      image: semgrep/semgrep@sha256:f83a64e8a7d985eaa51ee3978c9c882be946964c68633fba5d2817cf297a3912 # 2026-11-17
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # gha-curl-pipe-shell parses run blocks as Bash and warns on
+      # GitHub expressions, which marks Semgrep OSS as reporting warnings.
+      - name: Run Semgrep
+        uses: lx-software-ltd/actions/semgrep@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
+        with:
+          rules: p/python p/javascript p/security-audit p/secrets p/owasp-top-ten
+          exclude-rules: yaml.github-actions.security.gha-curl-pipe-shell.gha-curl-pipe-shell
 
   security-summary:
     permissions:
@@ -185,9 +206,10 @@ jobs:
       - dependency-audit
       - bandit
       - npm-audit
+      - semgrep
     if: always()
     steps:
       - name: Require every security job
-        uses: lx-software-ltd/actions/require-jobs@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/require-jobs@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
         with:
           needs-json: ${{ toJson(needs) }}

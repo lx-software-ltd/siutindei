@@ -292,7 +292,7 @@ Lambdas or NAT Gateway.
 - Node.js: `package-lock.json`
 - iOS: `Podfile.lock`
 - Python: exact `==` pins in the backend requirements files
-- CI workflow: `.github/workflows/check-lockfiles.yml`
+- CI jobs: `node-lockfiles`, `python-requirements`, and `flutter-lockfiles` in `.github/workflows/lint.yml`. The `lint` gate needs them.
 
 ## 7) Dependency Updates
 
@@ -330,8 +330,15 @@ Lambdas or NAT Gateway.
   upstream publishes 2.0.2+ or LHCI ships Lighthouse 13+.
 - PRs labeled by ecosystem (`dependencies`, `ci`, `backend`, `mobile`, `infrastructure`).
 
+**How updates land:**
+
+Routine Dependabot updates land as one batch pull request.
+`.github/workflows/dependabot-batch.yml` opens it. The owner merges it
+with a merge commit. A workflow change, a major update, and the
+`actions-pin` group stay single pull requests. This repository does not
+ask Dependabot to merge.
+
 **Dependabot commands:**
-- `@dependabot merge` - Merge when CI passes.
 - `@dependabot ignore this major version` - Stop updates for this major version.
 - `@dependabot ignore this dependency` - Stop all updates for this dependency.
 

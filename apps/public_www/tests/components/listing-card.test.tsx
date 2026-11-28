@@ -103,6 +103,31 @@ describe('ListingCard', () => {
     expect(screen.getByText(labels.detailsOnRequest)).toBeInTheDocument();
   });
 
+  it('covers the tile with a photo and contains a logo', () => {
+    const photo = renderCard(
+      buildListing({ organization: { mediaUrls: ['https://images.example.com/wide.jpg'] } }),
+    );
+    expect(photo.container.querySelector('img[src="https://images.example.com/wide.jpg"]')).toHaveClass(
+      'absolute',
+      'inset-0',
+      'h-full',
+      'w-full',
+      'object-cover',
+    );
+    photo.unmount();
+
+    const logo = renderCard(
+      buildListing({
+        organization: { mediaUrls: [], logoMediaUrl: 'https://images.example.com/logo.png' },
+      }),
+    );
+    expect(logo.container.querySelector('img[src="https://images.example.com/logo.png"]')).toHaveClass(
+      'absolute',
+      'inset-0',
+      'object-contain',
+    );
+  });
+
   it('falls back to the category art when the photo fails', () => {
     const { container } = renderCard(
       buildListing({ organization: { mediaUrls: ['https://images.example.com/broken.jpg'] } }),

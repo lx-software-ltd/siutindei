@@ -166,8 +166,8 @@ export function ListingCard({
             onError={() => setImageFailed(true)}
             className={
               isLogo
-                ? 'h-full w-full bg-white object-contain p-4'
-                : 'h-full w-full object-cover transition duration-300 group-hover:scale-105'
+                ? 'absolute inset-0 h-full w-full bg-white object-contain p-4'
+                : 'absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-105'
             }
           />
         ) : (

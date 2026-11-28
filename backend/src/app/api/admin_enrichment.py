@@ -6,11 +6,12 @@ from collections.abc import Mapping
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.api.admin_auth import _get_user_sub, _is_admin, _set_session_audit_context
 from app.api.admin_request import _parse_uuid, parse_object_body
+from app.api.admin_validators import MAX_MEDIA_URLS_COUNT
 from app.db.audit import AuditService
 from app.db.engine import get_engine
 from app.db.models import (
@@ -20,7 +21,7 @@ from app.db.models import (
     Location,
     Organization,
 )
-from app.db.models.org_enrichment import OrgEnrichmentProposal
+from app.db.models.org_enrichment import OrgEnrichmentProposal, OrgEnrichmentRun
 from app.exceptions import AppError, ValidationError
 from app.services.enrichment.apply import apply_proposals, dismiss_proposals
 from app.services.enrichment.queue import enqueue_enrichment
@@ -159,11 +160,18 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
         if run is None:
             payload = {"run": None, "proposals": [], "venues": []}
         else:
-            proposals = session.scalars(
-                select(OrgEnrichmentProposal)
-                .where(OrgEnrichmentProposal.run_id == run.id)
-                .order_by(OrgEnrichmentProposal.section, OrgEnrichmentProposal.label)
-            ).all()
+            proposals = _with_dismissed_pictures(
+                session,
+                org_id,
+                run,
+                list(
+                    session.scalars(
+                        select(OrgEnrichmentProposal).where(
+                            OrgEnrichmentProposal.run_id == run.id
+                        )
+                    ).all()
+                ),
+            )
             organization = session.get(Organization, org_id)
             venues = session.scalars(
                 select(Location).where(Location.org_id == org_id)
@@ -222,6 +230,86 @@ def _read(event: Mapping[str, Any], org_id: UUID) -> dict[str, Any]:
     return json_response(200, payload, event=event)
 
 
+def _with_dismissed_pictures(
+    session: Session,
+    org_id: UUID,
+    run: OrgEnrichmentRun,
+    proposals: list[OrgEnrichmentProposal],
+) -> list[OrgEnrichmentProposal]:
+    """Add website pictures dismissed on an earlier website run.
+
+    One row per hash, newest decision, capped at the media list size.
+    A leaflet run stays on its own rows. A hash already on this run is
+    left as it is. The list is always ordered the same way, so merging
+    rows does not reshuffle the run's own proposals.
+    """
+    extra = (
+        []
+        if run.source != "website"
+        else _earlier_dismissed_pictures(session, org_id, run, proposals)
+    )
+    return _sorted_proposals([*proposals, *extra])
+
+
+def _sorted_proposals(
+    rows: list[OrgEnrichmentProposal],
+) -> list[OrgEnrichmentProposal]:
+    return sorted(rows, key=lambda row: (row.section, row.label, str(row.id)))
+
+
+def _earlier_dismissed_pictures(
+    session: Session,
+    org_id: UUID,
+    run: OrgEnrichmentRun,
+    proposals: list[OrgEnrichmentProposal],
+) -> list[OrgEnrichmentProposal]:
+    seen = {row.proposed_hash for row in proposals}
+    earlier_runs = select(OrgEnrichmentRun.id).where(
+        OrgEnrichmentRun.org_id == org_id,
+        OrgEnrichmentRun.source == "website",
+        OrgEnrichmentRun.created_at < run.created_at,
+    )
+    leaflet = OrgEnrichmentProposal.proposed_value["leaflet"].astext
+    clauses = [
+        OrgEnrichmentProposal.org_id == org_id,
+        OrgEnrichmentProposal.run_id.in_(earlier_runs),
+        OrgEnrichmentProposal.kind == "add_media",
+        OrgEnrichmentProposal.status == "dismissed",
+        or_(leaflet.is_(None), leaflet != "true"),
+    ]
+    if seen:
+        clauses.append(OrgEnrichmentProposal.proposed_hash.not_in(seen))
+    hashes = session.scalars(
+        select(OrgEnrichmentProposal.proposed_hash)
+        .where(*clauses)
+        .group_by(OrgEnrichmentProposal.proposed_hash)
+        .order_by(
+            func.max(OrgEnrichmentProposal.decided_at).desc().nulls_last(),
+            func.max(OrgEnrichmentProposal.created_at).desc(),
+        )
+        .limit(MAX_MEDIA_URLS_COUNT)
+    ).all()
+    if not hashes:
+        return []
+    rows = session.scalars(
+        select(OrgEnrichmentProposal)
+        .where(*clauses, OrgEnrichmentProposal.proposed_hash.in_(hashes))
+        .order_by(
+            OrgEnrichmentProposal.decided_at.desc().nulls_last(),
+            OrgEnrichmentProposal.created_at.desc(),
+            OrgEnrichmentProposal.id.desc(),
+        )
+    ).all()
+    picked: list[OrgEnrichmentProposal] = []
+    got: set[str] = set()
+    for row in rows:
+        if row.proposed_hash in got:
+            continue
+        got.add(row.proposed_hash)
+        picked.append(row)
+    return picked
+
+
 def _body_requests_leaflet(event: Mapping[str, Any]) -> bool:
     try:
         body = parse_object_body(event)
@@ -267,8 +355,6 @@ def _start(
         enqueue_enrichment(run_id, stage=stage)
     except RuntimeError as exc:
         with Session(get_engine()) as session:
-            from app.db.models.org_enrichment import OrgEnrichmentRun
-
             row = session.get(OrgEnrichmentRun, run_id)
             if row is not None:
                 row.status = "failed"

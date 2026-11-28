@@ -73,7 +73,7 @@ jobs:
           AWS_REGION: ${{ vars.AWS_REGION }}
 
       - name: Configure AWS credentials
-        uses: lx-software-ltd/actions/aws-oidc@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/aws-oidc@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -87,7 +87,7 @@ jobs:
       - name: Read staging bucket
         id: staging
         if: ${{ steps.bucket_read.outputs.read_staging_bucket == 'true' }}
-        uses: lx-software-ltd/actions/cfn-stack-outputs@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/cfn-stack-outputs@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
         with:
 # template:set
           stack: lxsoftware-siutindei-public-www
@@ -188,7 +188,7 @@ jobs:
       # template:optional catalogue
       - name: Download promotion inputs
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: promote-public-www-inputs
           path: ${{ runner.temp }}/promote-inputs
@@ -197,7 +197,7 @@ jobs:
 
       - name: Set up Node.js
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
-        uses: lx-software-ltd/actions/setup-node@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/setup-node@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
         with:
           cache: npm
           working-directory: apps/public_www
@@ -262,7 +262,7 @@ jobs:
 
       - name: Configure AWS credentials
         if: ${{ success() && (needs.prepare.outputs.maintenance_mode == 'true' || needs.prepare.outputs.deploy == 'true') }}
-        uses: lx-software-ltd/actions/aws-oidc@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/aws-oidc@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
         with:
           account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           region: ${{ vars.AWS_REGION }}
@@ -289,7 +289,7 @@ jobs:
       - name: Read the production staging bucket
         id: production_staging
         if: ${{ success() && needs.prepare.outputs.deploy == 'true' }}
-        uses: lx-software-ltd/actions/cfn-stack-outputs@605040de8abecf8828d5db5a62648b1c35c12589 # main 2026-11-26
+        uses: lx-software-ltd/actions/cfn-stack-outputs@1433c6db97db3d774638175d1882138ef89ecce5 # main 2026-11-27
         with:
           # template:set
           stack: lxsoftware-siutindei-public-www

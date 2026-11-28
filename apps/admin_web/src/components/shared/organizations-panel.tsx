@@ -51,6 +51,12 @@ import { Textarea } from '../ui/textarea';
 import { StatusBanner } from '../status-banner';
 import { ManagerCombobox } from './organizations/manager-combobox';
 import {
+  OrganizationContactLink,
+  organizationEmailHref,
+  organizationWebsiteHref,
+  organizationWhatsappHref,
+} from './organizations/organization-contact-links';
+import {
   SOCIAL_FIELDS,
   DESCRIPTION_SOURCE_OPTIONS,
   catalogSourcePayload,
@@ -564,6 +570,11 @@ export function OrganizationsPanel({
                 className={showEmailError ? errorInputClassName : ''}
                 aria-invalid={showEmailError || undefined}
               />
+              {isAdmin ? (
+                <OrganizationContactLink href={organizationEmailHref(editorForm.email)}>
+                  Send a new email
+                </OrganizationContactLink>
+              ) : null}
             </VersionField>
             <VersionField
               versionKey='website'
@@ -587,6 +598,14 @@ export function OrganizationsPanel({
                 className={showWebsiteError ? errorInputClassName : ''}
                 aria-invalid={showWebsiteError || undefined}
               />
+              {isAdmin ? (
+                <OrganizationContactLink
+                  href={organizationWebsiteHref(editorForm.website)}
+                  external
+                >
+                  Open the website
+                </OrganizationContactLink>
+              ) : null}
             </VersionField>
             <VersionField
               versionKey='phone_country_code'
@@ -638,6 +657,17 @@ export function OrganizationsPanel({
                 className={showPhoneNumberError ? errorInputClassName : ''}
                 aria-invalid={showPhoneNumberError || undefined}
               />
+              {isAdmin ? (
+                <OrganizationContactLink
+                  href={organizationWhatsappHref(
+                    editorForm.phone_country_code,
+                    editorForm.phone_number
+                  )}
+                  external
+                >
+                  Start a new chat (whatsapp)
+                </OrganizationContactLink>
+              ) : null}
             </VersionField>
             {isAdmin && (
               <>

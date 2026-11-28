@@ -451,11 +451,11 @@ regression. See [`aws-assets-map.md`](./aws-assets-map.md) and
 
 ### Semgrep OSS
 
-SAST runs in `.github/workflows/semgrep.yml` (not `security.yml`). GitHub
-Code Scanning's Semgrep OSS setup looks for that path; embedding the job
-only in `security.yml` left the tool-status page at "1 configuration not
-found". Packs: `p/python`, `p/security-audit`, `p/secrets`,
-`p/owasp-top-ten`. SARIF category stays `semgrep`.
+SAST is the `semgrep` job in `.github/workflows/security.yml`, named
+`semgrep/ci`. `security-summary` needs it, so a failure blocks the merge.
+Packs: `p/python`, `p/javascript`, `p/security-audit`, `p/secrets`,
+`p/owasp-top-ten`. SARIF category stays `semgrep`. The action also uploads
+the previous category `.github/workflows/security.yml:semgrep`.
 `--exclude-rule` skips `dynamic-urllib-use-detected` (`cfn_response.py`
 HTTPS/.amazonaws.com URL check) and `gha-curl-pipe-shell` (false-positive
 Bash parse of GitHub `${{ }}` in workflow `run:` blocks; those SARIF

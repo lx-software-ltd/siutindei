@@ -23,9 +23,11 @@ the plan turns out to be wrong.
 | [`org-website.md`](org-website.md) | Organization website |
 | [`org-website-enrichment.md`](org-website-enrichment.md) | Enrich one organization from its website |
 | [`public-www-activity-pages-ux.md`](public-www-activity-pages-ux.md) | Activity information on the public website |
+| [`reapprove-dismissed-pictures.md`](reapprove-dismissed-pictures.md) | Re-approve dismissed enrichment pictures, and fit public photos to the tile |
 | [`public-www-seo-and-llm-search.md`](public-www-seo-and-llm-search.md) | SEO and LLM-search visibility |
 | [`search-incomplete-approved.md`](search-incomplete-approved.md) | Approved activities that lack a price or schedule |
 | [`siutindei-domain-consolidation.md`](siutindei-domain-consolidation.md) | Move admin, API, and Cognito onto siutindei.com |
 | [`staging-smoke-origin.md`](staging-smoke-origin.md) | Point staging smoke at the resolve-step origin |
 | [`2026-11-10-search-area-scope.md`](2026-11-10-search-area-scope.md) | Limit public search to selected Hong Kong areas |
 | [`2026-11-25-code-scanning-alerts.md`](2026-11-25-code-scanning-alerts.md) | Clear the open Semgrep and CodeQL alerts |
+| [`2026-11-27-dependabot-batch.md`](2026-11-27-dependabot-batch.md) | Open one pull request for routine Dependabot updates |

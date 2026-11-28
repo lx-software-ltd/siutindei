@@ -92,6 +92,11 @@ test.describe('Organizations Panel', () => {
     ).toBeVisible();
     await expect(adminPage.locator('#org-email')).toBeVisible();
     await expect(adminPage.getByLabel('Website')).toBeVisible();
+    await expect(adminPage.getByRole('link', { name: 'Send a new email' })).toHaveCount(0);
+    await expect(adminPage.getByRole('link', { name: 'Open the website' })).toHaveCount(0);
+    await expect(
+      adminPage.getByRole('link', { name: 'Start a new chat (whatsapp)' })
+    ).toHaveCount(0);
     const emailBox = await adminPage.locator('#org-email').boundingBox();
     const websiteBox = await adminPage.locator('#org-website').boundingBox();
     expect(emailBox && websiteBox).toBeTruthy();
@@ -725,6 +730,39 @@ test.describe('Organizations Panel', () => {
     await expect(adminPage.getByText('Test Organization 2')).toBeVisible();
   });
 
+  test('links email, website, and phone under the contact fields', async ({
+    adminPage,
+  }) => {
+    await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
+    await expect(adminPage.getByLabel('Email')).toHaveValue('contact@org-one.test');
+
+    const email = adminPage.getByRole('link', { name: 'Send a new email' });
+    const website = adminPage.getByRole('link', { name: 'Open the website' });
+    const chat = adminPage.getByRole('link', { name: 'Start a new chat (whatsapp)' });
+    await expect(email).toBeVisible();
+    await expect(email).toHaveAttribute('href', 'mailto:contact@org-one.test');
+    await expect(website).toHaveAttribute('href', 'https://org-one.example');
+    await expect(website).toHaveAttribute('target', '_blank');
+    await expect(chat).toHaveAttribute('href', 'https://wa.me/85212345678');
+    await expect(chat).toHaveAttribute('target', '_blank');
+
+    const emailBox = await adminPage.locator('#org-email').boundingBox();
+    const websiteBox = await adminPage.locator('#org-website').boundingBox();
+    const phoneBox = await adminPage.locator('#org-phone-number').boundingBox();
+    const emailLinkBox = await email.boundingBox();
+    const websiteLinkBox = await website.boundingBox();
+    const chatLinkBox = await chat.boundingBox();
+    expect(emailBox && websiteBox && phoneBox).toBeTruthy();
+    expect(emailLinkBox && websiteLinkBox && chatLinkBox).toBeTruthy();
+    expect(emailLinkBox!.y).toBeGreaterThan(emailBox!.y + emailBox!.height - 1);
+    expect(websiteLinkBox!.y).toBeGreaterThan(websiteBox!.y + websiteBox!.height - 1);
+    expect(chatLinkBox!.y).toBeGreaterThan(phoneBox!.y + phoneBox!.height - 1);
+
+    await adminPage.getByLabel('Website').fill('');
+    await expect(website).toHaveCount(0);
+    await expect(email).toBeVisible();
+  });
+
   test('shows listing status in the title after review is decided', async ({
     adminPage,
   }) => {
@@ -858,6 +896,37 @@ test.describe('Organizations Panel', () => {
     await expect(
       adminPage.getByRole('heading', { name: 'Website enrichment' })
     ).toHaveCount(0);
+  });
+
+  test('applies a picture that was dismissed', async ({ adminPage }) => {
+    let applyBody: { ids?: string[] } = {};
+    await adminPage.route(
+      '**/api/mock/**/admin/organizations/*/enrichment/apply',
+      async (route) => {
+        applyBody = route.request().postDataJSON();
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            results: (applyBody.ids ?? []).map((id) => ({
+              id,
+              status: 'applied',
+            })),
+          }),
+        });
+      }
+    );
+    await adminPage.goto('/admin/dashboard?section=organizations&org=org-1');
+    await adminPage.getByTestId('enrich-from-website').click();
+    const card = adminPage.getByTestId('website-enrichment');
+    const picture = card.getByRole('checkbox', { name: 'Select Photo · dismissed' });
+    await expect(picture).toBeEnabled();
+    await expect(card.getByRole('checkbox', { name: 'Select Old description' })).toBeDisabled();
+    await picture.check();
+    await expect(card.getByRole('button', { name: 'Dismiss selected' })).toBeDisabled();
+    await card.getByRole('button', { name: 'Apply selected' }).click();
+    await expect(card.getByText('Selected changes were applied.')).toBeVisible();
+    expect(applyBody.ids).toEqual(['prop-dismissed-photo']);
   });
 
   test('enriches one organization from a leaflet url', async ({ adminPage }) => {
